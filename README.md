@@ -88,6 +88,7 @@ npm run build               # build every package
 npm run test                # run every package's tests
 npm run typecheck           # typecheck every package
 npm run test:dogfood        # wrapper-level local dogfood project
+npm run test:pack           # pack local tarballs and smoke installed CLIs
 npm run test:pipeline       # end-to-end demo (agentmd → isolint → iso-harness)
 
 # Target a single package
@@ -135,3 +136,8 @@ wrapper CLI itself. It starts from `agent.md` + `iso/` source and runs the
 repo's local `packages/iso/bin/iso.mjs` entrypoint to produce the full harness
 fan-out. Run `npm run test:dogfood` to exercise the same wrapper path a
 downstream repo would use.
+
+`npm run test:pack` goes one level further: it packs the local workspaces into
+tarballs, installs them into fresh temp projects, and smoke-tests the packaged
+`iso-harness` and `iso` CLIs. This guards against packaging regressions that
+workspace-only tests can miss.

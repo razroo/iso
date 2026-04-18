@@ -81,6 +81,9 @@ jobs:
       - name: iso wrapper dogfood integration
         run: npm run test:dogfood
 
+      - name: packaged tarball smoke
+        run: npm run test:pack
+
       - name: iso-harness smoke build
         working-directory: packages/iso-harness
         run: npm run smoke
