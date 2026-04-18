@@ -30,6 +30,32 @@ my-project/
 If the project has no `agent.md`, the wrapper skips the `agentmd` steps
 and uses the existing `iso/instructions.md` as-is.
 
+## Example run
+
+Running `iso build` against the [`examples/dogfood`](../../examples/dogfood)
+project in this repo:
+
+```text
+▶ agentmd lint (structural check)
+agent.md: ok (0 diagnostics)
+
+▶ agentmd render → iso/instructions.md
+wrote iso/instructions.md
+
+▶ isolint lint (portable prose)
+1 file scanned — no findings
+
+▶ iso-harness build (fan out to all four harnesses)
+iso-harness: loaded 1 agent(s), 1 command(s), 1 MCP server(s) from iso/
+  [claude]   wrote 4 file(s) — CLAUDE.md, .claude/agents/*, .claude/commands/*, .mcp.json
+  [cursor]   wrote 3 file(s) — .cursor/rules/*, .cursor/mcp.json
+  [codex]    wrote 2 file(s) — AGENTS.md, .codex/config.toml
+  [opencode] wrote 4 file(s) — AGENTS.md, .opencode/agents/*, .opencode/skills/*, opencode.json
+```
+
+Each step runs in sequence and fails loudly on the first non-zero exit,
+so a broken authored source never produces a half-written harness tree.
+
 ## Install
 
 ```bash
