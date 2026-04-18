@@ -76,6 +76,21 @@ test("lint: --format=json produces parseable JSON", () => {
   assert.ok(parsed[0].diagnostics.some((d: { code: string }) => d.code === "L12"));
 });
 
+test("lint: --format sarif emits a valid SARIF 2.1.0 document", () => {
+  const dir = mktmp();
+  const a = join(dir, "a.md");
+  writeAgent(a, { missingProcedure: true });
+  const r = runCli(["lint", a, "--format=sarif"]);
+  assert.equal(r.status, 1);
+  const parsed = JSON.parse(r.stdout);
+  assert.equal(parsed.version, "2.1.0");
+  assert.equal(parsed.runs.length, 1);
+  const run = parsed.runs[0];
+  assert.equal(run.tool.driver.name, "agentmd");
+  assert.ok(Array.isArray(run.tool.driver.rules));
+  assert.ok(run.results.some((r: { ruleId: string; level: string }) => r.ruleId === "L9b" && r.level === "error"));
+});
+
 test("lint: --format github emits workflow annotations", () => {
   const dir = mktmp();
   const a = join(dir, "a.md");

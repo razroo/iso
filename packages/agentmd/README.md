@@ -258,8 +258,8 @@ guessing whether the changes helped.
 ```
 agentmd --version | -v
 agentmd new <name> [--dir <path>]
-agentmd lint <file|glob ...> [--format <text|json|github>] [--watch]
-agentmd lint -               [--format <text|json|github>]  # read stdin
+agentmd lint <file|glob ...> [--format <text|json|github|sarif>] [--watch]
+agentmd lint -               [--format <text|json|github|sarif>]  # read stdin
 agentmd render <file|->      [--out <path>]
 agentmd test <file> --fixtures <path>
                     [--via <api|claude-code>] [--model <id>]
@@ -279,7 +279,8 @@ Every `--flag <value>` also accepts the `--flag=value` form.
 - `lint` — structural checks (see below). Accepts multiple files, shell globs,
   or `-` to read from stdin. Exits non-zero if any file has errors. Machine
   formats: `--format json` for CI integrations, `--format github` to emit
-  GitHub Actions workflow annotations.
+  GitHub Actions workflow annotations, `--format sarif` to upload findings
+  to GitHub code scanning (same dialect as isolint's SARIF output).
 - `render` — emit the compiled prompt (what the model sees). `render` adds
   explicit "must never be violated" / "may be overridden…" scope labels.
   Accepts `-` to read source from stdin.

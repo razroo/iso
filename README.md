@@ -87,6 +87,31 @@ npm run build --workspace @razroo/isolint
 npm run test  --workspace @razroo/agentmd
 ```
 
+## Releasing
+
+Version bumps are driven by [Changesets](https://github.com/changesets/changesets).
+Every PR that changes a package should include a changeset describing the
+user-visible impact:
+
+```bash
+npm run changeset          # interactive — pick packages + bump level + summary
+npm run changeset:status   # preview what the next `version` would do
+```
+
+When you're ready to cut a release:
+
+```bash
+npm run version            # bumps package versions + writes CHANGELOG.md
+git commit -am "Version packages"
+git tag <pkg>-v<version>   # e.g. agentmd-v0.3.0
+git push && git push --tags
+gh release create <pkg>-v<version> --generate-notes
+```
+
+The tag-triggered release workflows in `.github/workflows/*-release.yml`
+take over from there — verify the tag matches `package.json`, run tests,
+build, and `npm publish --provenance`.
+
 ## End-to-end example
 
 [`examples/pipeline/`](./examples/pipeline) is an executable demonstration

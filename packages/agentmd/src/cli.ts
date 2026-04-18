@@ -33,8 +33,8 @@ const USAGE = `agentmd — structured markdown linter and adherence tester for a
 
 usage:
   agentmd --version | -v
-  agentmd lint <file|glob ...> [--format <text|json|github>] [--watch]
-  agentmd lint - [--format <text|json|github>]     # read stdin
+  agentmd lint <file|glob ...> [--format <text|json|github|sarif>] [--watch]
+  agentmd lint - [--format <text|json|github|sarif>] # read stdin
   agentmd render <file|-> [--out <path>]
   agentmd test <file> --fixtures <path>
                       [--via <api|claude-code>] [--model <id>]
@@ -233,9 +233,79 @@ function lintOne(target: string): LintOutcome {
   return { displayPath, diagnostics, errorCount };
 }
 
-type LintFormat = "text" | "json" | "github";
+type LintFormat = "text" | "json" | "github" | "sarif";
+
+function sarifLevel(sev: Diagnostic["severity"]): "error" | "warning" | "note" {
+  if (sev === "error") return "error";
+  if (sev === "warning") return "warning";
+  return "note";
+}
+
+function renderSARIF(outcomes: LintOutcome[]): string {
+  const ruleIds = new Set<string>();
+  const results: unknown[] = [];
+  for (const o of outcomes) {
+    if (o.parseError) {
+      ruleIds.add("parse-error");
+      results.push({
+        ruleId: "parse-error",
+        level: "error",
+        message: { text: o.parseError },
+        locations: [
+          { physicalLocation: { artifactLocation: { uri: o.displayPath } } },
+        ],
+      });
+      continue;
+    }
+    for (const d of o.diagnostics) {
+      ruleIds.add(d.code);
+      const region = d.line ? { region: { startLine: d.line } } : {};
+      results.push({
+        ruleId: d.code,
+        level: sarifLevel(d.severity),
+        message: { text: d.message },
+        locations: [
+          {
+            physicalLocation: {
+              artifactLocation: { uri: o.displayPath },
+              ...region,
+            },
+          },
+        ],
+      });
+    }
+  }
+  const rules = [...ruleIds].map((id) => ({
+    id,
+    name: id,
+    shortDescription: { text: id },
+  }));
+  return (
+    JSON.stringify(
+      {
+        $schema: "https://json.schemastore.org/sarif-2.1.0.json",
+        version: "2.1.0",
+        runs: [
+          {
+            tool: {
+              driver: {
+                name: "agentmd",
+                informationUri: "https://github.com/razroo/iso/tree/main/packages/agentmd",
+                rules,
+              },
+            },
+            results,
+          },
+        ],
+      },
+      null,
+      2,
+    ) + "\n"
+  );
+}
 
 function renderLint(outcomes: LintOutcome[], format: LintFormat): string {
+  if (format === "sarif") return renderSARIF(outcomes);
   if (format === "json") {
     const payload = outcomes.map((o) => ({
       file: o.displayPath,
@@ -513,9 +583,14 @@ async function main() {
       process.exit(2);
     }
     const formatFlag = typeof flags.format === "string" ? flags.format : "text";
-    if (formatFlag !== "text" && formatFlag !== "json" && formatFlag !== "github") {
+    if (
+      formatFlag !== "text" &&
+      formatFlag !== "json" &&
+      formatFlag !== "github" &&
+      formatFlag !== "sarif"
+    ) {
       process.stderr.write(
-        `unknown --format value: ${formatFlag} (expected 'text', 'json', or 'github')\n`,
+        `unknown --format value: ${formatFlag} (expected 'text', 'json', 'github', or 'sarif')\n`,
       );
       process.exit(2);
     }
