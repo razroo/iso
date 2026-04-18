@@ -18,11 +18,12 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/razroo/agentmd.git"
+    "url": "git+https://github.com/razroo/iso.git",
+    "directory": "packages/agentmd"
   },
-  "homepage": "https://github.com/razroo/agentmd#readme",
+  "homepage": "https://github.com/razroo/iso/tree/main/packages/agentmd#readme",
   "bugs": {
-    "url": "https://github.com/razroo/agentmd/issues"
+    "url": "https://github.com/razroo/iso/issues"
   },
   "keywords": [
     "agent",

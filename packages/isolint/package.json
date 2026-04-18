@@ -22,11 +22,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/razroo/isolint.git"
+    "url": "git+https://github.com/razroo/iso.git",
+    "directory": "packages/isolint"
   },
-  "homepage": "https://github.com/razroo/isolint#readme",
+  "homepage": "https://github.com/razroo/iso/tree/main/packages/isolint#readme",
   "bugs": {
-    "url": "https://github.com/razroo/isolint/issues"
+    "url": "https://github.com/razroo/iso/issues"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",

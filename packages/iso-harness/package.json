@@ -30,12 +30,13 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/razroo/iso-harness.git"
+    "url": "git+https://github.com/razroo/iso.git",
+    "directory": "packages/iso-harness"
   },
   "bugs": {
-    "url": "https://github.com/razroo/iso-harness/issues"
+    "url": "https://github.com/razroo/iso/issues"
   },
-  "homepage": "https://github.com/razroo/iso-harness#readme",
+  "homepage": "https://github.com/razroo/iso/tree/main/packages/iso-harness#readme",
   "author": "Razroo",
   "license": "MIT",
   "engines": {
