@@ -1,0 +1,22 @@
+suite: echo-basic
+runner: fake
+timeoutMs: 10000
+
+tasks:
+  - id: write-greeting
+    prompt: tasks/write-greeting.md
+    workspace: workspace/
+    trials: 1
+    checks:
+      - { type: file_exists, path: greeting.txt }
+      - { type: file_contains, path: greeting.txt, value: "hello from fake" }
+      - { type: file_not_contains, path: greeting.txt, value: "TODO" }
+
+  - id: command-echoes
+    prompt: |
+      Print the string "ok" to stdout.
+
+      $ echo ok
+    workspace: workspace/
+    checks:
+      - { type: command, run: "true", expectExit: 0 }

@@ -81,6 +81,9 @@ jobs:
       - name: iso wrapper dogfood integration
         run: npm run test:dogfood
 
+      - name: iso-eval example suite
+        run: node packages/iso-eval/dist/cli.js run packages/iso-eval/examples/suites/echo-basic/eval.yml
+
       - name: packaged tarball smoke
         run: npm run test:pack
 

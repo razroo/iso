@@ -69,6 +69,7 @@ try {
   // Ensure TypeScript package tarballs include fresh dist output.
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/agentmd']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/isolint']);
+  run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-eval']);
 
   const packsDir = resolve(tmpRoot, 'packs');
   mkdirSync(packsDir, { recursive: true });
@@ -77,6 +78,7 @@ try {
   const isolintTgz = packWorkspace('@razroo/isolint', packsDir);
   const harnessTgz = packWorkspace('@razroo/iso-harness', packsDir);
   const isoTgz = packWorkspace('@razroo/iso', packsDir);
+  const isoEvalTgz = packWorkspace('@razroo/iso-eval', packsDir);
 
   // Smoke the packaged iso-harness CLI directly.
   const harnessDir = resolve(tmpRoot, 'iso-harness');
@@ -130,7 +132,20 @@ try {
     throw new Error('packaged iso build did not render compiled instructions as expected');
   }
 
-  console.log(`\npack smoke ok — verified packaged iso-harness and iso from ${tmpRoot}`);
+  // Smoke the packaged iso-eval CLI against the bundled example suite.
+  const isoEvalDir = resolve(tmpRoot, 'iso-eval');
+  mkdirSync(isoEvalDir, { recursive: true });
+  writePackageJson(isoEvalDir);
+  cpSync(
+    resolve(repoRoot, 'packages', 'iso-eval', 'examples', 'suites', 'echo-basic'),
+    resolve(isoEvalDir, 'echo-basic'),
+    { recursive: true },
+  );
+  run('npm', ['install', isoEvalTgz], isoEvalDir);
+  run('npx', ['--no-install', 'iso-eval', '--version'], isoEvalDir);
+  run('npx', ['--no-install', 'iso-eval', 'run', 'echo-basic/eval.yml'], isoEvalDir);
+
+  console.log(`\npack smoke ok — verified packaged iso-harness, iso, and iso-eval from ${tmpRoot}`);
 } catch (err) {
   failed = true;
   console.error(`\npack smoke failed — temp data kept at ${tmpRoot}`);
