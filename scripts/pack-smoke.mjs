@@ -70,6 +70,7 @@ try {
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/agentmd']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/isolint']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-eval']);
+  run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-trace']);
 
   const packsDir = resolve(tmpRoot, 'packs');
   mkdirSync(packsDir, { recursive: true });
@@ -79,6 +80,7 @@ try {
   const harnessTgz = packWorkspace('@razroo/iso-harness', packsDir);
   const isoTgz = packWorkspace('@razroo/iso', packsDir);
   const isoEvalTgz = packWorkspace('@razroo/iso-eval', packsDir);
+  const isoTraceTgz = packWorkspace('@razroo/iso-trace', packsDir);
 
   // Smoke the packaged iso-harness CLI directly.
   const harnessDir = resolve(tmpRoot, 'iso-harness');
@@ -145,7 +147,23 @@ try {
   run('npx', ['--no-install', 'iso-eval', '--version'], isoEvalDir);
   run('npx', ['--no-install', 'iso-eval', 'run', 'echo-basic/eval.yml'], isoEvalDir);
 
-  console.log(`\npack smoke ok — verified packaged iso-harness, iso, and iso-eval from ${tmpRoot}`);
+  // Smoke the packaged iso-trace CLI against the bundled example transcript.
+  const isoTraceDir = resolve(tmpRoot, 'iso-trace');
+  mkdirSync(isoTraceDir, { recursive: true });
+  writePackageJson(isoTraceDir);
+  run('npm', ['install', isoTraceTgz], isoTraceDir);
+  run('npx', ['--no-install', 'iso-trace', '--version'], isoTraceDir);
+  const fixturePath = resolve(
+    isoTraceDir,
+    'node_modules',
+    '@razroo',
+    'iso-trace',
+    'examples',
+    'sample-session.jsonl',
+  );
+  run('npx', ['--no-install', 'iso-trace', 'stats', '--source', fixturePath], isoTraceDir);
+
+  console.log(`\npack smoke ok — verified packaged iso-harness, iso, iso-eval, and iso-trace from ${tmpRoot}`);
 } catch (err) {
   failed = true;
   console.error(`\npack smoke failed — temp data kept at ${tmpRoot}`);

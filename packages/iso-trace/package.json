@@ -1,0 +1,62 @@
+{
+  "name": "@razroo/iso-trace",
+  "version": "0.1.0",
+  "description": "Parse, normalize, and query AI coding agent transcripts — Claude Code JSONL sessions first, Codex and OpenCode additive. Local-only; never uploads.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "iso-trace": "dist/cli.js"
+  },
+  "files": [
+    "dist/**/*.js",
+    "dist/**/*.d.ts",
+    "examples",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rm -rf dist",
+    "dev": "tsc -p tsconfig.json --watch",
+    "test": "node --test --import tsx tests/*.test.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "example": "tsx src/cli.ts stats --source examples/sample-session.jsonl",
+    "ci": "npm run typecheck && npm test",
+    "prepublishOnly": "npm run clean && npm run build && npm test"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.2"
+  },
+  "engines": {
+    "node": ">=20.6.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/razroo/iso.git",
+    "directory": "packages/iso-trace"
+  },
+  "homepage": "https://github.com/razroo/iso/tree/main/packages/iso-trace#readme",
+  "bugs": {
+    "url": "https://github.com/razroo/iso/issues"
+  },
+  "keywords": [
+    "ai",
+    "agent",
+    "observability",
+    "claude-code",
+    "codex",
+    "opencode",
+    "transcripts",
+    "trace",
+    "telemetry",
+    "jsonl"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}

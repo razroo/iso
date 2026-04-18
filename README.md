@@ -24,9 +24,11 @@ Today, writing agent instructions is fragmented on two axes:
    until the agent misbehaves in production.
 
 Three core packages compose into a build pipeline that fixes both,
-[`@razroo/iso`](./packages/iso) runs the whole chain as one command, and
+[`@razroo/iso`](./packages/iso) runs the whole chain as one command,
 [`@razroo/iso-eval`](./packages/iso-eval) scores whether the resulting
-agent actually completes real tasks:
+agent actually completes real tasks, and
+[`@razroo/iso-trace`](./packages/iso-trace) parses production transcripts
+so you can see what your agent *really* does in the wild:
 
 ```
    authored source              structural dialect             portable prose             fan-out to harnesses           behavioral eval
@@ -93,6 +95,14 @@ project that exercises the wrapper end-to-end.
   deterministic `fake` runner for CI smoke; real-agent runners plug in
   via the library `RunnerFn` interface.
 
+- **[`packages/iso-trace`](./packages/iso-trace)** — [`@razroo/iso-trace`](https://www.npmjs.com/package/@razroo/iso-trace)
+  Local observability for real agent transcripts. Parses Claude Code
+  JSONL sessions (Codex / OpenCode additive) into a harness-agnostic
+  event model so you can ask "which rules ever actually fired?", "which
+  tools does my agent reach for most?", and "which captured sessions
+  would make good regression fixtures?" Zero upload — everything is
+  local reads and user-controlled output.
+
 Each package is independently published on npm and works on its own.
 They're in one repo because they're designed to compose.
 
@@ -107,7 +117,8 @@ iso/
     ├── isolint/          # portable prose
     ├── iso-harness/      # one source, every harness
     ├── iso/              # one command for the whole pipeline
-    └── iso-eval/         # behavioral eval on the produced harness
+    ├── iso-eval/         # behavioral eval on the produced harness
+    └── iso-trace/        # parse + query real agent transcripts (observability)
 ```
 
 ## Build & test
@@ -120,7 +131,8 @@ npm run typecheck           # typecheck every package
 npm run test:dogfood        # wrapper-level local dogfood project
 npm run test:pack           # pack local tarballs and smoke installed CLIs
 npm run test:pipeline       # end-to-end demo (agentmd → isolint → iso-harness)
-npm --workspace @razroo/iso-eval run example   # iso-eval against the bundled example suite
+npm --workspace @razroo/iso-eval  run example   # iso-eval against the bundled example suite
+npm --workspace @razroo/iso-trace run example   # iso-trace stats on the bundled sample transcript
 
 # Target a single package
 npm run build --workspace @razroo/isolint
@@ -170,8 +182,8 @@ downstream repo would use.
 
 `npm run test:pack` goes one level further: it packs the local workspaces into
 tarballs, installs them into fresh temp projects, and smoke-tests the packaged
-`iso-harness`, `iso`, and `iso-eval` CLIs. This guards against packaging
-regressions that workspace-only tests can miss.
+`iso-harness`, `iso`, `iso-eval`, and `iso-trace` CLIs. This guards against
+packaging regressions that workspace-only tests can miss.
 
 [`packages/iso-eval/examples/suites/echo-basic/`](./packages/iso-eval/examples/suites/echo-basic)
 is a runnable eval suite for the downstream side: a baseline workspace, a

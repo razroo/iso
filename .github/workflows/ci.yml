@@ -84,6 +84,9 @@ jobs:
       - name: iso-eval example suite
         run: node packages/iso-eval/dist/cli.js run packages/iso-eval/examples/suites/echo-basic/eval.yml
 
+      - name: iso-trace example stats
+        run: node packages/iso-trace/dist/cli.js stats --source packages/iso-trace/examples/sample-session.jsonl
+
       - name: packaged tarball smoke
         run: npm run test:pack
 
