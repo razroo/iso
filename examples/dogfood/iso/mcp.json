@@ -1,0 +1,11 @@
+{
+  "servers": {
+    "example": {
+      "command": "npx",
+      "args": ["-y", "@example/mcp"],
+      "env": {
+        "EXAMPLE_MODE": "dogfood"
+      }
+    }
+  }
+}

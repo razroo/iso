@@ -61,6 +61,10 @@ iso plan .                        # print the planned steps without executing
 is present, the wrapper still refreshes `iso/instructions.md` before the
 dry-run fan-out.
 
+This repo includes [`examples/dogfood/`](../../examples/dogfood) as a local
+project that exercises the wrapper against a real `agent.md` + `iso/` source
+tree.
+
 ## Library API
 
 ```js

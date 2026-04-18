@@ -87,6 +87,7 @@ npm install                 # install all workspace deps
 npm run build               # build every package
 npm run test                # run every package's tests
 npm run typecheck           # typecheck every package
+npm run test:dogfood        # wrapper-level local dogfood project
 npm run test:pipeline       # end-to-end demo (agentmd → isolint → iso-harness)
 
 # Target a single package
@@ -128,3 +129,9 @@ rendered, prose-linted, and fanned out into the 11 files each coding-agent
 harness expects. Run `npm run test:pipeline` to exercise the core pipeline,
 or use `@razroo/iso` in your own project when you want the same chain behind
 one CLI.
+
+[`examples/dogfood/`](./examples/dogfood) is a local dogfood project for the
+wrapper CLI itself. It starts from `agent.md` + `iso/` source and runs the
+repo's local `packages/iso/bin/iso.mjs` entrypoint to produce the full harness
+fan-out. Run `npm run test:dogfood` to exercise the same wrapper path a
+downstream repo would use.
