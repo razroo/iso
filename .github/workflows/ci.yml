@@ -1,0 +1,107 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  isolint-compat:
+    name: isolint compat (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ["18.17", "20", "22"]
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run typecheck --workspace @razroo/isolint
+
+      - run: npm test --workspace @razroo/isolint
+
+      - run: npm run build --workspace @razroo/isolint
+
+  build-test-lint:
+    name: build-test-lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run typecheck --workspaces --if-present
+
+      - run: npm run test --workspaces --if-present
+
+      - run: npm run build --workspaces --if-present
+
+      - name: agentmd lint (examples)
+        working-directory: packages/agentmd
+        run: |
+          node dist/cli.js lint examples/outreach-writer.md
+          node dist/cli.js lint examples/minimal.md
+
+      - name: isolint lint (SARIF)
+        working-directory: packages/isolint
+        run: node dist/cli/index.js lint . --format sarif --fail-on warn > isolint.sarif
+        continue-on-error: true
+
+      - name: Upload SARIF to GitHub code scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: packages/isolint/isolint.sarif
+          category: isolint
+
+      - name: isolint lint (enforce)
+        working-directory: packages/isolint
+        run: node dist/cli/index.js lint . --fail-on error
+
+      - name: Pipeline integration (agentmd → isolint → iso-harness)
+        run: node examples/pipeline/build.mjs
+
+      - name: iso-harness smoke build
+        working-directory: packages/iso-harness
+        run: npm run smoke
+
+      - name: Verify iso-harness expected output files exist
+        run: |
+          set -e
+          OUT=/tmp/iso-harness-smoke
+          for f in \
+            "$OUT/CLAUDE.md" \
+            "$OUT/.claude/agents/researcher.md" \
+            "$OUT/.claude/commands/review.md" \
+            "$OUT/.mcp.json" \
+            "$OUT/.cursor/rules/main.mdc" \
+            "$OUT/.cursor/mcp.json" \
+            "$OUT/AGENTS.md" \
+            "$OUT/.codex/config.toml" \
+            "$OUT/opencode.json" \
+            "$OUT/.opencode/agents/researcher.md" \
+            "$OUT/.opencode/skills/review.md"
+          do
+            if [ ! -f "$f" ]; then
+              echo "::error::missing expected output: $f"
+              exit 1
+            fi
+          done
+          echo "All 11 expected output files present."

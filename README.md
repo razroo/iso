@@ -80,8 +80,17 @@ npm install                 # install all workspace deps
 npm run build               # build every package
 npm run test                # run every package's tests
 npm run typecheck           # typecheck every package
+npm run test:pipeline       # end-to-end demo (agentmd → isolint → iso-harness)
 
 # Target a single package
 npm run build --workspace @razroo/isolint
 npm run test  --workspace @razroo/agentmd
 ```
+
+## End-to-end example
+
+[`examples/pipeline/`](./examples/pipeline) is an executable demonstration
+of the composed pipeline: one authored `agent.md` is structurally linted,
+rendered, prose-linted, and fanned out into the 11 files each coding-agent
+harness expects. Run `npm run test:pipeline` to exercise all three packages
+against a single source.

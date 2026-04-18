@@ -48,7 +48,7 @@
     "test": "node --test --import tsx tests/*.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint:examples": "tsx src/cli.ts lint examples/outreach-writer.md && tsx src/cli.ts lint examples/minimal.md",
-    "lint:isolint": "sh -c 'if command -v isolint >/dev/null 2>&1; then tsx src/cli.ts render examples/outreach-writer.md | isolint lint - && tsx src/cli.ts render examples/minimal.md | isolint lint -; else echo \"isolint not installed — skipping prose lint (install from https://github.com/razroo/isolint to enable)\"; fi'",
+    "lint:isolint": "npm --silent run build --workspace @razroo/isolint && mkdir -p .render && tsx src/cli.ts render examples/outreach-writer.md --out .render/outreach-writer.md && node ../isolint/dist/cli/index.js lint .render/outreach-writer.md && tsx src/cli.ts render examples/minimal.md --out .render/minimal.md && node ../isolint/dist/cli/index.js lint .render/minimal.md",
     "ci": "npm run typecheck && npm test && npm run lint:examples && npm run lint:isolint",
     "prepublishOnly": "npm run clean && npm run build && npm test"
   },
