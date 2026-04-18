@@ -5,7 +5,9 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
-const CLI = resolve(import.meta.dirname, "..", "dist", "cli.js");
+// Run the CLI from source via tsx so the tests don't depend on a prior
+// `npm run build`. The release workflow runs `npm test` before building.
+const CLI_SRC = resolve(import.meta.dirname, "..", "src", "cli.ts");
 
 function mktmp(): string {
   return mkdtempSync(join(tmpdir(), "agentmd-cli-test-"));
@@ -20,10 +22,11 @@ function writeAgent(path: string, opts: { dupHeading?: boolean; missingProcedure
 }
 
 function runCli(args: string[], stdin?: string) {
-  return spawnSync(process.execPath, [CLI, ...args], {
-    input: stdin,
-    encoding: "utf8",
-  });
+  return spawnSync(
+    process.execPath,
+    ["--import", "tsx", CLI_SRC, ...args],
+    { input: stdin, encoding: "utf8" },
+  );
 }
 
 test("lint: accepts multiple files and aggregates results", () => {
