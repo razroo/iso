@@ -18,25 +18,32 @@ const IMPERATIVE_VERBS = new Set([
 export function lint(doc: Doc): Diagnostic[] {
   const diags: Diagnostic[] = [];
 
-  // L9: required sections
+  // Parser-level oddities flagged during parsing (e.g., duplicate # Agent:)
+  if (doc.parseDiagnostics) {
+    for (const d of doc.parseDiagnostics) diags.push(d);
+  }
+
+  // L9a: agent heading required
   if (!doc.agent) {
     diags.push({
-      code: "L9",
+      code: "L9a",
       severity: "error",
       message: `Missing "# Agent: <name>" heading at the top of the file`,
       line: 1,
     });
   }
+  // L9b: procedure required
   if (!doc.procedure.length) {
     diags.push({
-      code: "L9",
+      code: "L9b",
       severity: "error",
       message: `Missing "## Procedure" section with at least one step`,
     });
   }
+  // L9c: at least one rule recommended
   if (!doc.hardLimits.length && !doc.defaults.length) {
     diags.push({
-      code: "L9",
+      code: "L9c",
       severity: "warning",
       message: `No rules defined — add a "## Hard limits" or "## Defaults" section`,
     });
@@ -65,16 +72,25 @@ export function lint(doc: Doc): Diagnostic[] {
     }
   }
 
-  // L3: duplicate IDs
-  const idCounts = new Map<string, number>();
-  for (const r of allRules) idCounts.set(r.id, (idCounts.get(r.id) ?? 0) + 1);
-  for (const [id, count] of idCounts) {
-    if (count > 1) {
-      diags.push({
-        code: "L3",
-        severity: "error",
-        message: `Duplicate rule ID [${id}] — each rule must have a unique ID`,
-      });
+  // L3: duplicate IDs — point at every occurrence after the first so each
+  // offender is fixable in the editor instead of having to grep.
+  const idOccurrences = new Map<string, number[]>();
+  for (const r of allRules) {
+    const list = idOccurrences.get(r.id) ?? [];
+    list.push(r.line);
+    idOccurrences.set(r.id, list);
+  }
+  for (const [id, lines] of idOccurrences) {
+    if (lines.length > 1) {
+      const firstLine = lines[0];
+      for (const line of lines.slice(1)) {
+        diags.push({
+          code: "L3",
+          severity: "error",
+          message: `Duplicate rule ID [${id}] — first defined at line ${firstLine}; each rule must have a unique ID`,
+          line,
+        });
+      }
     }
   }
 

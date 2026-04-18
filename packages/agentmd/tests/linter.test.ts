@@ -20,19 +20,28 @@ test("L3: duplicate ID across scopes", () => {
 ## Hard limits
 
 - [H1] one thing
-  why: because
+  why: because enough words
 
 ## Defaults
 
 - [H1] another thing
-  why: because
+  why: because enough words
 
 ## Procedure
 
 1. step one
 `;
   const d = lintSource(src);
-  assert.ok(d.some((x) => x.code === "L3"), "expected L3 duplicate-ID diagnostic");
+  const dupes = d.filter((x) => x.code === "L3");
+  assert.equal(dupes.length, 1, "expected one L3 diagnostic at the duplicate site");
+  assert.ok(dupes[0].line && dupes[0].line > 1, "L3 diagnostic must include a line number");
+  assert.match(dupes[0].message, /first defined at line \d+/);
+});
+
+test("L12: duplicate # Agent: heading surfaces through the linter", () => {
+  const src = `# Agent: a\n# Agent: b\n\n## Hard limits\n\n- [H1] rule\n  why: enough words here ok\n\n## Procedure\n\n1. do [H1]\n`;
+  const d = lintSource(src);
+  assert.ok(d.some((x) => x.code === "L12"), "expected L12 diagnostic from parseDiagnostics");
 });
 
 test("L4: reference to undefined rule", () => {
@@ -131,14 +140,14 @@ test("L8: routing with fallback row passes", () => {
   assert.ok(!d.some((x) => x.code === "L8"));
 });
 
-test("L9: missing Agent heading", () => {
+test("L9a: missing Agent heading", () => {
   const d = lintSource(`## Hard limits\n\n- [H1] x\n  why: y\n\n## Procedure\n\n1. step\n`);
-  assert.ok(d.some((x) => x.code === "L9" && x.severity === "error"));
+  assert.ok(d.some((x) => x.code === "L9a" && x.severity === "error"));
 });
 
-test("L9: missing Procedure", () => {
+test("L9b: missing Procedure", () => {
   const d = lintSource(`# Agent: x\n\n## Hard limits\n\n- [H1] y\n  why: z\n`);
-  assert.ok(d.some((x) => x.code === "L9" && /Procedure/.test(x.message)));
+  assert.ok(d.some((x) => x.code === "L9b" && /Procedure/.test(x.message)));
 });
 
 test("clean file emits no errors", () => {

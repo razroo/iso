@@ -1,5 +1,12 @@
 #!/usr/bin/env node
-import { existsSync, mkdirSync, readFileSync, watch, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  globSync,
+  mkdirSync,
+  readFileSync,
+  watch,
+  writeFileSync,
+} from "node:fs";
 import { basename, dirname, resolve } from "node:path";
 import { loadDotEnv } from "./env.js";
 import { parse } from "./parser.js";
@@ -19,17 +26,20 @@ import { makeClaudeCodeAgent, makeClaudeCodeJudge } from "./claude-code.js";
 import { diffPrompts, formatDiff } from "./diff.js";
 import { formatHistory, loadHistory } from "./history.js";
 import type { AgentFn, JudgeFn } from "./anthropic.js";
-import type { Backend, RunMeta } from "./types.js";
+import type { Backend, Diagnostic, RunMeta } from "./types.js";
 import type { ProgressFn, RunResult } from "./runner.js";
 
 const USAGE = `agentmd — structured markdown linter and adherence tester for agent prompts
 
 usage:
-  agentmd lint <file> [--watch]
-  agentmd render <file> [--out <path>]
+  agentmd --version | -v
+  agentmd lint <file|glob ...> [--format <text|json|github>] [--watch]
+  agentmd lint - [--format <text|json|github>]     # read stdin
+  agentmd render <file|-> [--out <path>]
   agentmd test <file> --fixtures <path>
                       [--via <api|claude-code>] [--model <id>]
                       [--temperature <n>] [--concurrency <n>] [--trials <n>]
+                      [--timeout <ms>]
                       [--rule <ID>] [--fail-under <pct>]
                       [--format <text|json>] [--out <path>]
                       [--baseline <path>] [--list]
@@ -120,7 +130,13 @@ function parseArgs(argv: string[]): Argv {
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a.startsWith("--")) {
-      const key = a.slice(2);
+      const body = a.slice(2);
+      const eq = body.indexOf("=");
+      if (eq !== -1) {
+        flags[body.slice(0, eq)] = body.slice(eq + 1);
+        continue;
+      }
+      const key = body;
       const next = argv[i + 1];
       if (!next || next.startsWith("--")) {
         flags[key] = true;
@@ -140,29 +156,144 @@ function loadDoc(path: string) {
   return parse(source, path);
 }
 
-function runLintOnce(file: string): number {
-  const abs = resolve(file);
-  let doc;
+function readStdinSync(): string {
+  // Node 22's readFileSync supports fd 0 on POSIX; on some shells it returns "".
   try {
-    doc = loadDoc(abs);
+    return readFileSync(0, "utf8");
   } catch (err) {
-    process.stdout.write(`error: ${err instanceof Error ? err.message : String(err)}\n`);
-    return 1;
+    throw new Error(
+      `failed to read stdin: ${err instanceof Error ? err.message : String(err)}`,
+    );
   }
-  const diags = lint(doc);
-  if (!diags.length) {
-    process.stdout.write(`${file}: ok (0 diagnostics)\n`);
-    return 0;
+}
+
+function expandLintTargets(patterns: string[]): string[] {
+  const out = new Set<string>();
+  for (const p of patterns) {
+    if (p === "-") {
+      out.add("-");
+      continue;
+    }
+    // A literal path that exists short-circuits any glob interpretation, so
+    // files named like "a[b].md" don't silently resolve to nothing.
+    if (existsSync(p)) {
+      out.add(p);
+      continue;
+    }
+    const matches = globSync(p);
+    if (matches.length === 0) {
+      // Preserve the user-provided pattern so the caller gets a clear
+      // "file not found" instead of silently skipping a typo.
+      out.add(p);
+      continue;
+    }
+    for (const m of matches) out.add(m);
   }
-  let errors = 0;
-  for (const d of diags) {
-    if (d.severity === "error") errors++;
-    process.stdout.write(formatDiagnostic(d, file) + "\n");
+  return [...out];
+}
+
+interface LintOutcome {
+  displayPath: string;
+  diagnostics: Diagnostic[];
+  errorCount: number;
+  parseError?: string;
+}
+
+function lintOne(target: string): LintOutcome {
+  let source: string;
+  let displayPath: string;
+  if (target === "-") {
+    displayPath = "<stdin>";
+    try {
+      source = readStdinSync();
+    } catch (err) {
+      return {
+        displayPath,
+        diagnostics: [],
+        errorCount: 1,
+        parseError: err instanceof Error ? err.message : String(err),
+      };
+    }
+  } else {
+    displayPath = target;
+    try {
+      source = readFileSync(resolve(target), "utf8");
+    } catch (err) {
+      return {
+        displayPath,
+        diagnostics: [],
+        errorCount: 1,
+        parseError: err instanceof Error ? err.message : String(err),
+      };
+    }
   }
-  process.stdout.write(
-    `\n${diags.length} diagnostic${diags.length === 1 ? "" : "s"} (${errors} error${errors === 1 ? "" : "s"})\n`,
-  );
-  return errors > 0 ? 1 : 0;
+  const doc = parse(source, displayPath);
+  const diagnostics = lint(doc);
+  const errorCount = diagnostics.filter((d) => d.severity === "error").length;
+  return { displayPath, diagnostics, errorCount };
+}
+
+type LintFormat = "text" | "json" | "github";
+
+function renderLint(outcomes: LintOutcome[], format: LintFormat): string {
+  if (format === "json") {
+    const payload = outcomes.map((o) => ({
+      file: o.displayPath,
+      parseError: o.parseError ?? null,
+      diagnostics: o.diagnostics,
+    }));
+    return JSON.stringify(payload, null, 2) + "\n";
+  }
+  if (format === "github") {
+    const lines: string[] = [];
+    for (const o of outcomes) {
+      if (o.parseError) {
+        lines.push(`::error file=${o.displayPath}::${o.parseError}`);
+        continue;
+      }
+      for (const d of o.diagnostics) {
+        const sev = d.severity === "error" ? "error" : d.severity === "warning" ? "warning" : "notice";
+        const linePart = d.line ? `,line=${d.line}` : "";
+        lines.push(
+          `::${sev} file=${o.displayPath}${linePart},title=${d.code}::${d.message.replace(/\n/g, " ")}`,
+        );
+      }
+    }
+    return lines.join("\n") + (lines.length ? "\n" : "");
+  }
+  // text
+  const parts: string[] = [];
+  let totalDiags = 0;
+  let totalErrors = 0;
+  for (const o of outcomes) {
+    if (o.parseError) {
+      parts.push(`${o.displayPath}: error — ${o.parseError}`);
+      totalErrors++;
+      continue;
+    }
+    if (!o.diagnostics.length) {
+      parts.push(`${o.displayPath}: ok (0 diagnostics)`);
+      continue;
+    }
+    for (const d of o.diagnostics) {
+      parts.push(formatDiagnostic(d, o.displayPath));
+    }
+    totalDiags += o.diagnostics.length;
+    totalErrors += o.errorCount;
+  }
+  if (outcomes.length > 1 || totalDiags > 0) {
+    parts.push(
+      `\n${totalDiags} diagnostic${totalDiags === 1 ? "" : "s"} across ${outcomes.length} file${outcomes.length === 1 ? "" : "s"} (${totalErrors} error${totalErrors === 1 ? "" : "s"})`,
+    );
+  }
+  return parts.join("\n") + "\n";
+}
+
+function runLintOnce(targets: string[], format: LintFormat = "text"): number {
+  const outcomes = targets.map((t) => lintOne(t));
+  process.stdout.write(renderLint(outcomes, format));
+  const hasErrors = outcomes.some((o) => o.errorCount > 0 || o.parseError);
+  return hasErrors ? 1 : 0;
 }
 
 interface TestOnceOptions {
@@ -179,6 +310,7 @@ interface TestOnceOptions {
   baselinePath: string | null;
   list: boolean;
   progress: boolean;
+  timeoutMs: number | null;
 }
 
 function loadBaseline(path: string): RunResult | null {
@@ -256,6 +388,7 @@ async function runTestOnce(
       concurrency: opts.concurrency,
       trials: opts.trials,
       ruleFilter: opts.ruleFilter ?? undefined,
+      timeoutMs: opts.timeoutMs ?? undefined,
       onCaseComplete: progress,
     });
   } catch (err) {
@@ -348,40 +481,73 @@ function scaffoldNew(name: string, dir: string): number {
   return 0;
 }
 
+function readVersion(): string {
+  try {
+    const pkg = JSON.parse(
+      readFileSync(resolve(import.meta.dirname, "..", "package.json"), "utf8"),
+    );
+    return typeof pkg.version === "string" ? pkg.version : "0.0.0";
+  } catch {
+    return "0.0.0";
+  }
+}
+
 async function main() {
   const [, , cmd, ...rest] = process.argv;
   if (!cmd || cmd === "-h" || cmd === "--help" || cmd === "help") {
     process.stdout.write(USAGE);
     return;
   }
+  if (cmd === "--version" || cmd === "-v" || cmd === "version") {
+    process.stdout.write(`agentmd ${readVersion()}\n`);
+    return;
+  }
   loadDotEnv();
   const { positional, flags } = parseArgs(rest);
 
   if (cmd === "lint") {
-    const file = positional[0];
-    if (!file) {
-      process.stderr.write(`usage: agentmd lint <file> [--watch]\n`);
+    if (!positional.length) {
+      process.stderr.write(
+        `usage: agentmd lint <file|glob ...> [--format text|json|github] [--watch]\n`,
+      );
       process.exit(2);
     }
+    const formatFlag = typeof flags.format === "string" ? flags.format : "text";
+    if (formatFlag !== "text" && formatFlag !== "json" && formatFlag !== "github") {
+      process.stderr.write(
+        `unknown --format value: ${formatFlag} (expected 'text', 'json', or 'github')\n`,
+      );
+      process.exit(2);
+    }
+    const targets = expandLintTargets(positional);
+    const format = formatFlag as LintFormat;
     if (flags.watch === true) {
-      runLintOnce(file);
-      watchFiles([file], () => {
+      if (targets.includes("-")) {
+        process.stderr.write(`--watch cannot be combined with stdin input\n`);
+        process.exit(2);
+      }
+      runLintOnce(targets, format);
+      watchFiles(targets, () => {
         process.stdout.write(`\n--- change detected, re-linting ---\n`);
-        runLintOnce(file);
+        runLintOnce(targets, format);
       });
       return;
     }
-    process.exit(runLintOnce(file));
+    process.exit(runLintOnce(targets, format));
   }
 
   if (cmd === "render") {
     const file = positional[0];
     if (!file) {
-      process.stderr.write(`usage: agentmd render <file> [--out <path>]\n`);
+      process.stderr.write(`usage: agentmd render <file|-> [--out <path>]\n`);
       process.exit(2);
     }
-    const abs = resolve(file);
-    const doc = loadDoc(abs);
+    let doc;
+    if (file === "-") {
+      doc = parse(readStdinSync(), "<stdin>");
+    } else {
+      doc = loadDoc(resolve(file));
+    }
     const out = render(doc);
     const outPath = typeof flags.out === "string" ? flags.out : null;
     if (outPath) {
@@ -439,6 +605,16 @@ async function main() {
         process.exit(2);
       }
       trials = Math.floor(n);
+    }
+
+    let timeoutMs: number | null = null;
+    if (typeof flags.timeout === "string") {
+      const n = Number(flags.timeout);
+      if (!Number.isFinite(n) || n <= 0) {
+        process.stderr.write(`invalid --timeout value: ${flags.timeout} (expect positive ms)\n`);
+        process.exit(2);
+      }
+      timeoutMs = Math.floor(n);
     }
 
     const ruleFilter = typeof flags.rule === "string" ? flags.rule : null;
@@ -505,6 +681,7 @@ async function main() {
       baselinePath,
       list,
       progress,
+      timeoutMs,
     };
 
     if (flags.watch === true) {

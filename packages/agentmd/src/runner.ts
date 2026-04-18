@@ -43,7 +43,27 @@ export interface RunOptions {
   concurrency?: number;
   trials?: number;
   ruleFilter?: string;
+  timeoutMs?: number;
   onCaseComplete?: ProgressFn;
+}
+
+function withTimeout<T>(p: Promise<T>, ms: number | undefined, label: string): Promise<T> {
+  if (!ms || ms <= 0) return p;
+  return new Promise<T>((resolve, reject) => {
+    const t = setTimeout(() => {
+      reject(new Error(`${label} exceeded ${ms}ms timeout`));
+    }, ms);
+    p.then(
+      (v) => {
+        clearTimeout(t);
+        resolve(v);
+      },
+      (err) => {
+        clearTimeout(t);
+        reject(err);
+      },
+    );
+  });
 }
 
 function fillMeta(partial: Partial<RunMeta> | undefined): RunMeta {
@@ -60,6 +80,18 @@ export function validateFixturesAgainstDoc(doc: Doc, fixtures: Fixtures): void {
   if (fixtures.agent && fixtures.agent !== doc.agent) {
     throw new Error(
       `Fixtures target agent "${fixtures.agent}" but the prompt defines agent "${doc.agent}". Update the fixture's "agent:" field or point at the right prompt file.`,
+    );
+  }
+  const seen = new Set<string>();
+  const dupes = new Set<string>();
+  for (const c of fixtures.cases) {
+    if (seen.has(c.name)) dupes.add(c.name);
+    else seen.add(c.name);
+  }
+  if (dupes.size) {
+    const list = [...dupes].map((n) => `  - "${n}"`).join("\n");
+    throw new Error(
+      `Fixture has duplicate case name(s) — each case must have a unique "name:" so reports aren't ambiguous:\n${list}`,
     );
   }
   const definedIds = new Set<string>();
@@ -95,14 +127,22 @@ async function runOneCaseWithTrials(
   agent: AgentFn,
   judge: JudgeFn | undefined,
   trials: number,
+  timeoutMs: number | undefined,
 ): Promise<CaseResult> {
   const userInput = formatInput(c.input);
   const trialResults: CaseTrial[] = [];
+  const wrappedJudge: JudgeFn | undefined = judge
+    ? (p, o) => withTimeout(judge(p, o), timeoutMs, `judge for case "${c.name}"`)
+    : undefined;
   for (let t = 0; t < trials; t++) {
-    const output = await agent(systemPrompt, userInput);
+    const output = await withTimeout(
+      agent(systemPrompt, userInput),
+      timeoutMs,
+      `agent for case "${c.name}" (trial ${t + 1}/${trials})`,
+    );
     const checks: CaseCheckResult[] = [];
     for (const exp of c.expectations) {
-      const r = await runCheck(exp, output, judge);
+      const r = await runCheck(exp, output, wrappedJudge);
       checks.push({
         rule: exp.rule,
         check: exp.check,
@@ -149,7 +189,14 @@ export async function run(
   const totalCases = effectiveFixtures.cases.length;
   let completed = 0;
   const cases = await runPool(effectiveFixtures.cases, concurrency, async (c) => {
-    const result = await runOneCaseWithTrials(systemPrompt, c, opts.agent, opts.judge, trials);
+    const result = await runOneCaseWithTrials(
+      systemPrompt,
+      c,
+      opts.agent,
+      opts.judge,
+      trials,
+      opts.timeoutMs,
+    );
     completed += 1;
     opts.onCaseComplete?.({
       caseIndex: completed,

@@ -256,12 +256,15 @@ guessing whether the changes helped.
 ## CLI
 
 ```
+agentmd --version | -v
 agentmd new <name> [--dir <path>]
-agentmd lint <file> [--watch]
-agentmd render <file> [--out <path>]
+agentmd lint <file|glob ...> [--format <text|json|github>] [--watch]
+agentmd lint -               [--format <text|json|github>]  # read stdin
+agentmd render <file|->      [--out <path>]
 agentmd test <file> --fixtures <path>
                     [--via <api|claude-code>] [--model <id>]
                     [--temperature <n>] [--concurrency <n>] [--trials <n>]
+                    [--timeout <ms>]
                     [--rule <ID>] [--fail-under <pct>]
                     [--format <text|json>] [--out <path>]
                     [--baseline <path>] [--list]
@@ -270,10 +273,16 @@ agentmd diff <old.md> <new.md>
 agentmd history <report.json>...
 ```
 
+Every `--flag <value>` also accepts the `--flag=value` form.
+
 - `new` — scaffold `<name>.md` + `fixtures/<name>.yml` as a starting point.
-- `lint` — structural checks (see below). Exits non-zero on errors.
+- `lint` — structural checks (see below). Accepts multiple files, shell globs,
+  or `-` to read from stdin. Exits non-zero if any file has errors. Machine
+  formats: `--format json` for CI integrations, `--format github` to emit
+  GitHub Actions workflow annotations.
 - `render` — emit the compiled prompt (what the model sees). `render` adds
   explicit "must never be violated" / "may be overridden…" scope labels.
+  Accepts `-` to read source from stdin.
 - `test` — run fixture cases through the compiled prompt and report per-rule
   adherence.
 - `diff` — structural diff of rule sets between two prompt files (added,
@@ -370,9 +379,12 @@ isn't on `PATH`).
 | L6 | warning | Procedure steps do one thing (no `" and "` / `" or "`) |
 | L7 | warning | Procedure steps stay short (≤ ~15 words) |
 | L8 | warning | Routing tables include a fallback row |
-| L9 | error/warning | Required sections present (Agent heading, Procedure, at least one rule) |
+| L9a | error | `# Agent: <name>` heading present |
+| L9b | error | `## Procedure` section present with at least one step |
+| L9c | warning | At least one `## Hard limits` or `## Defaults` rule defined |
 | L10 | warning | Every defined rule is referenced somewhere in Procedure or Routing |
 | L11 | warning | `why:` has at least ~5 words — rationale thinner than that can't guide edge cases |
+| L12 | warning | Only one `# Agent:` heading per file (duplicates are silently ignored by the parser) |
 
 Deliberately **not** checked: vague-word heuristics. They produce false
 positives on real prose and miss the actual bugs.
@@ -469,7 +481,7 @@ src/
   types.ts          AST shapes
   parser.ts         markdown → AST
   render.ts         AST → compiled prompt
-  linter.ts         structural checks (L1–L9)
+  linter.ts         structural checks (L1–L12)
   checks.ts         check functions
   fixtures.ts       YAML loader
   runner.ts         wires prompt + fixtures + agent

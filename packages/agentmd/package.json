@@ -1,6 +1,6 @@
 {
   "name": "@razroo/agentmd",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Agent prompts as structured markdown, with a linter for structure and a harness that scores per-rule adherence — so iteration produces numbers, not vibes.",
   "license": "MIT",
   "type": "module",

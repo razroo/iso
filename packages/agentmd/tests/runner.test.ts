@@ -246,3 +246,43 @@ test("report: flags rules with no fixture expectations", async () => {
   assert.match(report, /untested rules/);
   assert.match(report, /\[H2\]/);
 });
+
+test("runner: duplicate case names fail validation", async () => {
+  const doc = parse(DOC);
+  const agent = async () => "";
+  const fixtures: Fixtures = {
+    cases: [
+      { name: "dup", input: "i", expectations: [{ rule: "H1", check: "word_count_le", value: 5 }] },
+      { name: "dup", input: "j", expectations: [{ rule: "H1", check: "word_count_le", value: 5 }] },
+    ],
+  };
+  await assert.rejects(
+    () => run(doc, fixtures, { agent }),
+    /duplicate case name/i,
+  );
+});
+
+test("runner: per-call timeout kills a hung agent", async () => {
+  const doc = parse(DOC);
+  const hungAgent = () => new Promise<string>(() => { /* never resolves */ });
+  const fixtures: Fixtures = {
+    cases: [{ name: "hang", input: "i", expectations: [{ rule: "H1", check: "word_count_le", value: 5 }] }],
+  };
+  await assert.rejects(
+    () => run(doc, fixtures, { agent: hungAgent, timeoutMs: 50 }),
+    /timeout/i,
+  );
+});
+
+test("runner: timeout of 0 or undefined disables the limit", async () => {
+  const doc = parse(DOC);
+  const slowButFinite = async () => {
+    await new Promise((r) => setTimeout(r, 20));
+    return "ok";
+  };
+  const fixtures: Fixtures = {
+    cases: [{ name: "slow", input: "i", expectations: [{ rule: "H1", check: "word_count_le", value: 5 }] }],
+  };
+  const r = await run(doc, fixtures, { agent: slowButFinite });
+  assert.equal(r.cases.length, 1);
+});

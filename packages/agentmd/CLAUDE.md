@@ -27,7 +27,7 @@ src/
   types.ts          AST shapes
   parser.ts         markdown → AST (hand-rolled; no remark dep)
   render.ts         AST → compiled prompt (adds scope labels)
-  linter.ts         L1–L9 structural checks
+  linter.ts         L1–L13 structural checks
   checks.ts         word_count_le / does_not_contain / contains_all / regex / llm_judge
   fixtures.ts       YAML loader
   runner.ts         wires prompt + fixtures + agent (pluggable AgentFn / JudgeFn)
@@ -64,7 +64,7 @@ and needs `ANTHROPIC_API_KEY`.
 - **Structure, not words.** The linter deliberately does not check for
   vague words ("good", "nice") — that's cargo-cult. If you add a rule, it
   should catch a structural bug (missing rationale, dangling ref, missing
-  fallback row). See the list at L1–L9 in `src/linter.ts`.
+  fallback row). See the list at L1–L13 in `src/linter.ts`.
 - **Pluggable agent/judge.** `runner.ts` takes an `AgentFn` and optional
   `JudgeFn` so tests run offline against a fake. Don't import the Anthropic
   SDK or spawn `claude` from anywhere other than `src/anthropic.ts` /

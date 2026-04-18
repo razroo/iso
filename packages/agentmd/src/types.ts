@@ -29,9 +29,10 @@ export interface Doc {
   routing: RoutingRow[];
   context: { heading: string; body: string }[];
   sourcePath?: string;
+  parseDiagnostics?: Diagnostic[];
 }
 
-export type Severity = "error" | "warning";
+export type Severity = "error" | "warning" | "info";
 
 export interface Diagnostic {
   code: string;

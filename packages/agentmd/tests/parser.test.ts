@@ -2,6 +2,38 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { parse, extractIdReferences } from "../src/parser.js";
 
+test("parser strips UTF-8 BOM so the # Agent: heading still matches", () => {
+  const src = "\uFEFF# Agent: bomtest\n\n## Procedure\n\n1. step\n";
+  const doc = parse(src);
+  assert.equal(doc.agent, "bomtest");
+});
+
+test("parser normalizes CRLF line endings", () => {
+  const src = "# Agent: crlf\r\n\r\n## Hard limits\r\n\r\n- [H1] a rule\r\n  why: reasons here ok\r\n\r\n## Procedure\r\n\r\n1. step one\r\n";
+  const doc = parse(src);
+  assert.equal(doc.agent, "crlf");
+  assert.equal(doc.hardLimits.length, 1);
+  assert.equal(doc.hardLimits[0].id, "H1");
+  assert.equal(doc.procedure.length, 1);
+});
+
+test("parser normalizes bare CR line endings", () => {
+  const src = "# Agent: cr\r\r## Procedure\r\r1. step\r";
+  const doc = parse(src);
+  assert.equal(doc.agent, "cr");
+  assert.equal(doc.procedure.length, 1);
+});
+
+test("parser flags duplicate # Agent: heading via parseDiagnostics", () => {
+  const src = "# Agent: first\n# Agent: second\n\n## Procedure\n\n1. step\n";
+  const doc = parse(src);
+  assert.equal(doc.agent, "first");
+  assert.ok(
+    doc.parseDiagnostics?.some((d) => d.code === "L12"),
+    "expected L12 diagnostic for duplicate agent heading",
+  );
+});
+
 const SAMPLE = `# Agent: test-agent
 
 A short description.

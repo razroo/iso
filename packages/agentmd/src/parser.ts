@@ -1,6 +1,7 @@
-import type { Doc, Rule, ProcedureStep, RoutingRow, Scope } from "./types.js";
+import type { Doc, Rule, ProcedureStep, RoutingRow, Scope, Diagnostic } from "./types.js";
 
 const AGENT_HEADING = /^#\s+Agent:\s*(.+?)\s*$/;
+const H1_ANY = /^#\s+.+/;
 const H2 = /^##\s+(.+?)\s*$/;
 const RULE_LINE = /^-\s+\[([A-Za-z]+\d+)\]\s+(.+?)\s*$/;
 const WHY_LINE = /^\s+why:\s*(.+?)\s*$/;
@@ -26,7 +27,14 @@ function scopeFromId(id: string): Scope | null {
 }
 
 export function parse(source: string, sourcePath?: string): Doc {
-  const lines = source.split("\n");
+  // Strip UTF-8 BOM and normalize CRLF / bare CR so the parser sees a
+  // uniform stream regardless of editor/OS origin.
+  const normalized = source
+    .replace(/^\uFEFF/, "")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n");
+  const lines = normalized.split("\n");
+  const parseDiagnostics: Diagnostic[] = [];
   const doc: Doc = {
     agent: "",
     description: "",
@@ -36,6 +44,7 @@ export function parse(source: string, sourcePath?: string): Doc {
     routing: [],
     context: [],
     sourcePath,
+    parseDiagnostics,
   };
 
   let i = 0;
@@ -61,8 +70,17 @@ export function parse(source: string, sourcePath?: string): Doc {
     const lineNo = i + 1;
 
     const agentMatch = line.match(AGENT_HEADING);
-    if (agentMatch && !doc.agent) {
-      doc.agent = agentMatch[1].trim();
+    if (agentMatch) {
+      if (!doc.agent) {
+        doc.agent = agentMatch[1].trim();
+      } else {
+        parseDiagnostics.push({
+          code: "L12",
+          severity: "warning",
+          message: `Duplicate "# Agent:" heading — only the first one defines the agent name; the rest are ignored`,
+          line: lineNo,
+        });
+      }
       i++;
       continue;
     }
