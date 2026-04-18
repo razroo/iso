@@ -23,17 +23,18 @@ Today, writing agent instructions is fragmented on two axes:
    unstructured rationale all drop silently at 7B. You don't find out
    until the agent misbehaves in production.
 
-Three core packages compose into a pipeline that fixes both, and
-[`@razroo/iso`](./packages/iso) is the one command that runs the whole
-chain:
+Three core packages compose into a build pipeline that fixes both,
+[`@razroo/iso`](./packages/iso) runs the whole chain as one command, and
+[`@razroo/iso-eval`](./packages/iso-eval) scores whether the resulting
+agent actually completes real tasks:
 
 ```
-   authored source              structural dialect             portable prose             fan-out to harnesses
-  ┌────────────────┐  agentmd  ┌──────────────────┐  isolint  ┌───────────────┐  iso-harness  ┌──────────────────┐
-  │ your agent .md │ ────────▶ │ validated rules, │ ────────▶ │ small-model-  │ ─────────────▶│ CLAUDE.md        │
-  │ + fixtures     │   lint    │ scope labels,    │ lint/fix  │ safe prose    │    build      │ AGENTS.md        │
-  │                │  render   │ load-bearing why │           │               │               │ .cursor/rules/*  │
-  └────────────────┘           └──────────────────┘           └───────────────┘               │ .opencode/*      │
+   authored source              structural dialect             portable prose             fan-out to harnesses           behavioral eval
+  ┌────────────────┐  agentmd  ┌──────────────────┐  isolint  ┌───────────────┐  iso-harness  ┌──────────────────┐   iso-eval  ┌──────────────┐
+  │ your agent .md │ ────────▶ │ validated rules, │ ────────▶ │ small-model-  │ ─────────────▶│ CLAUDE.md        │ ──────────▶ │ per-task     │
+  │ + fixtures     │   lint    │ scope labels,    │ lint/fix  │ safe prose    │    build      │ AGENTS.md        │    run      │ pass / fail  │
+  │                │  render   │ load-bearing why │           │               │               │ .cursor/rules/*  │             │              │
+  └────────────────┘           └──────────────────┘           └───────────────┘               │ .opencode/*      │             └──────────────┘
                                                                                               └──────────────────┘
 ```
 
@@ -84,6 +85,14 @@ project that exercises the wrapper end-to-end.
   MCP servers into `CLAUDE.md`, `AGENTS.md`, `.cursor/rules/*.mdc`,
   `.opencode/agents/*.md`, etc., so all four harnesses stay in lockstep.
 
+- **[`packages/iso-eval`](./packages/iso-eval)** — [`@razroo/iso-eval`](https://www.npmjs.com/package/@razroo/iso-eval)
+  Behavioral eval runner for the produced harness. Snapshots a workspace
+  per task, hands it to a runner with the task prompt, then scores the
+  resulting filesystem / command state — answering "did the agent
+  actually do it?" that structural and prose lints can't. Ships a
+  deterministic `fake` runner for CI smoke; real-agent runners plug in
+  via the library `RunnerFn` interface.
+
 Each package is independently published on npm and works on its own.
 They're in one repo because they're designed to compose.
 
@@ -97,7 +106,8 @@ iso/
     ├── agentmd/          # structure + adherence
     ├── isolint/          # portable prose
     ├── iso-harness/      # one source, every harness
-    └── iso/              # one command for the whole pipeline
+    ├── iso/              # one command for the whole pipeline
+    └── iso-eval/         # behavioral eval on the produced harness
 ```
 
 ## Build & test
@@ -110,6 +120,7 @@ npm run typecheck           # typecheck every package
 npm run test:dogfood        # wrapper-level local dogfood project
 npm run test:pack           # pack local tarballs and smoke installed CLIs
 npm run test:pipeline       # end-to-end demo (agentmd → isolint → iso-harness)
+npm --workspace @razroo/iso-eval run example   # iso-eval against the bundled example suite
 
 # Target a single package
 npm run build --workspace @razroo/isolint
@@ -159,5 +170,11 @@ downstream repo would use.
 
 `npm run test:pack` goes one level further: it packs the local workspaces into
 tarballs, installs them into fresh temp projects, and smoke-tests the packaged
-`iso-harness` and `iso` CLIs. This guards against packaging regressions that
-workspace-only tests can miss.
+`iso-harness`, `iso`, and `iso-eval` CLIs. This guards against packaging
+regressions that workspace-only tests can miss.
+
+[`packages/iso-eval/examples/suites/echo-basic/`](./packages/iso-eval/examples/suites/echo-basic)
+is a runnable eval suite for the downstream side: a baseline workspace, a
+task prompt, and a set of file/command checks. Run `npm --workspace
+@razroo/iso-eval run example` to see the full pass-report against the
+bundled `fake` runner.
