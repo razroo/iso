@@ -3,8 +3,12 @@ import { stringify as toFrontmatter } from '../frontmatter.mjs';
 import { writeFile, writeJson } from '../fs-utils.mjs';
 import { targetOverride } from '../source.mjs';
 
-export async function emitCursor(src, outDir) {
+export async function emitCursor(src, outDir, opts = {}) {
   const written = [];
+  const push = async (p, content, writer = writeFile) => {
+    const { bytes } = await writer(p, content, opts);
+    written.push({ path: p, bytes });
+  };
 
   if (src.instructions) {
     const data = {
@@ -12,8 +16,7 @@ export async function emitCursor(src, outDir) {
       alwaysApply: true,
     };
     const p = path.join(outDir, '.cursor', 'rules', 'main.mdc');
-    await writeFile(p, toFrontmatter({ data, body: src.instructions }));
-    written.push(p);
+    await push(p, toFrontmatter({ data, body: src.instructions }));
   }
 
   // Cursor has no native subagents or slash commands; emit agent prompts as
@@ -26,8 +29,7 @@ export async function emitCursor(src, outDir) {
       alwaysApply: false,
     };
     const p = path.join(outDir, '.cursor', 'rules', `agent-${agent.slug}.mdc`);
-    await writeFile(p, toFrontmatter({ data, body: agent.body }));
-    written.push(p);
+    await push(p, toFrontmatter({ data, body: agent.body }));
   }
 
   if (Object.keys(src.mcp.servers).length > 0) {
@@ -39,8 +41,7 @@ export async function emitCursor(src, outDir) {
       mcpServers[name] = entry;
     }
     const p = path.join(outDir, '.cursor', 'mcp.json');
-    await writeJson(p, { mcpServers });
-    written.push(p);
+    await push(p, { mcpServers }, writeJson);
   }
 
   return written;

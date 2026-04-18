@@ -1,0 +1,58 @@
+{
+  "name": "@razroo/iso",
+  "version": "0.1.1",
+  "description": "One command that chains agentmd → isolint → iso-harness: author one prompt, ship it to every coding agent.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/index.mjs",
+  "exports": {
+    ".": "./src/index.mjs",
+    "./pipeline": "./src/pipeline.mjs"
+  },
+  "bin": {
+    "iso": "bin/iso.mjs"
+  },
+  "files": [
+    "bin",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "prepublishOnly": "npm test"
+  },
+  "dependencies": {
+    "@razroo/agentmd": "^0.3.0",
+    "@razroo/iso-harness": "^0.3.0",
+    "@razroo/isolint": "^1.4.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/razroo/iso.git",
+    "directory": "packages/iso"
+  },
+  "homepage": "https://github.com/razroo/iso/tree/main/packages/iso#readme",
+  "bugs": {
+    "url": "https://github.com/razroo/iso/issues"
+  },
+  "keywords": [
+    "agent",
+    "prompt",
+    "claude-code",
+    "cursor",
+    "codex",
+    "opencode",
+    "pipeline",
+    "agentmd",
+    "isolint",
+    "iso-harness"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

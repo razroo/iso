@@ -78,6 +78,9 @@ jobs:
       - name: Pipeline integration (agentmd → isolint → iso-harness)
         run: node examples/pipeline/build.mjs
 
+      - name: iso wrapper smoke build
+        run: node packages/iso/bin/iso.mjs build packages/iso-harness/examples/minimal --skip-isolint --dry-run --out /tmp/iso-wrapper-smoke --target claude
+
       - name: iso-harness smoke build
         working-directory: packages/iso-harness
         run: npm run smoke

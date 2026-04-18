@@ -28,20 +28,22 @@ function renderMcpToml(servers) {
   return lines.join('\n');
 }
 
-export async function emitCodex(src, outDir) {
+export async function emitCodex(src, outDir, opts = {}) {
   const written = [];
+  const push = async (p, content) => {
+    const { bytes } = await writeFile(p, content, opts);
+    written.push({ path: p, bytes });
+  };
 
   if (src.instructions) {
     const p = path.join(outDir, 'AGENTS.md');
-    await writeFile(p, src.instructions.endsWith('\n') ? src.instructions : src.instructions + '\n');
-    written.push(p);
+    await push(p, src.instructions.endsWith('\n') ? src.instructions : src.instructions + '\n');
   }
 
   if (Object.keys(src.mcp.servers).length > 0) {
     const body = renderMcpToml(src.mcp.servers);
     const p = path.join(outDir, '.codex', 'config.toml');
-    await writeFile(p, body);
-    written.push(p);
+    await push(p, body);
   }
 
   return written;

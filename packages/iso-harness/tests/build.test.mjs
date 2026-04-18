@@ -124,6 +124,25 @@ test('build: rendered CLAUDE.md preserves the instructions file verbatim (plus t
   assert.equal(got, '# My project\n\nRule 1.\nRule 2.\n');
 });
 
+test('build: --dry-run returns a summary without writing any files', async () => {
+  const { iso, out } = mkIso();
+  const summary = await build({ source: iso, out, targets: ['claude'], dryRun: true });
+  assert.ok(!existsSync(out), 'output dir must not be created in dry-run');
+  assert.match(summary[0], /dry-run/);
+  assert.ok(summary.some((line) => /would write/.test(line)));
+  assert.ok(summary.some((line) => /no files written/.test(line)));
+});
+
+test('build: --dry-run still errors on schema violations (no silent pass)', async () => {
+  const { iso, out } = mkIso({
+    mcp: JSON.stringify({ servers: { bad: { args: ['no-command'] } } }),
+  });
+  await assert.rejects(
+    () => build({ source: iso, out, targets: ['claude'], dryRun: true }),
+    /source validation failed/,
+  );
+});
+
 test('build: codex TOML escapes double quotes in command/args', async () => {
   const { iso, out } = mkIso({
     mcp: JSON.stringify({

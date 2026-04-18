@@ -23,7 +23,8 @@ Today, writing agent instructions is fragmented on two axes:
    unstructured rationale all drop silently at 7B. You don't find out
    until the agent misbehaves in production.
 
-The three packages in this repo compose into a pipeline that fixes both:
+Three core packages in this repo compose into a pipeline that fixes both,
+and a fourth wrapper package exposes that whole chain behind one CLI:
 
 ```
    authored source              structural dialect             portable prose             fan-out to harnesses
@@ -58,6 +59,11 @@ The three packages in this repo compose into a pipeline that fixes both:
   MCP servers into `CLAUDE.md`, `AGENTS.md`, `.cursor/rules/*.mdc`,
   `.opencode/agents/*.md`, etc., so all four harnesses stay in lockstep.
 
+- **[`packages/iso`](./packages/iso)** — `@razroo/iso`
+  The wrapper CLI for the whole flow: if `agent.md` is your authored source,
+  `iso build` runs `agentmd lint`, `agentmd render`, `isolint lint`, then
+  `iso-harness build` in one command.
+
 Each package is independently published on npm and works on its own.
 They're in one repo because they're designed to compose.
 
@@ -70,7 +76,8 @@ iso/
 └── packages/
     ├── agentmd/          # structure + adherence
     ├── isolint/          # portable prose
-    └── iso-harness/      # one source, every harness
+    ├── iso-harness/      # one source, every harness
+    └── iso/              # one command for the whole pipeline
 ```
 
 ## Build & test
@@ -85,6 +92,7 @@ npm run test:pipeline       # end-to-end demo (agentmd → isolint → iso-harne
 # Target a single package
 npm run build --workspace @razroo/isolint
 npm run test  --workspace @razroo/agentmd
+npm run test  --workspace @razroo/iso
 ```
 
 ## Releasing
@@ -117,5 +125,6 @@ build, and `npm publish --provenance`.
 [`examples/pipeline/`](./examples/pipeline) is an executable demonstration
 of the composed pipeline: one authored `agent.md` is structurally linted,
 rendered, prose-linted, and fanned out into the 11 files each coding-agent
-harness expects. Run `npm run test:pipeline` to exercise all three packages
-against a single source.
+harness expects. Run `npm run test:pipeline` to exercise the core pipeline,
+or use `@razroo/iso` in your own project when you want the same chain behind
+one CLI.

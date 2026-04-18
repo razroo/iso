@@ -1,5 +1,12 @@
 # @razroo/iso-harness
 
+## 0.3.0
+
+### Minor Changes
+
+- Add `iso-harness build --dry-run` and `--watch`, and include dry-run
+  summaries with per-file byte sizes.
+
 ## 0.2.0
 
 ### Minor Changes

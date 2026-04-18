@@ -9,13 +9,16 @@ function claudeTools(tools) {
   return String(tools);
 }
 
-export async function emitClaude(src, outDir) {
+export async function emitClaude(src, outDir, opts = {}) {
   const written = [];
+  const push = async (p, content, writer = writeFile) => {
+    const { bytes } = await writer(p, content, opts);
+    written.push({ path: p, bytes });
+  };
 
   if (src.instructions) {
     const p = path.join(outDir, 'CLAUDE.md');
-    await writeFile(p, src.instructions.endsWith('\n') ? src.instructions : src.instructions + '\n');
-    written.push(p);
+    await push(p, src.instructions.endsWith('\n') ? src.instructions : src.instructions + '\n');
   }
 
   for (const agent of src.agents) {
@@ -30,8 +33,7 @@ export async function emitClaude(src, outDir) {
     const model = override.model ?? agent.model;
     if (model) data.model = model;
     const p = path.join(outDir, '.claude', 'agents', `${agent.slug}.md`);
-    await writeFile(p, toFrontmatter({ data, body: agent.body }));
-    written.push(p);
+    await push(p, toFrontmatter({ data, body: agent.body }));
   }
 
   for (const cmd of src.commands) {
@@ -46,8 +48,7 @@ export async function emitClaude(src, outDir) {
     const model = override.model ?? cmd.model;
     if (model) data.model = model;
     const p = path.join(outDir, '.claude', 'commands', `${cmd.slug}.md`);
-    await writeFile(p, toFrontmatter({ data, body: cmd.body }));
-    written.push(p);
+    await push(p, toFrontmatter({ data, body: cmd.body }));
   }
 
   if (Object.keys(src.mcp.servers).length > 0) {
@@ -59,8 +60,7 @@ export async function emitClaude(src, outDir) {
       mcpServers[name] = entry;
     }
     const p = path.join(outDir, '.mcp.json');
-    await writeJson(p, { mcpServers });
-    written.push(p);
+    await push(p, { mcpServers }, writeJson);
   }
 
   return written;

@@ -33,7 +33,17 @@ Or once installed as a CLI:
 iso-harness build                         # reads ./iso, writes to ./
 iso-harness build --target claude,cursor  # only two targets
 iso-harness build --source path/to/iso --out path/to/project
+iso-harness build --dry-run               # print planned writes, no disk changes
+iso-harness build --watch                 # rebuild on every change under iso/
 ```
+
+## Build modes
+
+- `--dry-run` validates and renders the full output plan, but prints what
+  would be written instead of touching disk.
+- `--watch` keeps a filesystem watcher on the source directory and reruns the
+  build after changes. Combine it with `--target` when you only care about one
+  harness while iterating.
 
 ## Source format
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { build, validate } from '../src/build.mjs';
 import { formatDiagnostic } from '../src/validate.mjs';
-import { readFileSync } from 'node:fs';
+import { readFileSync, watch as fsWatch } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -34,6 +34,7 @@ const USAGE = `iso-harness — one source directory, every agent harness
 Usage:
   iso-harness --version
   iso-harness build    [--source <dir>] [--out <dir>] [--target claude,cursor,codex,opencode]
+                       [--dry-run] [--watch]
   iso-harness validate [--source <dir>] [--format text|json]
 
 Commands:
@@ -47,6 +48,8 @@ Flags:
   --source <dir>     Path to iso source directory (default: iso)
   --out <dir>        Output root directory (default: .)
   --target <list>    Comma-separated targets (default: all four)
+  --dry-run          Print what would be written, with byte sizes. No disk writes.
+  --watch            Rebuild on changes to the source directory. Ctrl-C to exit.
   --format <fmt>     validate-only: text (default) | json
 `;
 
@@ -70,21 +73,58 @@ if (!cmd || cmd === '-h' || cmd === '--help' || cmd === 'help') {
   process.exit(cmd ? 0 : 0);
 }
 
+async function runBuildOnce({ source, out, targets, dryRun }) {
+  try {
+    const summary = await build({ source, out, targets, dryRun });
+    for (const line of summary) console.log(line);
+    return 0;
+  } catch (err) {
+    console.error(err.message);
+    return 1;
+  }
+}
+
+function watchBuild({ source, out, targets, dryRun }) {
+  const sourceAbs = resolve(source);
+  let scheduled = null;
+  let building = false;
+  const trigger = () => {
+    if (scheduled) clearTimeout(scheduled);
+    scheduled = setTimeout(async () => {
+      scheduled = null;
+      if (building) return;
+      building = true;
+      console.log(`\n--- change detected — rebuilding ---`);
+      await runBuildOnce({ source, out, targets, dryRun });
+      building = false;
+    }, 150);
+  };
+  try {
+    fsWatch(sourceAbs, { recursive: true }, trigger);
+  } catch (err) {
+    console.error(`watch failed for ${sourceAbs}: ${err.message}`);
+    process.exit(1);
+  }
+  console.log(`watching ${sourceAbs} — press ^C to exit`);
+}
+
 if (cmd === 'build') {
   const source = flag('source', 'iso');
   const out = flag('out', '.');
   const targets = list('target') ?? ALL_TARGETS;
+  const dryRun = boolFlag('dry-run');
+  const watchMode = boolFlag('watch');
   const unknown = targets.filter(t => !ALL_TARGETS.includes(t));
   if (unknown.length) {
     console.error(`Unknown target(s): ${unknown.join(', ')}. Valid: ${ALL_TARGETS.join(', ')}`);
     process.exit(2);
   }
-  try {
-    const summary = await build({ source, out, targets });
-    for (const line of summary) console.log(line);
-  } catch (err) {
-    console.error(err.message);
-    process.exit(1);
+  const initial = await runBuildOnce({ source, out, targets, dryRun });
+  if (watchMode) {
+    watchBuild({ source, out, targets, dryRun });
+    // Keep the process alive; ^C exits.
+  } else {
+    process.exit(initial);
   }
 } else if (cmd === 'validate') {
   const source = flag('source', 'iso');

@@ -3,13 +3,16 @@ import { stringify as toFrontmatter } from '../frontmatter.mjs';
 import { writeFile, writeJson } from '../fs-utils.mjs';
 import { targetOverride } from '../source.mjs';
 
-export async function emitOpenCode(src, outDir) {
+export async function emitOpenCode(src, outDir, opts = {}) {
   const written = [];
+  const push = async (p, content, writer = writeFile) => {
+    const { bytes } = await writer(p, content, opts);
+    written.push({ path: p, bytes });
+  };
 
   if (src.instructions) {
     const p = path.join(outDir, 'AGENTS.md');
-    await writeFile(p, src.instructions.endsWith('\n') ? src.instructions : src.instructions + '\n');
-    written.push(p);
+    await push(p, src.instructions.endsWith('\n') ? src.instructions : src.instructions + '\n');
   }
 
   for (const agent of src.agents) {
@@ -33,8 +36,7 @@ export async function emitOpenCode(src, outDir) {
       data[k] = v;
     }
     const p = path.join(outDir, '.opencode', 'agents', `${agent.slug}.md`);
-    await writeFile(p, toFrontmatter({ data, body: agent.body }));
-    written.push(p);
+    await push(p, toFrontmatter({ data, body: agent.body }));
   }
 
   for (const cmd of src.commands) {
@@ -49,8 +51,7 @@ export async function emitOpenCode(src, outDir) {
     const args = override.args ?? cmd.extra?.args ?? cmd.extra?.['argument-hint'];
     if (args) data.args = Array.isArray(args) ? args.join(' ') : args;
     const p = path.join(outDir, '.opencode', 'skills', `${cmd.slug}.md`);
-    await writeFile(p, toFrontmatter({ data, body: cmd.body }));
-    written.push(p);
+    await push(p, toFrontmatter({ data, body: cmd.body }));
   }
 
   const opencodeExtras = src.config?.targets?.opencode ?? {};
@@ -76,8 +77,7 @@ export async function emitOpenCode(src, outDir) {
       output[k] = v;
     }
     const p = path.join(outDir, 'opencode.json');
-    await writeJson(p, output);
-    written.push(p);
+    await push(p, output, writeJson);
   }
 
   return written;
