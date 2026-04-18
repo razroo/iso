@@ -1,0 +1,70 @@
+{
+  "findings": [
+    {
+      "rule_id": "soft-imperative",
+      "severity": "warn",
+      "line": 5,
+      "snippet": "should"
+    },
+    {
+      "rule_id": "vague-quantifier",
+      "severity": "warn",
+      "line": 5,
+      "snippet": "some"
+    },
+    {
+      "rule_id": "taste-word",
+      "severity": "warn",
+      "line": 6,
+      "snippet": "engaging"
+    },
+    {
+      "rule_id": "implicit-conditional",
+      "severity": "warn",
+      "line": 8,
+      "snippet": "when relevant"
+    },
+    {
+      "rule_id": "output-format-no-example",
+      "severity": "warn",
+      "line": 8,
+      "snippet": "returning JSON"
+    },
+    {
+      "rule_id": "soft-imperative",
+      "severity": "warn",
+      "line": 8,
+      "snippet": "Consider"
+    },
+    {
+      "rule_id": "taste-word",
+      "severity": "warn",
+      "line": 8,
+      "snippet": "when relevant"
+    },
+    {
+      "rule_id": "trailing-etc",
+      "severity": "warn",
+      "line": 12,
+      "snippet": "etc"
+    },
+    {
+      "rule_id": "vague-quantifier",
+      "severity": "warn",
+      "line": 12,
+      "snippet": "many"
+    },
+    {
+      "rule_id": "soft-imperative",
+      "severity": "warn",
+      "line": 14,
+      "snippet": "should"
+    },
+    {
+      "rule_id": "undefined-step-reference",
+      "severity": "warn",
+      "line": 14,
+      "snippet": "Step 5"
+    }
+  ]
+}

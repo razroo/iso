@@ -1,0 +1,14 @@
+{
+  "sender": {
+    "name": "Jordan Park",
+    "company": "Linework",
+    "role": "Founder"
+  },
+  "recipient": {
+    "name": "Ava Chen",
+    "company": "Northwind Robotics",
+    "role": "VP of Engineering"
+  },
+  "offer": "On-call noise reduction for robotics fleets via anomaly deduplication",
+  "evidence": "Cut pager volume 62% at two Series B robotics companies in Q1."
+}

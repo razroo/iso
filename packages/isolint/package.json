@@ -1,0 +1,71 @@
+{
+  "name": "@razroo/isolint",
+  "version": "1.4.0",
+  "description": "Lint and rewrite AI harness markdown so weak small models (Minimax 2.5, Nemotron 3, Mistral 7B) can execute it reliably.",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "sideEffects": false,
+  "bin": {
+    "isolint": "dist/cli/index.js"
+  },
+  "files": [
+    "dist/**/*.js",
+    "dist/**/*.d.ts",
+    "examples",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/razroo/isolint.git"
+  },
+  "homepage": "https://github.com/razroo/isolint#readme",
+  "bugs": {
+    "url": "https://github.com/razroo/isolint/issues"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check:plans": "tsx scripts/check-plans.ts",
+    "dev": "tsc -p tsconfig.json --watch",
+    "start": "node dist/cli/index.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "tsx --test test/*.test.ts",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run clean && npm run build && npm test"
+  },
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "remark-parse": "^11.0.0",
+    "unified": "^11.0.5",
+    "unist-util-visit": "^5.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.4",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.2"
+  },
+  "engines": {
+    "node": ">=18.17.0"
+  },
+  "keywords": [
+    "linter",
+    "markdown",
+    "prompt-engineering",
+    "llm",
+    "small-model",
+    "harness",
+    "minimax",
+    "nemotron",
+    "mistral",
+    "opencode",
+    "claude-code",
+    "cursor",
+    "agent"
+  ]
+}

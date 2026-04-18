@@ -1,0 +1,91 @@
+{
+  "version": "1",
+  "name": "invoice-extract-v1",
+  "description": "Extract a strict invoice schema from a raw invoice-like text blob.",
+  "input_schema": {
+    "type": "object",
+    "required": ["document"],
+    "properties": { "document": { "type": "string", "minLength": 20 } }
+  },
+  "steps": [
+    {
+      "id": "header",
+      "title": "Extract invoice header",
+      "instruction": "Extract the invoice number, issue date (ISO 8601), vendor name, and customer name from the document. Use null for any field not present. Do not guess.",
+      "inputs": ["$input"],
+      "constraints": [
+        { "rule": "Use null, not empty strings, for missing fields" }
+      ],
+      "expected_output": {
+        "kind": "json",
+        "json_schema": {
+          "type": "object",
+          "required": ["invoice_number", "issue_date", "vendor", "customer"],
+          "additionalProperties": false,
+          "properties": {
+            "invoice_number": { "type": ["string", "null"] },
+            "issue_date": { "type": ["string", "null"], "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+            "vendor": { "type": ["string", "null"] },
+            "customer": { "type": ["string", "null"] }
+          }
+        }
+      },
+      "failure_handling": { "max_retries": 2, "on_invalid": "repair" }
+    },
+    {
+      "id": "line_items",
+      "title": "Extract line items",
+      "instruction": "Extract each line item as {description, quantity, unit_price, total}. Quantities and prices must be numbers. If totals are missing, compute quantity * unit_price. Omit lines you cannot parse.",
+      "inputs": ["$input"],
+      "constraints": [
+        { "rule": "All numeric fields are JSON numbers, not strings" }
+      ],
+      "expected_output": {
+        "kind": "json",
+        "json_schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["description", "quantity", "unit_price", "total"],
+            "additionalProperties": false,
+            "properties": {
+              "description": { "type": "string", "minLength": 1 },
+              "quantity": { "type": "number", "minimum": 0 },
+              "unit_price": { "type": "number", "minimum": 0 },
+              "total": { "type": "number", "minimum": 0 }
+            }
+          }
+        }
+      },
+      "failure_handling": { "max_retries": 2, "on_invalid": "repair" }
+    },
+    {
+      "id": "totals",
+      "title": "Compute totals",
+      "instruction": "Given the line items, return subtotal (sum of totals), tax (use tax_rate from the document, default 0), and grand_total (subtotal + tax). Round to 2 decimals.",
+      "inputs": ["$input", "$steps.line_items"],
+      "constraints": [
+        { "rule": "Round subtotal, tax, and grand_total to 2 decimals" }
+      ],
+      "expected_output": {
+        "kind": "json",
+        "json_schema": {
+          "type": "object",
+          "required": ["subtotal", "tax", "grand_total"],
+          "additionalProperties": false,
+          "properties": {
+            "subtotal": { "type": "number", "minimum": 0 },
+            "tax": { "type": "number", "minimum": 0 },
+            "grand_total": { "type": "number", "minimum": 0 }
+          }
+        }
+      },
+      "failure_handling": { "max_retries": 2, "on_invalid": "repair" }
+    }
+  ],
+  "final_output": {
+    "header": "$steps.header",
+    "line_items": "$steps.line_items",
+    "totals": "$steps.totals"
+  }
+}

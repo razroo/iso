@@ -1,0 +1,9 @@
+{
+  "extends": ["recommended"],
+  "ignore": [
+    "node_modules/**",
+    "dist/**",
+    "examples/**",
+    "test/**"
+  ]
+}

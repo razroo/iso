@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 140" role="img" aria-label="isolint">
+  <title>isolint</title>
+  <style>
+    .fg     { fill: #0f172a; stroke: #0f172a; }
+    .accent { fill: #14b8a6; stroke: #14b8a6; }
+    .muted  { fill: #64748b; }
+    @media (prefers-color-scheme: dark) {
+      .fg     { fill: #e2e8f0; stroke: #e2e8f0; }
+      .accent { fill: #2dd4bf; stroke: #2dd4bf; }
+      .muted  { fill: #94a3b8; }
+    }
+  </style>
+
+  <!-- bracket + checkmark: the "lint" stamp -->
+  <g fill="none" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <path class="fg" d="M 52 30 L 28 30 L 28 110 L 52 110"/>
+    <path class="fg" d="M 140 30 L 164 30 L 164 110 L 140 110"/>
+    <path class="accent" d="M 62 72 L 82 92 L 130 44"/>
+  </g>
+
+  <!-- wordmark -->
+  <text class="fg"
+        x="190" y="94"
+        font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Courier New', monospace"
+        font-size="64" font-weight="800" letter-spacing="-2"
+        stroke="none">isolint</text>
+</svg>

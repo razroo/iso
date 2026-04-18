@@ -1,0 +1,83 @@
+name: isolint CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'packages/isolint/**'
+      - '.github/workflows/isolint-ci.yml'
+      - 'tsconfig.base.json'
+      - 'package.json'
+  push:
+    branches: [main]
+    paths:
+      - 'packages/isolint/**'
+      - '.github/workflows/isolint-ci.yml'
+      - 'tsconfig.base.json'
+      - 'package.json'
+
+permissions:
+  contents: read
+  security-events: write
+
+defaults:
+  run:
+    working-directory: packages/isolint
+
+jobs:
+  build:
+    name: Build & test (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ["18.17", "20", "22"]
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - name: Install (workspace root)
+        run: npm ci
+        working-directory: .
+
+      - run: npm run typecheck
+
+      - run: npm test
+
+      - run: npm run build
+
+  self-lint:
+    name: Dogfood isolint
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install (workspace root)
+        run: npm ci
+        working-directory: .
+
+      - run: npm run build
+
+      - name: isolint lint (SARIF)
+        run: node dist/cli/index.js lint . --format sarif --fail-on warn > isolint.sarif
+        continue-on-error: true
+
+      - name: Upload SARIF to GitHub code scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: packages/isolint/isolint.sarif
+          category: isolint
+
+      - name: isolint lint (enforce)
+        run: node dist/cli/index.js lint . --fail-on error

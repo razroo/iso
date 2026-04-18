@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="agentmd">
+  <title>agentmd</title>
+  <rect width="128" height="128" rx="20" fill="#0F766E"/>
+  <style>
+    .m { font-family: "JetBrains Mono", "SF Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace; font-size: 60px; font-weight: 700; letter-spacing: -1px; fill: #ffffff; }
+  </style>
+  <text class="m" x="10" y="82">[md]</text>
+</svg>

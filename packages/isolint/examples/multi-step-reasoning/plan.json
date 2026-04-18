@@ -1,0 +1,106 @@
+{
+  "version": "1",
+  "name": "support-triage-v1",
+  "description": "Classify a support ticket, identify the root cause category, and propose a next action. Each step is atomic and validated.",
+  "input_schema": {
+    "type": "object",
+    "required": ["ticket"],
+    "properties": {
+      "ticket": {
+        "type": "object",
+        "required": ["subject", "body"],
+        "properties": {
+          "subject": { "type": "string", "minLength": 1 },
+          "body": { "type": "string", "minLength": 1 },
+          "customer_tier": { "type": "string", "enum": ["free", "pro", "enterprise"] }
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "id": "classify",
+      "title": "Classify ticket category",
+      "instruction": "Read the ticket and output a single category label.",
+      "inputs": ["$input"],
+      "constraints": [
+        { "rule": "Return only the label, lowercase, no punctuation" }
+      ],
+      "expected_output": {
+        "kind": "enum",
+        "values": ["billing", "bug", "feature_request", "account_access", "how_to", "other"]
+      },
+      "failure_handling": { "max_retries": 2, "on_invalid": "retry", "fallback_value": "other" }
+    },
+    {
+      "id": "severity",
+      "title": "Assign severity",
+      "instruction": "Return one severity level based on the ticket body. Use P0 for outages or data loss, P1 for blocked workflows, P2 for degraded features, P3 for cosmetic or how-to.",
+      "inputs": ["$input"],
+      "constraints": [
+        { "rule": "Return only the label" }
+      ],
+      "expected_output": {
+        "kind": "enum",
+        "values": ["P0", "P1", "P2", "P3"]
+      },
+      "failure_handling": { "max_retries": 2, "on_invalid": "retry", "fallback_value": "P2" }
+    },
+    {
+      "id": "root_cause",
+      "title": "Identify likely root cause",
+      "instruction": "Given the category and the ticket, identify the most likely root cause from the ticket text and assign a confidence score. Keep the root cause concise and base both values only on the ticket text.",
+      "inputs": ["$input", "$steps.classify"],
+      "constraints": [
+        { "rule": "confidence is a number between 0 and 1 inclusive" }
+      ],
+      "expected_output": {
+        "kind": "json",
+        "json_schema": {
+          "type": "object",
+          "required": ["root_cause", "confidence"],
+          "additionalProperties": false,
+          "properties": {
+            "root_cause": { "type": "string", "minLength": 4, "maxLength": 80 },
+            "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+          }
+        }
+      },
+      "failure_handling": { "max_retries": 2, "on_invalid": "repair" }
+    },
+    {
+      "id": "next_action",
+      "title": "Propose next action",
+      "instruction": "Given the category, severity, and root cause, choose the owning team, write the next action as a single imperative sentence, and set the SLA in hours.",
+      "inputs": [
+        "$input",
+        "$steps.classify",
+        "$steps.severity",
+        "$steps.root_cause"
+      ],
+      "constraints": [
+        { "rule": "action is one sentence", "must_not_match": "[.!?].+[.!?]" }
+      ],
+      "expected_output": {
+        "kind": "json",
+        "json_schema": {
+          "type": "object",
+          "required": ["owner", "action", "sla_hours"],
+          "additionalProperties": false,
+          "properties": {
+            "owner": { "type": "string", "enum": ["support", "engineering", "billing", "product"] },
+            "action": { "type": "string", "minLength": 10, "maxLength": 140 },
+            "sla_hours": { "type": "integer", "minimum": 1, "maximum": 168 }
+          }
+        }
+      },
+      "failure_handling": { "max_retries": 2, "on_invalid": "repair" }
+    }
+  ],
+  "final_output": {
+    "category": "$steps.classify",
+    "severity": "$steps.severity",
+    "root_cause": "$steps.root_cause",
+    "next_action": "$steps.next_action"
+  }
+}

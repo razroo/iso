@@ -1,0 +1,60 @@
+name: iso-harness Quality checks
+
+on:
+  pull_request:
+    paths:
+      - 'packages/iso-harness/**'
+      - '.github/workflows/iso-harness-ci.yml'
+      - 'package.json'
+  push:
+    branches: [main]
+    paths:
+      - 'packages/iso-harness/**'
+      - '.github/workflows/iso-harness-ci.yml'
+      - 'package.json'
+
+defaults:
+  run:
+    working-directory: packages/iso-harness
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install (workspace root)
+        run: npm ci
+        working-directory: .
+
+      - name: Smoke build (all four targets against the example source)
+        run: npm run smoke
+
+      - name: Verify expected output files exist
+        run: |
+          set -e
+          OUT=/tmp/iso-harness-smoke
+          for f in \
+            "$OUT/CLAUDE.md" \
+            "$OUT/.claude/agents/researcher.md" \
+            "$OUT/.claude/commands/review.md" \
+            "$OUT/.mcp.json" \
+            "$OUT/.cursor/rules/main.mdc" \
+            "$OUT/.cursor/mcp.json" \
+            "$OUT/AGENTS.md" \
+            "$OUT/.codex/config.toml" \
+            "$OUT/opencode.json" \
+            "$OUT/.opencode/agents/researcher.md" \
+            "$OUT/.opencode/skills/review.md"
+          do
+            if [ ! -f "$f" ]; then
+              echo "::error::missing expected output: $f"
+              exit 1
+            fi
+          done
+          echo "All 11 expected output files present."

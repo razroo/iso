@@ -1,0 +1,66 @@
+{
+  "name": "@razroo/agentmd",
+  "version": "0.1.0",
+  "description": "Agent prompts as structured markdown, with a linter for structure and a harness that scores per-rule adherence — so iteration produces numbers, not vibes.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "bin": {
+    "agentmd": "dist/cli.js"
+  },
+  "files": [
+    "dist/**/*.js",
+    "dist/**/*.d.ts",
+    "examples",
+    "assets",
+    "README.md",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/razroo/agentmd.git"
+  },
+  "homepage": "https://github.com/razroo/agentmd#readme",
+  "bugs": {
+    "url": "https://github.com/razroo/agentmd/issues"
+  },
+  "keywords": [
+    "agent",
+    "prompt",
+    "llm",
+    "markdown",
+    "linter",
+    "claude",
+    "anthropic",
+    "evaluation",
+    "adherence",
+    "fixtures"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "agentmd": "tsx src/cli.ts",
+    "build": "tsc -p tsconfig.json",
+    "clean": "rm -rf dist",
+    "dev": "tsc -p tsconfig.json --watch",
+    "test": "node --test --import tsx tests/*.test.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint:examples": "tsx src/cli.ts lint examples/outreach-writer.md && tsx src/cli.ts lint examples/minimal.md",
+    "lint:isolint": "sh -c 'if command -v isolint >/dev/null 2>&1; then tsx src/cli.ts render examples/outreach-writer.md | isolint lint - && tsx src/cli.ts render examples/minimal.md | isolint lint -; else echo \"isolint not installed — skipping prose lint (install from https://github.com/razroo/isolint to enable)\"; fi'",
+    "ci": "npm run typecheck && npm test && npm run lint:examples && npm run lint:isolint",
+    "prepublishOnly": "npm run clean && npm run build && npm test"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.40.0",
+    "yaml": "^2.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

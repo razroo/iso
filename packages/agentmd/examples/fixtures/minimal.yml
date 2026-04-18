@@ -1,0 +1,48 @@
+# Minimal fixture — demonstrates every check type agentmd supports.
+# Run with: agentmd test examples/minimal.md --fixtures examples/fixtures/minimal.yml
+#
+# agent: must match the "# Agent: <name>" heading in the prompt file.
+agent: minimal
+
+cases:
+  - name: basic
+    # input: passed verbatim if a string, serialised to YAML otherwise.
+    input: "hello world from agentmd"
+    expectations:
+      # word_count_le — output has at most N words.
+      - rule: H1
+        check: word_count_le
+        value: 40
+
+      # word_count_ge — output has at least N words.
+      - rule: D1
+        check: word_count_ge
+        value: 3
+
+      # char_count_le — output has at most N characters.
+      - rule: H1
+        check: char_count_le
+        value: 400
+
+      # does_not_contain — none of the listed substrings appear (case-insensitive).
+      # Accepts a string or a list.
+      - rule: H2
+        check: does_not_contain
+        value: ["lorem", "ipsum"]
+
+      # contains_all — every listed substring appears (case-insensitive).
+      - rule: D2
+        check: contains_all
+        value: ["hello", "world", "agentmd"]
+
+      # regex — the pattern matches somewhere in the output.
+      # Remember to escape backslashes in YAML double-quoted strings.
+      - rule: D3
+        check: regex
+        value: "^ECHO\\b"
+
+      # llm_judge — a small model answers yes/no against your prompt.
+      # Convention: phrase the question so "yes" means the rule was followed.
+      - rule: D4
+        check: llm_judge
+        prompt: "Is the reply written in a neutral, concise tone without hype or filler? Answer yes only if it is."

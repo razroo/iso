@@ -1,0 +1,36 @@
+agent: outreach-writer
+cases:
+  - name: ic-engineer-with-context
+    input:
+      prospect_profile: "Senior backend engineer at Acme, Go + Kubernetes, 8 years experience"
+      company_context: "Acme runs 200+ microservices on GKE, recently announced layoffs in Q1"
+    expectations:
+      - rule: H1
+        check: word_count_le
+        value: 140
+      - rule: H3
+        check: does_not_contain
+        value: ["[Company]", "{name}", "[Name]", "{{", "[Prospect]"]
+      - rule: D1
+        check: llm_judge
+        prompt: "Does the email open with a specific observation about Acme or the prospect's role? Yes only if the opener names the company or a concrete detail about their work."
+      - rule: D2
+        check: llm_judge
+        prompt: "Does the email close with one concrete next step (a call, a link, a specific question)? Yes only if there is a clear ask."
+
+  - name: director-no-company-context
+    input:
+      prospect_profile: "VP of Engineering at Northwind, 12 years leadership experience"
+    expectations:
+      - rule: H1
+        check: word_count_le
+        value: 140
+      - rule: H2
+        check: llm_judge
+        prompt: "Does the email avoid fabricating specific numeric claims about Northwind (ARR, customer counts, headcount)? Answer yes if NO such fabricated numbers appear."
+      - rule: D3
+        check: regex
+        value: "(\\n\\s*\\n.*){2,}"
+      - rule: D2
+        check: llm_judge
+        prompt: "Does the email close with one concrete next step (a call, a link, a specific question)?"

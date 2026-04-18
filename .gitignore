@@ -1,0 +1,17 @@
+node_modules
+dist
+*.tsbuildinfo
+coverage
+.env
+.env.local
+.DS_Store
+*.log
+
+# Accidental tsc emit beside sources (build output belongs in dist/)
+packages/*/src/**/*.js
+packages/*/src/**/*.js.map
+packages/*/src/**/*.d.ts
+packages/*/src/**/*.d.ts.map
+
+# iso-harness example outputs
+packages/iso-harness/examples/*/out/

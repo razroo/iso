@@ -1,0 +1,7 @@
+{
+  "ticket": {
+    "subject": "Deploys stuck in 'queued' since 9am",
+    "body": "Hi - since around 9am PT all of our deploys show 'queued' and never start. Two customers are pinging us. We're on the Enterprise plan. Logs show no errors on our side. Please escalate.",
+    "customer_tier": "enterprise"
+  }
+}

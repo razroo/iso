@@ -1,0 +1,113 @@
+{
+  "version": "1",
+  "name": "cold-email-v1",
+  "description": "Produce a structured cold outreach email with subject, hook, value, ask.",
+  "input_schema": {
+    "type": "object",
+    "required": ["sender", "recipient", "offer"],
+    "properties": {
+      "sender": {
+        "type": "object",
+        "required": ["name", "company", "role"],
+        "properties": {
+          "name": { "type": "string" },
+          "company": { "type": "string" },
+          "role": { "type": "string" }
+        }
+      },
+      "recipient": {
+        "type": "object",
+        "required": ["name", "company", "role"],
+        "properties": {
+          "name": { "type": "string" },
+          "company": { "type": "string" },
+          "role": { "type": "string" }
+        }
+      },
+      "offer": { "type": "string", "minLength": 10 },
+      "evidence": { "type": "string" }
+    }
+  },
+  "steps": [
+    {
+      "id": "subject",
+      "title": "Write subject line",
+      "instruction": "Write a subject line referencing the recipient's company. Use Title Case. No emojis. No exclamation marks.",
+      "inputs": ["$input"],
+      "constraints": [
+        { "rule": "Between 4 and 8 words", "must_match": "^(\\S+\\s){3,7}\\S+$" },
+        { "rule": "No exclamation marks", "must_not_match": "!" },
+        { "rule": "No emojis", "must_not_match": "[\\u{1F300}-\\u{1FAFF}\\u{2600}-\\u{27BF}]" }
+      ],
+      "expected_output": { "kind": "text", "min_chars": 15, "max_chars": 80 },
+      "failure_handling": { "max_retries": 2, "on_invalid": "retry" }
+    },
+    {
+      "id": "hook",
+      "title": "Write opening hook",
+      "instruction": "Write one sentence that names the recipient's company and ties it to the offer. No questions.",
+      "inputs": ["$input"],
+      "constraints": [
+        { "rule": "Exactly one sentence", "must_not_match": "[.!?].+[.!?]" },
+        { "rule": "No questions", "must_not_match": "\\?" }
+      ],
+      "expected_output": { "kind": "text", "min_chars": 40, "max_chars": 240 },
+      "failure_handling": { "max_retries": 2, "on_invalid": "retry" }
+    },
+    {
+      "id": "value",
+      "title": "Write value paragraph",
+      "instruction": "Write one short paragraph explaining the offer and one concrete result. Use the evidence field if present. Plain prose only.",
+      "inputs": ["$input"],
+      "constraints": [
+        { "rule": "2 to 3 sentences" },
+        { "rule": "No bullet points", "must_not_match": "^\\s*[-*]" },
+        { "rule": "No markdown", "must_not_match": "[*_#`]" }
+      ],
+      "expected_output": { "kind": "text", "min_chars": 120, "max_chars": 500 },
+      "failure_handling": { "max_retries": 2, "on_invalid": "retry" }
+    },
+    {
+      "id": "ask",
+      "title": "Write the ask",
+      "instruction": "Write one sentence proposing a 15-minute call next week. End with a question mark.",
+      "inputs": ["$input"],
+      "constraints": [
+        { "rule": "Ends with a question mark", "must_match": "\\?\\s*$" },
+        { "rule": "Mentions 15 minutes", "must_match": "15" }
+      ],
+      "expected_output": { "kind": "text", "min_chars": 30, "max_chars": 180 },
+      "failure_handling": { "max_retries": 2, "on_invalid": "retry" }
+    },
+    {
+      "id": "assemble",
+      "title": "Assemble final email",
+      "instruction": "Assemble the final email by copying the prior step outputs verbatim into the final result. Do not rewrite any text.",
+      "inputs": [
+        "$steps.subject",
+        "$steps.hook",
+        "$steps.value",
+        "$steps.ask"
+      ],
+      "constraints": [
+        { "rule": "Copy the inputs verbatim" }
+      ],
+      "expected_output": {
+        "kind": "json",
+        "json_schema": {
+          "type": "object",
+          "required": ["subject", "hook", "value", "ask"],
+          "additionalProperties": false,
+          "properties": {
+            "subject": { "type": "string", "minLength": 15 },
+            "hook": { "type": "string", "minLength": 40 },
+            "value": { "type": "string", "minLength": 120 },
+            "ask": { "type": "string", "minLength": 30 }
+          }
+        }
+      },
+      "failure_handling": { "max_retries": 2, "on_invalid": "repair" }
+    }
+  ],
+  "final_output": "$steps.assemble"
+}
