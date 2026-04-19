@@ -25,6 +25,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "example": "tsx src/cli.ts stats --source examples/sample-session.jsonl",
     "ci": "npm run typecheck && npm test",
+    "release:check-source": "node ./scripts/release/check-source.mjs",
     "prepublishOnly": "npm run clean && npm run build && npm test"
   },
   "devDependencies": {

@@ -25,6 +25,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "example": "tsx src/cli.ts run examples/suites/echo-basic/eval.yml",
     "ci": "npm run typecheck && npm test",
+    "release:check-source": "node ./scripts/release/check-source.mjs",
     "prepublishOnly": "npm run clean && npm run build && npm test"
   },
   "dependencies": {

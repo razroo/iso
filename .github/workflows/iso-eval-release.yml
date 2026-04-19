@@ -1,0 +1,71 @@
+name: iso-eval Release to npm
+
+on:
+  release:
+    types: [published]
+
+defaults:
+  run:
+    working-directory: packages/iso-eval
+
+jobs:
+  publish:
+    if: startsWith(github.ref_name, 'iso-eval-v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'npm'
+
+      - name: Set version from release tag
+        run: |
+          VERSION="${GITHUB_REF_NAME#iso-eval-v}"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Verify CI build-test-lint passed for release commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        working-directory: .
+        run: |
+          SHA=$(git rev-parse HEAD)
+          echo "Verifying CI build-test-lint check-run for $SHA"
+          DEADLINE=$(( $(date +%s) + 1800 ))
+          STATUS=""
+          CONCLUSION=""
+          while [ "$(date +%s)" -lt "$DEADLINE" ]; do
+            read -r STATUS CONCLUSION <<<"$(gh api "repos/${{ github.repository }}/commits/$SHA/check-runs" \
+              --jq '[.check_runs[] | select(.name == "build-test-lint")] | sort_by(.started_at) | last | "\(.status // "missing") \(.conclusion // "null")"')"
+            echo "build-test-lint check-run: status=$STATUS conclusion=$CONCLUSION"
+            if [ "$STATUS" = "completed" ]; then
+              break
+            fi
+            sleep 15
+          done
+          if [ "$STATUS" != "completed" ]; then
+            echo "::error::CI build-test-lint for $SHA never completed within 30min (last status: $STATUS)."
+            exit 1
+          fi
+          if [ "$CONCLUSION" != "success" ]; then
+            echo "::error::CI build-test-lint for $SHA did not succeed (conclusion: $CONCLUSION). Fix before re-releasing."
+            exit 1
+          fi
+          echo "CI build-test-lint succeeded for $SHA"
+
+      - name: Verify package.json version matches release tag
+        run: npm run release:check-source -- "$VERSION"
+
+      - name: Install (workspace root)
+        run: npm ci
+        working-directory: .
+
+      - name: Publish to npm (with provenance)
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
