@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { mkdirSync, readFileSync, readSync, writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { dirname, relative, resolve } from "node:path";
 import { Planner } from "../planner/index.js";
 import { createProvider, type ProviderSpec } from "../providers/factory.js";
 import { Runtime } from "../runtime/index.js";
@@ -203,6 +203,9 @@ async function cmdLint(
 ): Promise<void> {
   const target = positional[0] ?? ".";
   const cwd = resolve(process.cwd(), target);
+  // Repo root for cross-reference rules. Falls back to process.cwd() when
+  // not inside a git checkout — keeps non-git directories linting cleanly.
+  const repoRoot = findGitRoot(cwd) ?? process.cwd();
 
   // Load config relative to the target, not process.cwd(). Explicit
   // --config paths are still resolved from process.cwd() for ergonomics.
@@ -219,15 +222,21 @@ async function cmdLint(
   const use_gitignore = !flagBool(flags, "no-gitignore");
 
   let discovered = discoverFiles(cwd, { include_ext, ignore, use_gitignore });
+  // Re-base rel_path against the repo root so path-gated rules
+  // (`ctx.file.match(/modes\/|prompts\/|skills\/|agents\//)`) and
+  // link-resolution rules (stale-link-reference, missing-file-reference)
+  // see the file's full repo-relative path even when the user lints a
+  // subdirectory like `isolint lint modes/`.
+  discovered = discovered.map((f) => ({ ...f, rel_path: relative(repoRoot, f.abs_path) }));
 
   const since = flagString(flags, "since");
   if (since) {
-    const repoRoot = findGitRoot(cwd);
-    if (!repoRoot) {
+    const gitRoot = findGitRoot(cwd);
+    if (!gitRoot) {
       process.stderr.write(`[isolint] --since requires a git repository; ${cwd} is not one.\n`);
       process.exit(2);
     }
-    const changed = changedFilesSince(repoRoot, since);
+    const changed = changedFilesSince(gitRoot, since);
     discovered = discovered.filter((f) => changed.has(f.abs_path));
     if (discovered.length === 0) {
       process.stdout.write(`no files matching extensions changed since ${since}\n`);
@@ -254,8 +263,10 @@ async function cmdLint(
   const presetRules =
     presetNames.length > 0 ? rulesFromPresets(presetNames) : undefined;
 
-  // Scan the whole repo (minus ignored paths) for cross-reference rules.
-  const repoFiles = discoverRepoFiles(cwd, { ignore, use_gitignore });
+  // Scan from the repo root (not the lint target) so cross-reference rules
+  // can resolve links pointing outside the target — e.g. a `modes/README.md`
+  // that links to `[..](../CONTRIBUTING.md)` at the project root.
+  const repoFiles = discoverRepoFiles(repoRoot, { ignore, use_gitignore });
 
   const lintReport = await runLint(
     discovered.map((f) => ({ rel_path: f.rel_path, source: f.source })),
