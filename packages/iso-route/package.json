@@ -1,6 +1,6 @@
 {
   "name": "@razroo/iso-route",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Author one model policy; fan out to every harness that supports it. Translates role-based model selection into settings.json, config.toml, opencode.json, and a machine-readable resolved map.",
   "license": "MIT",
   "type": "module",

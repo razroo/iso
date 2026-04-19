@@ -1,5 +1,12 @@
 # @razroo/iso
 
+## 0.2.4
+
+### Patch Changes
+
+- Updated dependencies [39c86f8]
+  - @razroo/iso-route@0.3.0
+
 ## 0.2.3
 
 ### Patch Changes
