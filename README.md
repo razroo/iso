@@ -23,23 +23,33 @@ Today, writing agent instructions is fragmented on two axes:
    unstructured rationale all drop silently at 7B. You don't find out
    until the agent misbehaves in production.
 
-Three core packages compose into a build pipeline that fixes both,
-[`@razroo/iso`](./packages/iso) runs the whole chain as one command,
-[`@razroo/iso-route`](./packages/iso-route) compiles one model policy
-into each harness's config so you can swap models everywhere with a
-single edit, [`@razroo/iso-eval`](./packages/iso-eval) scores whether
-the resulting agent actually completes real tasks, and
-[`@razroo/iso-trace`](./packages/iso-trace) parses production transcripts
-so you can see what your agent *really* does in the wild:
+Seven packages solve that in one pipeline with a feedback loop:
+
+- **Four build-time tools** turn your authored source into every harness's file layout:
+  [`@razroo/agentmd`](./packages/agentmd) validates *structure*,
+  [`@razroo/isolint`](./packages/isolint) rewrites *prose* for small-model safety,
+  [`@razroo/iso-harness`](./packages/iso-harness) *fans out* to every harness, and
+  [`@razroo/iso-route`](./packages/iso-route) compiles *one model policy* into each harness's config.
+- **One wrapper** runs the whole build chain:
+  [`@razroo/iso`](./packages/iso) chains the above into a single `iso build`.
+- **Two feedback tools** close the loop after deploy:
+  [`@razroo/iso-eval`](./packages/iso-eval) scores *did the agent complete the task?* and
+  [`@razroo/iso-trace`](./packages/iso-trace) parses production transcripts to show *what the agent actually did*.
 
 ```
-   authored source              structural dialect             portable prose             fan-out to harnesses           behavioral eval
-  ┌────────────────┐  agentmd  ┌──────────────────┐  isolint  ┌───────────────┐  iso-harness  ┌──────────────────┐   iso-eval  ┌──────────────┐
-  │ your agent .md │ ────────▶ │ validated rules, │ ────────▶ │ small-model-  │ ─────────────▶│ CLAUDE.md        │ ──────────▶ │ per-task     │
-  │ + fixtures     │   lint    │ scope labels,    │ lint/fix  │ safe prose    │    build      │ AGENTS.md        │    run      │ pass / fail  │
-  │                │  render   │ load-bearing why │           │               │               │ .cursor/rules/*  │             │              │
-  └────────────────┘           └──────────────────┘           └───────────────┘               │ .opencode/*      │             └──────────────┘
-                                                                                              └──────────────────┘
+                authoring                          build                               output                        feedback
+  ┌────────────────────┐  agentmd  ┌───────────────────┐  isolint  ┌─────────────────┐  iso-harness  ┌───────────────────────┐    iso-eval  ──▶  per-task pass / fail
+  │ agent.md           │ ────────▶ │ validated rules,  │ ────────▶ │ small-model-    │ ────────────▶ │ CLAUDE.md             │                    (behavioral scoring)
+  │ + fixtures         │   lint    │ scope labels,     │ lint/fix  │ safe prose      │    build      │ AGENTS.md             │
+  │                    │   render  │ load-bearing why  │           │                 │               │ .cursor/rules/*       │    iso-trace ──▶  production events,
+  └────────────────────┘           └───────────────────┘           └─────────────────┘               │ .opencode/agents/*    │                    which rules ever fired,
+                                                                                                     │ settings.json         │                    regression-fixture mining
+  ┌────────────────────┐                                                                             │ .codex/config.toml    │
+  │ models.yaml        │ ───────────────────── iso-route build ─────────────────────────────────────▶│ opencode.json         │
+  │ (roles + fallback) │                                                                             │ .mcp.json             │
+  └────────────────────┘                                                                             └───────────────────────┘
+
+                    @razroo/iso chains agentmd → isolint → iso-harness in one command.  Run iso-route build alongside it for model config.
 ```
 
 ## Quickstart
