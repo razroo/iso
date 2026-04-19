@@ -25,8 +25,10 @@ Today, writing agent instructions is fragmented on two axes:
 
 Three core packages compose into a build pipeline that fixes both,
 [`@razroo/iso`](./packages/iso) runs the whole chain as one command,
-[`@razroo/iso-eval`](./packages/iso-eval) scores whether the resulting
-agent actually completes real tasks, and
+[`@razroo/iso-route`](./packages/iso-route) compiles one model policy
+into each harness's config so you can swap models everywhere with a
+single edit, [`@razroo/iso-eval`](./packages/iso-eval) scores whether
+the resulting agent actually completes real tasks, and
 [`@razroo/iso-trace`](./packages/iso-trace) parses production transcripts
 so you can see what your agent *really* does in the wild:
 
@@ -87,6 +89,15 @@ project that exercises the wrapper end-to-end.
   MCP servers into `CLAUDE.md`, `AGENTS.md`, `.cursor/rules/*.mdc`,
   `.opencode/agents/*.md`, etc., so all four harnesses stay in lockstep.
 
+- **[`packages/iso-route`](./packages/iso-route)** — [`@razroo/iso-route`](https://www.npmjs.com/package/@razroo/iso-route)
+  One model policy, every harness. Declare a default model plus named
+  roles (`planner`, `fast-edit`, `reviewer`, …) in a single
+  `models.yaml`; iso-route compiles that into `.claude/settings.json`,
+  `.codex/config.toml`, `opencode.json`, and a resolved role map that
+  `iso-harness` consumes when stamping per-subagent frontmatter. Honest
+  about ceilings — warns loudly where a harness (e.g. Cursor) can't bind
+  models programmatically.
+
 - **[`packages/iso-eval`](./packages/iso-eval)** — [`@razroo/iso-eval`](https://www.npmjs.com/package/@razroo/iso-eval)
   Behavioral eval runner for the produced harness. Snapshots a workspace
   per task, hands it to a runner with the task prompt, then scores the
@@ -117,6 +128,7 @@ iso/
     ├── isolint/          # portable prose
     ├── iso-harness/      # one source, every harness
     ├── iso/              # one command for the whole pipeline
+    ├── iso-route/        # one model policy → per-harness config
     ├── iso-eval/         # behavioral eval on the produced harness
     └── iso-trace/        # parse + query real agent transcripts (observability)
 ```

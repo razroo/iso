@@ -1,0 +1,33 @@
+# Example iso-route policy.
+#
+# The shape is intentionally small: one default model every harness falls back
+# to, plus named roles that harness-specific machinery (Claude Code subagents,
+# Codex profiles, OpenCode agents) can bind to.
+#
+# iso-route ONLY handles model selection. Prompts, rules, and subagent bodies
+# are owned by agentmd + iso-harness. Everything here compiles to *config*,
+# not prose.
+
+default:
+  provider: anthropic
+  model: claude-sonnet-4-6
+
+roles:
+  planner:
+    provider: anthropic
+    model: claude-opus-4-7
+    reasoning: high
+
+  fast-edit:
+    provider: anthropic
+    model: claude-haiku-4-5
+
+  reviewer:
+    provider: openai
+    model: gpt-5
+    fallback:
+      - { provider: anthropic, model: claude-sonnet-4-6 }
+
+  local-smoke:
+    provider: ollama
+    model: qwen2.5-coder:7b
