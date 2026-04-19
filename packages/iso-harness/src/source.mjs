@@ -32,6 +32,7 @@ async function loadMarkdownDir(dir) {
     out.push({
       slug,
       name: data.name ?? slug,
+      role: data.role,
       description: data.description ?? '',
       model: data.model,
       tools: data.tools,

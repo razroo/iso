@@ -1,5 +1,20 @@
 # @razroo/iso-harness
 
+## 0.4.0
+
+### Minor Changes
+
+- Read `<out>/.claude/iso-route.resolved.json` (written by
+  `@razroo/iso-route`) during the Claude emit and stamp `model:` onto
+  each subagent's frontmatter using `roles[agent.role ?? agent.slug]`.
+  Resolution order: `targets.claude.model` → inline `model:` → resolved
+  map → nothing. Non-Anthropic roles are skipped with a stderr warning
+  (Claude Code subagents only run Anthropic models); missing roles are
+  silent. Additive: builds without a resolved map on disk emit
+  unchanged. Also loads a new optional `role:` frontmatter field on
+  agent source files so a subagent can bind to a role whose name
+  differs from its filename slug.
+
 ## 0.3.0
 
 ### Minor Changes

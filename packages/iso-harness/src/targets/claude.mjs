@@ -1,3 +1,4 @@
+import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { stringify as toFrontmatter } from '../frontmatter.mjs';
 import { writeFile, writeJson } from '../fs-utils.mjs';
@@ -9,12 +10,41 @@ function claudeTools(tools) {
   return String(tools);
 }
 
+// Read the resolved role map that @razroo/iso-route writes next to the
+// Claude settings. Returns null if absent so a user running iso-harness
+// without iso-route sees no behavior change.
+async function loadResolvedRoleMap(outDir) {
+  const p = path.join(outDir, '.claude', 'iso-route.resolved.json');
+  try {
+    const raw = await fs.readFile(p, 'utf8');
+    return JSON.parse(raw);
+  } catch (err) {
+    if (err.code === 'ENOENT') return null;
+    throw new Error(`iso-harness: failed to read ${p}: ${err.message}`);
+  }
+}
+
+// Resolve a model for a Claude subagent from the iso-route map.
+// Returns { model } on success, { skip, reason } when the role exists
+// but can't be used for Claude (non-anthropic provider), or null when
+// the map has nothing to say.
+function modelFromResolvedMap(roleMap, roleName) {
+  const role = roleMap?.roles?.[roleName];
+  if (!role) return null;
+  if (role.provider !== 'anthropic') {
+    return { skip: true, reason: `provider "${role.provider}" is not anthropic` };
+  }
+  if (typeof role.model !== 'string' || !role.model) return null;
+  return { model: role.model };
+}
+
 export async function emitClaude(src, outDir, opts = {}) {
   const written = [];
   const push = async (p, content, writer = writeFile) => {
     const { bytes } = await writer(p, content, opts);
     written.push({ path: p, bytes });
   };
+  const roleMap = await loadResolvedRoleMap(outDir);
 
   if (src.instructions) {
     const p = path.join(outDir, 'CLAUDE.md');
@@ -30,7 +60,20 @@ export async function emitClaude(src, outDir, opts = {}) {
     };
     const tools = claudeTools(override.tools ?? agent.tools);
     if (tools) data.tools = tools;
-    const model = override.model ?? agent.model;
+    let model = override.model ?? agent.model;
+    // Only consult the iso-route map when no inline model is declared —
+    // an agent author that hard-pinned a model owns that decision.
+    if (!model && roleMap) {
+      const roleName = agent.role ?? agent.slug;
+      const lookup = modelFromResolvedMap(roleMap, roleName);
+      if (lookup?.model) {
+        model = lookup.model;
+      } else if (lookup?.skip) {
+        console.warn(
+          `iso-harness: [claude] agent "${agent.slug}" role "${roleName}" ${lookup.reason} — omitting model field`,
+        );
+      }
+    }
     if (model) data.model = model;
     const p = path.join(outDir, '.claude', 'agents', `${agent.slug}.md`);
     await push(p, toFrontmatter({ data, body: agent.body }));

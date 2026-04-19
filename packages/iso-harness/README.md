@@ -154,6 +154,33 @@ For features with no cross-harness analogue (Claude Code hooks, OpenCode
 `fallback_models`), edit the generated file or add a separate post-build
 step — don't force them into the neutral source.
 
+## Composition with `@razroo/iso-route`
+
+When [`@razroo/iso-route`](https://www.npmjs.com/package/@razroo/iso-route)
+writes its resolved role map to `<out>/.claude/iso-route.resolved.json`
+(normally by running `iso-route build` into the same output directory
+before `iso-harness build`), iso-harness picks it up automatically and
+stamps `model:` onto each Claude subagent frontmatter.
+
+Resolution order per subagent, highest to lowest:
+
+1. Per-target `targets.claude.model` from the agent's frontmatter.
+2. Inline `model:` from the agent's frontmatter.
+3. `roles[agent.role ?? agent.slug].model` from the resolved map.
+4. Nothing — the emitted frontmatter has no `model:` field.
+
+So an author can (a) hard-pin a model in the source file, (b) let
+iso-route drive it from policy, or (c) leave it to Claude Code's
+session default — without editing the agent body.
+
+Non-Anthropic roles in the resolved map are skipped (Claude Code
+subagents can only run Anthropic models) and logged on stderr. Missing
+roles are silent — not every agent needs a role entry.
+
+The contract is file-based on purpose: iso-harness and iso-route
+publish and version independently, so an on-disk JSON file is more
+robust than a TypeScript import across the two.
+
 ## Releasing
 
 Releases are cut via a GitHub Release, which triggers

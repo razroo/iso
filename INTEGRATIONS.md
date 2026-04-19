@@ -28,36 +28,15 @@ Rules of the road:
 
 ---
 
-## 1. `iso-harness` ← consumes `iso-route` resolved role map
+## 1. `iso-harness` ← consumes `iso-route` resolved role map — **DONE**
 
-**Status:** open. `iso-route` already writes
-`<out>/.claude/iso-route.resolved.json` when emitting for Claude; nothing
-reads it yet.
-
-**Target end-state.** When `iso-harness build` runs and finds
-`.claude/iso-route.resolved.json` in its `--out` directory, it stamps a
-`model:` field in each Claude subagent's frontmatter using the matching
-role's resolved model. If the role is absent from the map, or its
-provider is non-anthropic, the subagent emits without `model:` and
-iso-harness logs one line per skip.
-
-**Touch.**
-
-- `packages/iso-harness/src/targets/claude.mjs` — before writing
-  `.claude/agents/<name>.md`, read the resolved map once if it exists and
-  look up `roles[agentName]`.
-- `packages/iso-harness/src/frontmatter.mjs` — add a `model` field to
-  the frontmatter emitter if the value is non-null.
-- `packages/iso-harness/README.md` — add a paragraph under "Composition"
-  explaining the resolved-map contract.
-
-**Verify.**
-
-- New test under `packages/iso-harness/tests/` that writes a fake
-  resolved map + an agents source, runs the build, and asserts the
-  emitted subagent file contains `model: claude-opus-4-7`.
-- Existing test suite still passes when no resolved map is present
-  (additive change).
+Shipped in `@razroo/iso-harness` 0.4.0. The Claude emitter reads
+`<out>/.claude/iso-route.resolved.json` when present and stamps
+`model:` onto each subagent's frontmatter using
+`roles[agent.role ?? agent.slug]`. Inline `model:` in the agent source
+still wins; non-Anthropic roles are skipped with a stderr warning;
+missing roles are silent. See the "Composition with `@razroo/iso-route`"
+section in `packages/iso-harness/README.md` for the resolution order.
 
 ---
 
