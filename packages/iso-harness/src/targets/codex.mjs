@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { promises as fs } from 'node:fs';
 import { writeFile } from '../fs-utils.mjs';
 
 function tomlString(v) {
@@ -28,6 +29,34 @@ function renderMcpToml(servers) {
   return lines.join('\n');
 }
 
+// Strip every `[mcp_servers.*]` section (from the header through the next
+// section heading or EOF) from a TOML text. Preserves all other content
+// verbatim — top-level keys, comments, and unrelated sections — so
+// co-authored config.toml files (e.g. iso-route's model + profile blocks)
+// survive the iso-harness MCP rewrite.
+function stripMcpServerSections(text) {
+  const lines = text.split('\n');
+  const out = [];
+  let inMcpSection = false;
+  for (const line of lines) {
+    const m = line.match(/^\s*\[([^\]]+)\]\s*$/);
+    if (m) {
+      inMcpSection = m[1].startsWith('mcp_servers.');
+    }
+    if (!inMcpSection) out.push(line);
+  }
+  return out.join('\n');
+}
+
+async function readIfExists(p) {
+  try {
+    return await fs.readFile(p, 'utf8');
+  } catch (err) {
+    if (err.code === 'ENOENT') return null;
+    throw err;
+  }
+}
+
 export async function emitCodex(src, outDir, opts = {}) {
   const written = [];
   const push = async (p, content) => {
@@ -41,8 +70,20 @@ export async function emitCodex(src, outDir, opts = {}) {
   }
 
   if (Object.keys(src.mcp.servers).length > 0) {
-    const body = renderMcpToml(src.mcp.servers);
     const p = path.join(outDir, '.codex', 'config.toml');
+    // Merge — not overwrite. `@razroo/iso-route` writes model + profiles +
+    // model_providers to this same file; iso-harness owns only the
+    // `[mcp_servers.*]` sections. Strip those from any existing file,
+    // preserve everything else, and append the freshly-rendered MCP block.
+    const existing = opts.dryRun ? null : await readIfExists(p);
+    const mcpBlock = renderMcpToml(src.mcp.servers);
+    let body;
+    if (existing) {
+      const preserved = stripMcpServerSections(existing).trimEnd();
+      body = preserved ? `${preserved}\n\n${mcpBlock}` : mcpBlock;
+    } else {
+      body = mcpBlock;
+    }
     await push(p, body);
   }
 
