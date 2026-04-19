@@ -1,9 +1,11 @@
 # @razroo/iso-route — standard preset
 #
 # Opinionated cost-tiered routing across Claude Code, Cursor, Codex, and
-# OpenCode. Verified against each provider's 2026-04 model catalogs:
-#   Anthropic docs, OpenAI docs, xAI docs, Google Gemini docs, OpenCode
-#   Zen/Go proxy listings.
+# OpenCode. Verified against 2026-04 harness/provider docs:
+#   - Claude Code model config (aliases + pinned model IDs)
+#   - Cursor models docs (manual picker; no file-based role binding)
+#   - Codex models docs (gpt-5.4 default recommendation)
+#   - OpenCode models docs (provider/model ID format + variants)
 #
 # Three roles, each with per-harness overrides:
 #   - fast     — cheap + quick, for procedural work
@@ -23,6 +25,9 @@ default:
   provider: anthropic
   model: claude-sonnet-4-6
   targets:
+    codex:
+      provider: openai
+      model: gpt-5.4
     opencode:
       provider: opencode
       model: opencode/glm-5.1
