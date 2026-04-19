@@ -24,7 +24,7 @@
   },
   "dependencies": {
     "@razroo/agentmd": "^0.3.0",
-    "@razroo/iso-harness": "^0.3.0",
+    "@razroo/iso-harness": "^0.4.0",
     "@razroo/isolint": "^1.4.0"
   },
   "repository": {
