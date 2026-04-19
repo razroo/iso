@@ -1,5 +1,12 @@
 # @razroo/iso
 
+## 0.2.3
+
+### Patch Changes
+
+- Updated dependencies [e60189b]
+  - @razroo/iso-harness@0.6.0
+
 ## 0.2.2
 
 ### Patch Changes

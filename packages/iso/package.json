@@ -1,6 +1,6 @@
 {
   "name": "@razroo/iso",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "One command that chains agentmd → isolint → iso-harness: author one prompt, ship it to every coding agent.",
   "license": "MIT",
   "type": "module",
@@ -24,7 +24,7 @@
   },
   "dependencies": {
     "@razroo/agentmd": "^0.3.0",
-    "@razroo/iso-harness": "^0.5.0",
+    "@razroo/iso-harness": "^0.6.0",
     "@razroo/iso-route": "^0.2.0",
     "@razroo/isolint": "^1.4.1"
   },
