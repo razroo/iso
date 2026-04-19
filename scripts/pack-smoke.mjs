@@ -71,6 +71,7 @@ try {
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/isolint']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-eval']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-trace']);
+  run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-route']);
 
   const packsDir = resolve(tmpRoot, 'packs');
   mkdirSync(packsDir, { recursive: true });
@@ -81,6 +82,7 @@ try {
   const isoTgz = packWorkspace('@razroo/iso', packsDir);
   const isoEvalTgz = packWorkspace('@razroo/iso-eval', packsDir);
   const isoTraceTgz = packWorkspace('@razroo/iso-trace', packsDir);
+  const isoRouteTgz = packWorkspace('@razroo/iso-route', packsDir);
 
   // Smoke the packaged iso-harness CLI directly.
   const harnessDir = resolve(tmpRoot, 'iso-harness');
@@ -163,7 +165,30 @@ try {
   );
   run('npx', ['--no-install', 'iso-trace', 'stats', '--source', fixturePath], isoTraceDir);
 
-  console.log(`\npack smoke ok — verified packaged iso-harness, iso, iso-eval, and iso-trace from ${tmpRoot}`);
+  // Smoke the packaged iso-route CLI against the bundled example policy.
+  const isoRouteDir = resolve(tmpRoot, 'iso-route');
+  mkdirSync(isoRouteDir, { recursive: true });
+  writePackageJson(isoRouteDir);
+  run('npm', ['install', isoRouteTgz], isoRouteDir);
+  run('npx', ['--no-install', 'iso-route', '--version'], isoRouteDir);
+  const modelsPath = resolve(
+    isoRouteDir,
+    'node_modules',
+    '@razroo',
+    'iso-route',
+    'examples',
+    'models.yaml',
+  );
+  run(
+    'npx',
+    ['--no-install', 'iso-route', 'build', modelsPath, '--out', resolve(isoRouteDir, 'out'), '--dry-run'],
+    isoRouteDir,
+  );
+  run('npx', ['--no-install', 'iso-route', 'plan', modelsPath], isoRouteDir);
+
+  console.log(
+    `\npack smoke ok — verified packaged iso-harness, iso, iso-eval, iso-trace, and iso-route from ${tmpRoot}`,
+  );
 } catch (err) {
   failed = true;
   console.error(`\npack smoke failed — temp data kept at ${tmpRoot}`);
