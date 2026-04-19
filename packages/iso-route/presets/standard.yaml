@@ -1,0 +1,72 @@
+# @razroo/iso-route — standard preset
+#
+# Opinionated cost-tiered routing across Claude Code, Cursor, Codex, and
+# OpenCode. Verified against each provider's 2026-04 model catalogs:
+#   Anthropic docs, OpenAI docs, xAI docs, Google Gemini docs, OpenCode
+#   Zen/Go proxy listings.
+#
+# Three roles, each with per-harness overrides:
+#   - fast     — cheap + quick, for procedural work
+#   - quality  — top-tier, for judgment / writing / reasoning
+#   - minimal  — smallest credible model, for narrow one-shot transforms
+#
+# Users extend this preset in their own models.yaml:
+#
+#   extends: standard
+#   # ...override only what you want:
+#   roles:
+#     quality:
+#       targets:
+#         codex: { provider: openai, model: gpt-5.4 }
+
+default:
+  provider: anthropic
+  model: claude-sonnet-4-6
+  targets:
+    opencode:
+      provider: opencode
+      model: opencode/glm-5.1
+
+roles:
+  # fast — procedural worker. Cheap per-call cost; assumes the task is
+  # scripted / deterministic and quality-sensitive prose is NOT required.
+  fast:
+    provider: anthropic
+    model: claude-haiku-4-5
+    targets:
+      opencode:
+        provider: opencode
+        model: opencode/big-pickle
+      codex:
+        provider: openai
+        model: gpt-5.4-mini
+
+  # quality — top-tier worker. Use for writing, evaluation narratives,
+  # nuanced judgment calls, or high-stakes single applications where the
+  # marginal cost is worth the quality delta.
+  quality:
+    provider: anthropic
+    model: claude-opus-4-7
+    reasoning: high
+    targets:
+      opencode:
+        provider: opencode
+        model: opencode-go/kimi-k2.5
+      codex:
+        provider: openai
+        model: gpt-5.4
+        reasoning: high
+
+  # minimal — narrow one-shot extractor / classifier. Smallest credible
+  # model on each harness; input/output is expected to be ≤5K tokens and
+  # structured. Not for multi-step workflows.
+  minimal:
+    provider: anthropic
+    model: claude-haiku-4-5
+    targets:
+      opencode:
+        provider: opencode
+        model: opencode/minimax-m2.5-free
+      codex:
+        provider: openai
+        model: gpt-5.4-nano

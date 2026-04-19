@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { ALL_TARGETS, build } from "./build.js";
-import { loadPolicy } from "./parser.js";
+import { listPresets, loadPolicy } from "./parser.js";
 import type { HarnessTarget } from "./types.js";
 
 const USAGE = `iso-route — one model policy, every harness
@@ -14,8 +14,11 @@ usage:
   iso-route build  <models.yaml> [--out <dir>] [--targets claude,codex,opencode,cursor]
                                   [--dry-run]
   iso-route plan   <models.yaml>
+  iso-route init   [--preset <name>] [--out <path>] [--force]
 
 targets default to all four. --dry-run emits nothing but prints every file it *would* write.
+"init" scaffolds a starter models.yaml from a built-in preset. Run "iso-route init --help"
+to see available presets.
 `;
 
 function readVersion(): string {
@@ -111,6 +114,77 @@ function cmdPlan(args: string[]): number {
   return 0;
 }
 
+function cmdInit(args: string[]): number {
+  let preset = "standard";
+  let outPath = "models.yaml";
+  let force = false;
+  let showHelp = false;
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i];
+    if (a === "--preset") {
+      preset = args[++i] ?? "";
+      if (!preset) {
+        console.error("iso-route init: --preset requires a name");
+        return 2;
+      }
+    } else if (a === "--out") {
+      outPath = args[++i] ?? "";
+      if (!outPath) {
+        console.error("iso-route init: --out requires a path");
+        return 2;
+      }
+    } else if (a === "--force") {
+      force = true;
+    } else if (a === "--help" || a === "-h") {
+      showHelp = true;
+    } else {
+      console.error(`iso-route init: unknown flag "${a}"`);
+      return 2;
+    }
+  }
+  if (showHelp) {
+    console.log(
+      `iso-route init — scaffold a models.yaml from a built-in preset\n\n` +
+        `available presets: ${listPresets().join(", ")}\n\n` +
+        `flags:\n` +
+        `  --preset <name>  preset to use (default: standard)\n` +
+        `  --out <path>     where to write (default: ./models.yaml)\n` +
+        `  --force          overwrite an existing file\n`,
+    );
+    return 0;
+  }
+
+  const presets = listPresets();
+  if (!presets.includes(preset)) {
+    console.error(
+      `iso-route init: unknown preset "${preset}". Available: ${presets.join(", ")}`,
+    );
+    return 2;
+  }
+
+  const absOut = resolve(process.cwd(), outPath);
+  if (existsSync(absOut) && !force) {
+    console.error(
+      `iso-route init: ${absOut} already exists. Pass --force to overwrite, or --out <other>.`,
+    );
+    return 2;
+  }
+
+  // Scaffold a lean consumer models.yaml that extends the preset. Users can
+  // see the preset's content by reading node_modules/@razroo/iso-route/presets/
+  // or by running `iso-route plan` on this file.
+  const header = `# Model policy for this project. Extends @razroo/iso-route's built-in "${preset}"\n`;
+  const explain =
+    `# preset — override only what you want to differ. Run \`iso-route plan\` to see\n` +
+    `# the resolved policy (preset + your overrides applied).\n`;
+  const body = `\nextends: ${preset}\n\n# Example override — uncomment and edit:\n#\n# roles:\n#   quality:\n#     targets:\n#       codex:\n#         provider: openai\n#         model: gpt-5.4\n`;
+  writeFileSync(absOut, header + explain + body);
+  console.log(`iso-route: wrote ${absOut} (extends preset "${preset}")`);
+  console.log(`  next: \`iso-route plan ${outPath}\` to see resolved roles`);
+  console.log(`        \`iso-route build ${outPath} --out .\` to emit harness configs`);
+  return 0;
+}
+
 function formatBytes(n: number): string {
   if (n < 1024) return `${n} B`;
   if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
@@ -131,6 +205,7 @@ function main(argv: string[]): number {
   const rest = args.slice(1);
   if (cmd === "build") return cmdBuild(rest);
   if (cmd === "plan") return cmdPlan(rest);
+  if (cmd === "init") return cmdInit(rest);
   console.error(`iso-route: unknown command "${cmd}"\n`);
   console.error(USAGE);
   return 2;
