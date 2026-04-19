@@ -1,7 +1,15 @@
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import YAML from "yaml";
-import type { ModelPolicy, Provider, ProviderModel, Reasoning, Role } from "./types.js";
+import type {
+  HarnessTarget,
+  ModelPolicy,
+  Provider,
+  ProviderModel,
+  Reasoning,
+  Role,
+  TargetOverride,
+} from "./types.js";
 
 const VALID_PROVIDERS: ReadonlySet<Provider> = new Set<Provider>([
   "anthropic",
@@ -13,10 +21,18 @@ const VALID_PROVIDERS: ReadonlySet<Provider> = new Set<Provider>([
   "groq",
   "ollama",
   "openrouter",
+  "opencode",
   "local",
 ]);
 
 const VALID_REASONING: ReadonlySet<Reasoning> = new Set<Reasoning>(["low", "medium", "high"]);
+
+const VALID_TARGETS: ReadonlySet<HarnessTarget> = new Set<HarnessTarget>([
+  "claude",
+  "codex",
+  "opencode",
+  "cursor",
+]);
 
 const ROLE_NAME_RE = /^[a-z][a-z0-9-]*$/;
 
@@ -80,6 +96,26 @@ function parseProviderModel(raw: unknown, where: string, path: string): Provider
       );
     }
     out.reasoning = r.reasoning as Reasoning;
+  }
+  if (r.targets != null) {
+    if (typeof r.targets !== "object" || Array.isArray(r.targets)) {
+      throw new Error(
+        `${path}: ${where}.targets must be an object mapping harness → override`,
+      );
+    }
+    const targets: Partial<Record<HarnessTarget, TargetOverride>> = {};
+    for (const [name, cfg] of Object.entries(r.targets as Record<string, unknown>)) {
+      if (!VALID_TARGETS.has(name as HarnessTarget)) {
+        throw new Error(
+          `${path}: ${where}.targets.${name} — unknown harness; valid: ${[...VALID_TARGETS].join(", ")}`,
+        );
+      }
+      const override = parseProviderModel(cfg, `${where}.targets.${name}`, path);
+      // Target overrides cannot themselves carry `.targets` — flatten.
+      const { targets: _nested, ...flat } = override;
+      targets[name as HarnessTarget] = flat;
+    }
+    out.targets = targets;
   }
   return out;
 }

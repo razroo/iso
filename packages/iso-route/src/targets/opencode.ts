@@ -25,9 +25,16 @@ export function emitOpenCode(policy: ModelPolicy): EmitResult {
 
   const providerKeys = new Set<ProviderModel["provider"]>();
   for (const r of [policy.default, ...policy.roles]) providerKeys.add(r.provider);
-  config.provider = Object.fromEntries(
-    [...providerKeys].map((p) => [p, { npm: providerPackage(p) }]),
-  );
+  const providerEntries: Array<[string, { npm: string }]> = [];
+  for (const p of providerKeys) {
+    const pkg = providerPackage(p);
+    // OpenCode natively recognises `opencode/*` routing tokens; no SDK
+    // package to declare. Skip the provider block entry so opencode.json
+    // doesn't try to install a nonexistent npm package.
+    if (pkg === null) continue;
+    providerEntries.push([p, { npm: pkg }]);
+  }
+  if (providerEntries.length) config.provider = Object.fromEntries(providerEntries);
 
   const json = `${JSON.stringify(config, null, 2)}\n`;
   return {
@@ -38,10 +45,14 @@ export function emitOpenCode(policy: ModelPolicy): EmitResult {
 }
 
 function qualifiedModel(r: ProviderModel): string {
+  // "opencode" is a passthrough — the model string is already a fully-
+  // qualified OpenCode routing token (e.g. "opencode/big-pickle",
+  // "opencode-go/minimax-m2.7"). Re-prefixing would double-qualify it.
+  if (r.provider === "opencode") return r.model;
   return `${r.provider}/${r.model}`;
 }
 
-function providerPackage(p: ProviderModel["provider"]): string {
+function providerPackage(p: ProviderModel["provider"]): string | null {
   switch (p) {
     case "anthropic":
       return "@ai-sdk/anthropic";
@@ -63,5 +74,7 @@ function providerPackage(p: ProviderModel["provider"]): string {
       return "ollama-ai-provider";
     case "local":
       return "ollama-ai-provider";
+    case "opencode":
+      return null;
   }
 }
