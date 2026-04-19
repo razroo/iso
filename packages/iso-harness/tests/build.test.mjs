@@ -204,6 +204,56 @@ test('build: codex config.toml handles no pre-existing file', async () => {
   assert.doesNotMatch(toml, /\[profiles\./);
 });
 
+test('build: opencode agent stamps model from iso-route config when no inline model', async () => {
+  const { iso, out } = mkIso({
+    agent:
+      '---\nname: a\ndescription: sample\ntargets:\n  opencode:\n    mode: subagent\n---\n\nBody.\n',
+  });
+  // Simulate iso-route having pre-written opencode.json with an agent map.
+  mkdirSync(out, { recursive: true });
+  writeFileSync(
+    join(out, 'opencode.json'),
+    JSON.stringify(
+      {
+        $schema: 'https://opencode.ai/config.json',
+        model: 'anthropic/claude-sonnet-4-6',
+        agent: {
+          a: { model: 'opencode/big-pickle' },
+        },
+      },
+      null,
+      2,
+    ),
+  );
+  await build({ source: iso, out, targets: ['opencode'] });
+  const agentBody = readFileSync(join(out, '.opencode/agents/a.md'), 'utf8');
+  // Model from the resolved map was stamped onto the agent file.
+  assert.match(agentBody, /^model: opencode\/big-pickle$/m);
+});
+
+test('build: inline opencode model still wins over iso-route resolved map', async () => {
+  const { iso, out } = mkIso({
+    agent:
+      '---\nname: a\ndescription: sample\ntargets:\n  opencode:\n    mode: subagent\n    model: inline/pinned-model\n---\n\nBody.\n',
+  });
+  mkdirSync(out, { recursive: true });
+  writeFileSync(
+    join(out, 'opencode.json'),
+    JSON.stringify(
+      {
+        $schema: 'https://opencode.ai/config.json',
+        agent: { a: { model: 'should/not/win' } },
+      },
+      null,
+      2,
+    ),
+  );
+  await build({ source: iso, out, targets: ['opencode'] });
+  const agentBody = readFileSync(join(out, '.opencode/agents/a.md'), 'utf8');
+  assert.match(agentBody, /^model: inline\/pinned-model$/m);
+  assert.doesNotMatch(agentBody, /should\/not\/win/);
+});
+
 test('build: opencode.json merges with existing iso-route model config', async () => {
   const { iso, out } = mkIso();
   // Simulate `@razroo/iso-route build` having already written model routing
