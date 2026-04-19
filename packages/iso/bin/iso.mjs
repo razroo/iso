@@ -11,9 +11,9 @@ const USAGE = `iso — authored source in, every coding-agent harness out
 Usage:
   iso --version
   iso [build] [project-dir] [--out <dir>] [--target <list>]
-      [--skip-isolint] [--dry-run]
+      [--skip-isolint] [--skip-iso-route] [--dry-run]
   iso plan [project-dir] [--out <dir>] [--target <list>]
-      [--skip-isolint] [--dry-run]
+      [--skip-isolint] [--skip-iso-route] [--dry-run]
 
 Commands:
   build     Run the full pipeline (default).
@@ -23,6 +23,9 @@ Flags:
   --out <dir>         Output directory for generated harness files.
   --target <list>     Comma-separated targets: claude,cursor,codex,opencode
   --skip-isolint      Skip the portable-prose lint step.
+  --skip-iso-route    Skip the model-policy compile step (iso-route).
+                      The step is also skipped automatically when no
+                      models.yaml exists.
   --dry-run           Pass through to iso-harness: show planned writes only.
 `;
 
@@ -68,6 +71,7 @@ function parseCli(argv) {
     out: values.get('out'),
     target: values.get('target'),
     skipIsolint: booleans.has('skip-isolint'),
+    skipIsoRoute: booleans.has('skip-iso-route'),
     dryRun: booleans.has('dry-run'),
   };
 }
@@ -75,6 +79,7 @@ function parseCli(argv) {
 function printPlan(plan) {
   console.log(`iso: ${plan.projectDir}`);
   console.log(`  source: ${plan.hasAgentMd ? 'agent.md + iso/' : 'iso/'}`);
+  if (plan.modelsYaml) console.log(`  models: ${plan.modelsYaml}`);
   console.log(`  out:    ${plan.outDir}`);
   console.log(`  steps:  ${plan.steps.length}`);
   for (const [idx, step] of plan.steps.entries()) {
@@ -103,6 +108,7 @@ const opts = {
   out: cli.out,
   target: cli.target,
   skipIsolint: cli.skipIsolint,
+  skipIsoRoute: cli.skipIsoRoute,
   dryRun: cli.dryRun,
 };
 

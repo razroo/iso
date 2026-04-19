@@ -1,7 +1,6 @@
 ---
 name: workspace-researcher
 description: Investigates one package or workflow and reports the exact files involved.
-model: sonnet
 tools:
   - Read
   - Grep

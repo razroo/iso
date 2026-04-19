@@ -22,6 +22,7 @@ function run(cmd, args, cwd = repoRoot) {
 // Ensure sibling CLIs exist before the wrapper resolves their local bins.
 run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/agentmd']);
 run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/isolint']);
+run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-route']);
 
 // Show the planned steps, then run the full wrapper build.
 run('node', [isoCli, 'plan', here, '--out', 'out']);
@@ -32,12 +33,15 @@ const expected = [
   'CLAUDE.md',
   '.claude/agents/workspace-researcher.md',
   '.claude/commands/release-check.md',
+  '.claude/settings.json',
+  '.claude/iso-route.resolved.json',
+  '.codex/config.toml',
   '.mcp.json',
   '.cursor/rules/main.mdc',
   '.cursor/rules/agent-workspace-researcher.mdc',
   '.cursor/mcp.json',
+  '.cursor/iso-route.md',
   'AGENTS.md',
-  '.codex/config.toml',
   'opencode.json',
   '.opencode/agents/workspace-researcher.md',
   '.opencode/skills/release-check.md',
@@ -55,6 +59,20 @@ if (!existsSync(renderedInstructions)) {
 const instructions = readFileSync(renderedInstructions, 'utf8');
 if (!instructions.includes('## Hard limits — must never be violated')) {
   console.error('\nrendered instructions did not include the expected compiled heading');
+  process.exit(1);
+}
+
+// Integration #1 + #2 smoke: iso-route's resolved map must carry the
+// workspace-researcher role, and iso-harness must have stamped its model
+// onto the Claude subagent frontmatter.
+const resolvedMap = JSON.parse(readFileSync(resolve(out, '.claude/iso-route.resolved.json'), 'utf8'));
+if (resolvedMap.roles?.['workspace-researcher']?.model !== 'claude-opus-4-7') {
+  console.error('\niso-route resolved map missing expected workspace-researcher role');
+  process.exit(1);
+}
+const researcherAgent = readFileSync(resolve(out, '.claude/agents/workspace-researcher.md'), 'utf8');
+if (!/^model:\s*claude-opus-4-7\b/m.test(researcherAgent)) {
+  console.error('\niso-harness did not stamp model: claude-opus-4-7 onto workspace-researcher');
   process.exit(1);
 }
 

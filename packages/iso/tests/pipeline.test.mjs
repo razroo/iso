@@ -9,7 +9,13 @@ import { planPipeline, runPipeline } from '../src/index.mjs';
 
 const CLI = fileURLToPath(new URL('../bin/iso.mjs', import.meta.url));
 
-function mkProject({ agentMd = '# Agent\n', instructions = '# Instructions\n', withAgentMd = true } = {}) {
+function mkProject({
+  agentMd = '# Agent\n',
+  instructions = '# Instructions\n',
+  withAgentMd = true,
+  modelsYaml = null,
+  modelsLocation = 'root',
+} = {}) {
   const dir = mkdtempSync(join(tmpdir(), 'iso-pipeline-'));
   const isoDir = join(dir, 'iso');
   mkdirSync(join(isoDir, 'agents'), { recursive: true });
@@ -18,6 +24,10 @@ function mkProject({ agentMd = '# Agent\n', instructions = '# Instructions\n', w
   writeFileSync(join(isoDir, 'instructions.md'), instructions);
   if (withAgentMd) {
     writeFileSync(join(dir, 'agent.md'), agentMd);
+  }
+  if (modelsYaml) {
+    const loc = modelsLocation === 'iso' ? join(isoDir, 'models.yaml') : join(dir, 'models.yaml');
+    writeFileSync(loc, modelsYaml);
   }
   return dir;
 }
@@ -98,4 +108,66 @@ test('planPipeline: missing iso directory fails clearly', () => {
   const dir = mkdtempSync(join(tmpdir(), 'iso-missing-'));
   assert.throws(() => planPipeline(dir), /No iso\/ source directory found/);
   rmSync(dir, { recursive: true, force: true });
+});
+
+test('planPipeline: models.yaml at project root inserts iso-route before iso-harness', () => {
+  const dir = mkProject({
+    modelsYaml: 'default:\n  provider: anthropic\n  model: claude-sonnet-4-6\n',
+  });
+  const plan = planPipeline(dir);
+  const labels = plan.steps.map((s) => s.label);
+  const routeIdx = labels.findIndex((l) => l.startsWith('iso-route'));
+  const harnessIdx = labels.findIndex((l) => l.startsWith('iso-harness'));
+  assert.ok(routeIdx !== -1, `iso-route step missing: ${labels.join(' | ')}`);
+  assert.ok(routeIdx < harnessIdx, 'iso-route must run before iso-harness');
+  assert.equal(plan.modelsYaml, resolve(dir, 'models.yaml'));
+});
+
+test('planPipeline: iso/models.yaml is detected when project root is empty', () => {
+  const dir = mkProject({
+    modelsYaml: 'default:\n  provider: anthropic\n  model: claude-sonnet-4-6\n',
+    modelsLocation: 'iso',
+  });
+  const plan = planPipeline(dir);
+  assert.ok(plan.steps.some((s) => s.label.startsWith('iso-route')));
+  assert.equal(plan.modelsYaml, resolve(dir, 'iso/models.yaml'));
+});
+
+test('planPipeline: project root models.yaml wins over iso/models.yaml', () => {
+  const dir = mkProject({
+    modelsYaml: 'default:\n  provider: anthropic\n  model: claude-sonnet-4-6\n',
+    modelsLocation: 'root',
+  });
+  writeFileSync(
+    join(dir, 'iso', 'models.yaml'),
+    'default:\n  provider: openai\n  model: gpt-5\n',
+  );
+  const plan = planPipeline(dir);
+  assert.equal(plan.modelsYaml, resolve(dir, 'models.yaml'));
+});
+
+test('planPipeline: no iso-route step when no models.yaml present', () => {
+  const dir = mkProject();
+  const plan = planPipeline(dir);
+  assert.equal(plan.modelsYaml, null);
+  assert.ok(!plan.steps.some((s) => s.label.startsWith('iso-route')));
+});
+
+test('planPipeline: --skip-iso-route omits the step even when models.yaml exists', () => {
+  const dir = mkProject({
+    modelsYaml: 'default:\n  provider: anthropic\n  model: claude-sonnet-4-6\n',
+  });
+  const plan = planPipeline(dir, { skipIsoRoute: true });
+  assert.equal(plan.modelsYaml, null);
+  assert.ok(!plan.steps.some((s) => s.label.startsWith('iso-route')));
+});
+
+test('planPipeline: --dry-run is forwarded to the iso-route step', () => {
+  const dir = mkProject({
+    modelsYaml: 'default:\n  provider: anthropic\n  model: claude-sonnet-4-6\n',
+  });
+  const plan = planPipeline(dir, { dryRun: true });
+  const routeStep = plan.steps.find((s) => s.label.startsWith('iso-route'));
+  assert.ok(routeStep);
+  assert.ok(routeStep.args.includes('--dry-run'));
 });

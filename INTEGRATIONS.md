@@ -40,35 +40,18 @@ section in `packages/iso-harness/README.md` for the resolution order.
 
 ---
 
-## 2. `@razroo/iso` wrapper ← composes `iso-route build` as an optional step
+## 2. `@razroo/iso` wrapper ← composes `iso-route build` as an optional step — **DONE**
 
-**Status:** open. The wrapper currently chains
-`agentmd → isolint → iso-harness`. `iso-route` runs alongside, not inside.
-
-**Target end-state.** `iso build .` detects `models.yaml` (or
-`iso/models.yaml`) in the project root. If present, the pipeline inserts
-an `iso-route build` step *before* `iso-harness build` so the resolved
-map is on disk when iso-harness reads it (see integration #1).
-`iso plan` lists the step. `--skip-iso-route` opts out.
-
-**Touch.**
-
-- `packages/iso/src/pipeline.mjs` — add a new `planPipeline` branch that
-  appends the iso-route step conditionally on `models.yaml` existence.
-- `packages/iso/package.json` — add `@razroo/iso-route` to
-  `dependencies`.
-- `packages/iso/bin/iso.mjs` — surface `--skip-iso-route` in the CLI
-  flag parser.
-- `packages/iso/README.md` — document the new step and flag.
-- `examples/dogfood/` — add a sample `models.yaml` so the dogfood
-  exercises the composed flow.
-
-**Verify.**
-
-- `npm run test:dogfood` still passes.
-- New test in `packages/iso/tests/` that drives `planPipeline` against a
-  fixture project with and without `models.yaml`, asserts the step list
-  contains / omits `iso-route build` accordingly.
+Shipped in `@razroo/iso` 0.2.0. The wrapper detects `models.yaml` (at
+project root, preferred) or `iso/models.yaml` and inserts `iso-route
+build <path> --out <outDir>` before `iso-harness build`, so the
+resolved role map is on disk when iso-harness reads it (see #1).
+`--skip-iso-route` opts out; absent `models.yaml` skips the step
+automatically. `iso plan` now lists the step and the detected
+`models.yaml` path. `examples/dogfood/` carries a sample `models.yaml`
+so both `npm run test:dogfood` and `npm run test:pack` exercise the
+full composed flow end-to-end, asserting that `model: claude-opus-4-7`
+ends up stamped on the `workspace-researcher` subagent.
 
 ---
 

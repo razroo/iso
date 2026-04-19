@@ -114,17 +114,28 @@ try {
   writePackageJson(isoDir);
   cpSync(resolve(repoRoot, 'examples', 'dogfood', 'agent.md'), resolve(isoDir, 'agent.md'));
   cpSync(resolve(repoRoot, 'examples', 'dogfood', 'iso'), resolve(isoDir, 'iso'), { recursive: true });
-  run('npm', ['install', agentmdTgz, isolintTgz, harnessTgz, isoTgz], isoDir);
+  cpSync(
+    resolve(repoRoot, 'examples', 'dogfood', 'models.yaml'),
+    resolve(isoDir, 'models.yaml'),
+  );
+  run(
+    'npm',
+    ['install', agentmdTgz, isolintTgz, harnessTgz, isoRouteTgz, isoTgz],
+    isoDir,
+  );
   run('npx', ['--no-install', 'iso', '--version'], isoDir);
   run('npx', ['--no-install', 'iso', 'build', '.', '--out', 'out'], isoDir);
   assertFiles(resolve(isoDir, 'out'), [
     'CLAUDE.md',
     '.claude/agents/workspace-researcher.md',
     '.claude/commands/release-check.md',
+    '.claude/settings.json',
+    '.claude/iso-route.resolved.json',
     '.mcp.json',
     '.cursor/rules/main.mdc',
     '.cursor/rules/agent-workspace-researcher.mdc',
     '.cursor/mcp.json',
+    '.cursor/iso-route.md',
     'AGENTS.md',
     '.codex/config.toml',
     'opencode.json',
@@ -134,6 +145,18 @@ try {
   const rendered = readFileSync(resolve(isoDir, 'iso', 'instructions.md'), 'utf8');
   if (!rendered.includes('## Hard limits — must never be violated')) {
     throw new Error('packaged iso build did not render compiled instructions as expected');
+  }
+  // Confirm the iso-route → iso-harness handoff survived packaging: the
+  // resolved role map on disk should drive a model: line into the
+  // workspace-researcher subagent's emitted frontmatter.
+  const packedAgent = readFileSync(
+    resolve(isoDir, 'out', '.claude', 'agents', 'workspace-researcher.md'),
+    'utf8',
+  );
+  if (!/^model:\s*claude-opus-4-7\b/m.test(packedAgent)) {
+    throw new Error(
+      'packaged iso build did not stamp model: claude-opus-4-7 onto workspace-researcher',
+    );
   }
 
   // Smoke the packaged iso-eval CLI against the bundled example suite.

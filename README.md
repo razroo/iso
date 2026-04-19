@@ -49,7 +49,7 @@ Seven packages solve that in one pipeline with a feedback loop:
   │ (roles + fallback) │                                                                             │ .mcp.json             │
   └────────────────────┘                                                                             └───────────────────────┘
 
-                    @razroo/iso chains agentmd → isolint → iso-harness in one command.  Run iso-route build alongside it for model config.
+                    @razroo/iso chains agentmd → isolint → iso-route (when models.yaml exists) → iso-harness in one command.
 ```
 
 ## Quickstart

@@ -1,0 +1,15 @@
+# Dogfood policy — exercises the iso-route → iso-harness integration.
+#
+# The `workspace-researcher` role name matches the subagent filename in
+# iso/agents/workspace-researcher.md, so iso-harness stamps model:
+# claude-opus-4-7 onto that subagent's frontmatter at build time.
+
+default:
+  provider: anthropic
+  model: claude-sonnet-4-6
+
+roles:
+  workspace-researcher:
+    provider: anthropic
+    model: claude-opus-4-7
+    reasoning: high

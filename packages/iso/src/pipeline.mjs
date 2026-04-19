@@ -21,6 +21,18 @@ function siblingBin(pkgName, binName) {
 const AGENTMD_BIN = siblingBin('@razroo/agentmd', 'agentmd');
 const ISOLINT_BIN = siblingBin('@razroo/isolint', 'isolint');
 const ISO_HARNESS_BIN = siblingBin('@razroo/iso-harness', 'iso-harness');
+const ISO_ROUTE_BIN = siblingBin('@razroo/iso-route', 'iso-route');
+
+// Detect a models.yaml in conventional locations. Project-root wins over
+// iso/models.yaml so a team that treats model policy as "project-level
+// config" (not "agent source") can keep it separate from iso/.
+function findModelsYaml(projectDir, isoDir) {
+  const candidates = [
+    path.join(projectDir, 'models.yaml'),
+    path.join(isoDir, 'models.yaml'),
+  ];
+  return candidates.find((p) => existsSync(p)) ?? null;
+}
 
 // Run one subprocess step. `stdio: inherit` so user sees the child's output
 // live — progress bars, warnings, summaries all pass through unchanged.
@@ -71,6 +83,19 @@ export function planPipeline(projectDir, opts = {}) {
       });
     }
   }
+  // iso-route must run BEFORE iso-harness: iso-route writes the resolved
+  // role map to <out>/.claude/iso-route.resolved.json, and iso-harness's
+  // Claude emitter reads that map to stamp per-subagent model: fields.
+  const modelsYaml = opts.skipIsoRoute ? null : findModelsYaml(abs, isoDir);
+  if (modelsYaml) {
+    const routeArgs = ['build', modelsYaml, '--out', outDir];
+    if (opts.dryRun) routeArgs.push('--dry-run');
+    steps.push({
+      label: `iso-route build (model policy → harness config)`,
+      bin: ISO_ROUTE_BIN,
+      args: routeArgs,
+    });
+  }
   const harnessArgs = ['build', '--source', isoDir, '--out', outDir];
   if (opts.dryRun) harnessArgs.push('--dry-run');
   if (opts.target) harnessArgs.push('--target', opts.target);
@@ -79,7 +104,7 @@ export function planPipeline(projectDir, opts = {}) {
     bin: ISO_HARNESS_BIN,
     args: harnessArgs,
   });
-  return { projectDir: abs, hasAgentMd, hasIsoDir, outDir, steps };
+  return { projectDir: abs, hasAgentMd, hasIsoDir, outDir, modelsYaml, steps };
 }
 
 export function runPipeline(projectDir, opts = {}, deps = {}) {
