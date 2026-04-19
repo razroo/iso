@@ -1,5 +1,17 @@
 # @razroo/iso-route
 
+## 0.3.1
+
+### Patch Changes
+
+- f49fddd: `standard` preset: add an explicit `default.targets.codex`
+  (`openai/gpt-5.4`) so a Codex user running `extends: standard` with
+  no further overrides gets a natively-routable OpenAI model instead
+  of the Anthropic default flattened as-is. Also tightens the preset
+  header comment to cite the specific harness/provider docs used to
+  verify each pick (Claude Code model config, Cursor models, Codex
+  models, OpenCode models). Content-only — no API or CLI changes.
+
 ## 0.3.0
 
 ### Minor Changes
