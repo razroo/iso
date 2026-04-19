@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.4.1
+
+### Patch Changes
+
+- 47d3c60: Fix cross-reference rules when linting a subdirectory.
+
+  `isolint lint modes/` previously rooted the repo-file scan and `ctx.file`
+  at the lint target instead of the actual repo root. This produced two
+  classes of bug: (1) stale-link-reference flagged every `[..](../X.md)`
+  link to a project-root file because those files weren't in `repo_files`,
+  and (2) every rule that gates on `ctx.file.match(/modes\/|prompts\/|…/)`
+  silently skipped because `ctx.file` was target-relative (`README.md`)
+  instead of repo-relative (`modes/README.md`).
+
+  `discoverRepoFiles` now scans from the git root (or `process.cwd()`
+  outside a git checkout), and discovered file `rel_path` values are
+  re-based to the repo root before reaching rules. Behavior when linting
+  the project root (`isolint lint .`) is unchanged.
+
 ## 1.4.0
 
 ### Changed
@@ -66,6 +85,7 @@
 ## 1.2.0
 
 ### Added
+
 - **`isolint cost [path]`** — new command. Buckets harness files into
   shared-prefix (loaded every turn), per-mode, and per-agent, then reports
   approximate per-turn prompt-token cost with section-level breakdown for
@@ -95,6 +115,7 @@
     `if/when/unless/whenever` conditions.
 
 ### Changed
+
 - **Scanner honors `.gitignore` by default** when run inside a git repo.
   Uses `git ls-files --cached --others --exclude-standard` as an
   allowlist so build output (generated `CLAUDE.md`, `AGENTS.md`,
@@ -106,6 +127,7 @@
   `cost` and performance rules import from there.
 
 ### Fixed
+
 - macOS path canonicalization via `realpathSync` so `/var` vs.
   `/private/var` doesn't break gitignore membership checks.
 

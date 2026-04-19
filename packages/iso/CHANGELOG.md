@@ -1,5 +1,14 @@
 # @razroo/iso
 
+## 0.2.1
+
+### Patch Changes
+
+- Updated dependencies [9127f0b]
+- Updated dependencies [47d3c60]
+  - @razroo/iso-harness@0.5.0
+  - @razroo/isolint@1.4.1
+
 ## 0.2.0
 
 ### Minor Changes
