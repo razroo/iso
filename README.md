@@ -127,6 +127,83 @@ project that exercises the wrapper end-to-end.
 Each package is independently published on npm and works on its own.
 They're in one repo because they're designed to compose.
 
+## Commands cheat sheet
+
+Install any one package globally or per-project; every CLI below is the
+bin exposed by that package.
+
+### `@razroo/iso` — wrapper (recommended)
+
+```bash
+iso build                         # run agentmd → isolint → iso-harness on ./
+iso build path/to/project         # target another project
+iso build . --out dist            # write generated harness files under ./dist
+iso build . --target claude,cursor
+iso build . --skip-isolint        # skip the portable-prose pass
+iso build . --dry-run             # dry-run the final iso-harness write
+iso plan  .                       # print planned steps without executing
+```
+
+### `@razroo/agentmd` — author structure
+
+```bash
+agentmd lint   <file>                                     # structural lint (rule IDs, refs, why:)
+agentmd render <file> [--out compiled.md]                 # render compiled prompt with scope labels
+agentmd test   <file> --fixtures <path> [--via api|claude-code] [--model <id>]
+```
+
+### `@razroo/isolint` — portable prose
+
+```bash
+isolint lint .                                            # default preset
+isolint lint . --preset recommended,performance
+isolint lint . --since origin/main --fail-on warn         # gate PRs
+isolint lint . --format sarif > lint.sarif                # for GitHub code scanning
+isolint lint . --fix --llm --large anthropic/claude-3.5-sonnet
+isolint plan  <spec>                                      # generate portable instructions from a plan
+```
+
+### `@razroo/iso-harness` — fan out to every harness
+
+```bash
+iso-harness build                                         # reads ./iso, writes to ./
+iso-harness build --target claude,cursor                  # subset of targets
+iso-harness build --source path/to/iso --out path/to/project
+iso-harness build --dry-run                               # print planned writes
+iso-harness build --watch                                 # rebuild on every source change
+```
+
+### `@razroo/iso-route` — one model policy, every harness
+
+```bash
+iso-route build models.yaml --out .                       # emit .claude/settings.json, config.toml, etc.
+iso-route build models.yaml --targets claude,codex        # subset of harnesses
+iso-route build models.yaml --dry-run                     # preview without touching disk
+iso-route plan  models.yaml                               # print resolved role table
+```
+
+### `@razroo/iso-eval` — did the agent actually do the task?
+
+```bash
+iso-eval run  eval.yml                                    # run the suite
+iso-eval run  eval.yml --filter write-greeting --concurrency 2 --json
+iso-eval run  eval.yml --keep-workspaces                  # keep tmpdirs for debugging
+iso-eval plan eval.yml                                    # list tasks + checks, no execution
+```
+
+### `@razroo/iso-trace` — what the agent *actually* did (production)
+
+```bash
+iso-trace sources                                         # detected transcript roots + parser status
+iso-trace list                                            # recent sessions across every root
+iso-trace list --since 7d --cwd .
+iso-trace show <id-or-prefix> [--events tool_call,file_op]
+iso-trace show <id> --grep "H3"                           # regex across messages + tool input
+iso-trace stats [ids…] [--since 7d] [--cwd .]             # aggregate tool/rule stats
+iso-trace stats --source path/to/sample.jsonl             # one file, no discovery
+iso-trace export <id> --format jsonl > session.jsonl
+```
+
 ## Layout
 
 ```
