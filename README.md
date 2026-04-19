@@ -127,6 +127,12 @@ project that exercises the wrapper end-to-end.
 Each package is independently published on npm and works on its own.
 They're in one repo because they're designed to compose.
 
+**Working on integrations across packages?** Read
+[`INTEGRATIONS.md`](./INTEGRATIONS.md). It lists the open composition
+work with target end-states, touch points, and verification steps — so
+an AI agent (or human) pointed at this repo knows which compositions
+are planned vs. which are deliberately kept decoupled.
+
 ## Commands cheat sheet
 
 Install any one package globally or per-project; every CLI below is the
