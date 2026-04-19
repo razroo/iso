@@ -203,3 +203,35 @@ test('build: codex config.toml handles no pre-existing file', async () => {
   assert.match(toml, /\[mcp_servers\.a\]/);
   assert.doesNotMatch(toml, /\[profiles\./);
 });
+
+test('build: opencode.json merges with existing iso-route model config', async () => {
+  const { iso, out } = mkIso();
+  // Simulate `@razroo/iso-route build` having already written model routing
+  // fields to opencode.json. iso-harness must preserve them and layer only
+  // its own $schema + mcp on top.
+  mkdirSync(out, { recursive: true });
+  writeFileSync(
+    join(out, 'opencode.json'),
+    JSON.stringify(
+      {
+        $schema: 'https://opencode.ai/config.json',
+        model: 'anthropic/claude-sonnet-4-6',
+        agent: {
+          planner: { model: 'anthropic/claude-opus-4-7' },
+          'fast-edit': { model: 'anthropic/claude-haiku-4-5' },
+        },
+      },
+      null,
+      2,
+    ),
+  );
+  await build({ source: iso, out, targets: ['opencode'] });
+  const cfg = JSON.parse(readFileSync(join(out, 'opencode.json'), 'utf8'));
+  // Preserved: iso-route's model + agent fields
+  assert.equal(cfg.model, 'anthropic/claude-sonnet-4-6');
+  assert.equal(cfg.agent?.planner?.model, 'anthropic/claude-opus-4-7');
+  assert.equal(cfg.agent?.['fast-edit']?.model, 'anthropic/claude-haiku-4-5');
+  // Added/overwritten by iso-harness: $schema + mcp
+  assert.equal(cfg.$schema, 'https://opencode.ai/config.json');
+  assert.ok(cfg.mcp?.a, 'expected mcp.a to be present');
+});

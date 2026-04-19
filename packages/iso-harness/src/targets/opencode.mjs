@@ -1,7 +1,19 @@
 import path from 'node:path';
+import { promises as fs } from 'node:fs';
 import { stringify as toFrontmatter } from '../frontmatter.mjs';
 import { writeFile, writeJson } from '../fs-utils.mjs';
 import { targetOverride } from '../source.mjs';
+
+async function readJsonIfExists(p) {
+  try {
+    const raw = await fs.readFile(p, 'utf8');
+    return JSON.parse(raw);
+  } catch (err) {
+    if (err.code === 'ENOENT') return {};
+    if (err instanceof SyntaxError) return {};
+    throw err;
+  }
+}
 
 export async function emitOpenCode(src, outDir, opts = {}) {
   const written = [];
@@ -58,7 +70,13 @@ export async function emitOpenCode(src, outDir, opts = {}) {
   const hasMcp = Object.keys(src.mcp.servers).length > 0;
   const hasExtras = Object.keys(opencodeExtras).length > 0;
   if (hasMcp || hasExtras) {
+    const p = path.join(outDir, 'opencode.json');
+    // Merge with any existing opencode.json — `@razroo/iso-route` writes
+    // model routing fields to the same file, so iso-harness must preserve
+    // them and layer its own mcp/extras on top instead of overwriting.
+    const existing = opts.dryRun ? {} : await readJsonIfExists(p);
     const output = {
+      ...existing,
       $schema: 'https://opencode.ai/config.json',
     };
     if (hasMcp) {
@@ -76,7 +94,6 @@ export async function emitOpenCode(src, outDir, opts = {}) {
     for (const [k, v] of Object.entries(opencodeExtras)) {
       output[k] = v;
     }
-    const p = path.join(outDir, 'opencode.json');
     await push(p, output, writeJson);
   }
 
