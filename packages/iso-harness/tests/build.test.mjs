@@ -117,6 +117,40 @@ test('loadSource: throws a clear error when mcp.json has no servers object', asy
   await assert.rejects(() => loadSource(iso), /top-level "servers" object/);
 });
 
+test('build: opencode target writes opencode-model-fallback.json from opencodeModelFallback', async () => {
+  const { iso, out } = mkIso();
+  writeFileSync(
+    join(iso, 'config.json'),
+    JSON.stringify(
+      {
+        opencodeModelFallback: {
+          cooldown_seconds: 1,
+          retryable_error_patterns: ['(?i)venice'],
+          fallback_models: ['openrouter/openai/gpt-oss-20b:free'],
+        },
+      },
+      null,
+      2,
+    ),
+  );
+  await build({ source: iso, out, targets: ['opencode'] });
+  const p = join(out, '.opencode', 'opencode-model-fallback.json');
+  assert.ok(existsSync(p));
+  const got = JSON.parse(readFileSync(p, 'utf8'));
+  assert.equal(got.cooldown_seconds, 1);
+  assert.deepEqual(got.retryable_error_patterns, ['(?i)venice']);
+  assert.deepEqual(got.fallback_models, ['openrouter/openai/gpt-oss-20b:free']);
+});
+
+test('build: rejects opencodeModelFallback when not a plain object', async () => {
+  const { iso, out } = mkIso();
+  writeFileSync(join(iso, 'config.json'), JSON.stringify({ opencodeModelFallback: [] }));
+  await assert.rejects(
+    () => build({ source: iso, out, targets: ['opencode'] }),
+    /opencodeModelFallback/,
+  );
+});
+
 test('build: rendered CLAUDE.md preserves the instructions file verbatim (plus trailing newline)', async () => {
   const { iso, out } = mkIso({ instructions: '# My project\n\nRule 1.\nRule 2.' });
   await build({ source: iso, out, targets: ['claude'] });

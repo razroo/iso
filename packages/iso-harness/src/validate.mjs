@@ -157,6 +157,16 @@ export function validateConfig(config, file = 'iso/config.json') {
       }
     }
   }
+  if (config.opencodeModelFallback !== undefined) {
+    if (!isPlainObject(config.opencodeModelFallback)) {
+      diags.push({
+        severity: 'error',
+        file,
+        field: 'opencodeModelFallback',
+        message: `"opencodeModelFallback" must be a JSON object (plugin config for .opencode/opencode-model-fallback.json)`,
+      });
+    }
+  }
   return diags;
 }
 

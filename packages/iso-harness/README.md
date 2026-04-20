@@ -13,8 +13,9 @@ iso/                              →  CLAUDE.md                    (Claude Code
 ├── agents/                          .mcp.json
 │   └── researcher.md             →  AGENTS.md                    (Codex + OpenCode)
 └── commands/                        .codex/config.toml
-    └── review.md                    .opencode/agents/*.md
+    └── review.md                                                         .opencode/agents/*.md
                                      .opencode/skills/*.md
+                                     .opencode/opencode-model-fallback.json  (optional; from `opencodeModelFallback` in iso/config.json)
                                      opencode.json
                                   →  .cursor/rules/*.mdc          (Cursor)
                                      .cursor/mcp.json
@@ -50,6 +51,7 @@ iso-harness build --watch                 # rebuild on every change under iso/
 ```
 iso/
 ├── instructions.md       # root prompt → CLAUDE.md / AGENTS.md / .cursor/rules/main.mdc
+├── config.json           # optional — targets.* merges + opencodeModelFallback file emit
 ├── mcp.json              # shared MCP server definitions
 ├── agents/               # subagents
 │   └── <slug>.md         # YAML frontmatter + body
@@ -138,6 +140,11 @@ explicit hatches keep harness-specific features possible:
    harness config (not per-item). Keys under `targets.opencode` are
    merged into the generated `opencode.json` — use this for OpenCode's
    top-level `instructions: [...]` array, for example.
+4. **`iso/config.json` top-level `opencodeModelFallback`** — JSON object
+   written verbatim to `.opencode/opencode-model-fallback.json` for the
+   [`@razroo/opencode-model-fallback`](https://www.npmjs.com/package/@razroo/opencode-model-fallback)
+   plugin (`retryable_error_patterns`, global `fallback_models`, etc.).
+   OpenCode-only; other harnesses ignore it.
 
 ```json
 // iso/config.json
@@ -146,13 +153,18 @@ explicit hatches keep harness-specific features possible:
     "opencode": {
       "instructions": ["templates/states.yml"]
     }
+  },
+  "opencodeModelFallback": {
+    "cooldown_seconds": 60,
+    "retryable_error_patterns": ["(?i)venice.*insufficient"],
+    "fallback_models": ["openrouter/openai/gpt-oss-120b:free"]
   }
 }
 ```
 
-For features with no cross-harness analogue (Claude Code hooks, OpenCode
-`fallback_models`), edit the generated file or add a separate post-build
-step — don't force them into the neutral source.
+Per-agent OpenCode `fallback_models` still belong in agent frontmatter
+under `targets.opencode`. Use `opencodeModelFallback` only for the
+**global** plugin file OpenCode loads from `.opencode/`.
 
 ## Composition with `@razroo/iso-route`
 

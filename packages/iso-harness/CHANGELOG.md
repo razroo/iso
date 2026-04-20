@@ -1,5 +1,19 @@
 # @razroo/iso-harness
 
+## 0.6.1
+
+### Patch Changes
+
+- Emit `.opencode/opencode-model-fallback.json` when `iso/config.json`
+  defines a top-level `opencodeModelFallback` object.
+
+  This is the on-disk config shape consumed by
+  `@razroo/opencode-model-fallback` (retryable error patterns, global
+  `fallback_models`, cooldowns, etc.). Keeping it in `iso/` means
+  `iso-harness build` fans it out with the rest of the OpenCode target
+  instead of hand-maintaining a generated path outside the harness
+  source tree.
+
 ## 0.6.0
 
 ### Minor Changes

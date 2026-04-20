@@ -125,5 +125,14 @@ export async function emitOpenCode(src, outDir, opts = {}) {
     await push(opencodeJsonPath, output, writeJson);
   }
 
+  // Optional @razroo/opencode-model-fallback plugin config — emitted as its
+  // own file so OpenCode picks it up without polluting opencode.json. Source
+  // of truth lives next to other harness config in iso/config.json.
+  const modelFallback = src.config?.opencodeModelFallback;
+  if (modelFallback != null) {
+    const p = path.join(outDir, '.opencode', 'opencode-model-fallback.json');
+    await push(p, JSON.stringify(modelFallback, null, 2) + '\n');
+  }
+
   return written;
 }

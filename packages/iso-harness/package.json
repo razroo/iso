@@ -1,6 +1,6 @@
 {
   "name": "@razroo/iso-harness",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "One config for every coding agent — Cursor, Claude Code, Codex, OpenCode.",
   "type": "module",
   "bin": {
