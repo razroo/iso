@@ -5,11 +5,24 @@
 # proxy tokens. Intended for users who already have OpenRouter connected
 # inside OpenCode and want reproducible, inspectable model names.
 #
-# Verified against the live OpenRouter models API on 2026-04-20:
-#   - default:  qwen/qwen3-coder:free
-#   - quality:  openai/gpt-oss-120b:free
-#   - fast:     minimax/minimax-m2.5:free
-#   - minimal:  google/gemma-4-26b-a4b-it:free
+# Verified against the live OpenRouter models API on 2026-04-20, tuned
+# after real-world observation that qwen3-coder:free is the most
+# contended free model on the shared OpenRouter pool (everyone uses it,
+# so the Venice / Chutes providers that back it rate-limit often).
+# We keep it as the orchestrator default since it is genuinely the
+# strongest free agentic model, but subagent roles now spread load
+# across less-contended providers:
+#
+#   - orchestrator:  qwen/qwen3-coder:free             (best free agentic)
+#   - quality:       qwen/qwen3-next-80b-a3b-instruct:free (best free writing)
+#   - fast:          z-ai/glm-4.5-air:free             (reliable tool-calling)
+#   - minimal:       openai/gpt-oss-20b:free           (strong structured output)
+#
+# Notable free candidates outside this shortlist (see `iso-route catalog
+# openrouter`): moonshotai/kimi-k2.6 (scores 910, free with tools,
+# 262k ctx — worth pinning once usage stabilizes),
+# nvidia/nemotron-3-super-120b-a12b:free (120B reasoning model, good
+# quality-tier fallback).
 #
 # Use `iso-route catalog openrouter` to refresh the shortlist when
 # upstream offerings change.
@@ -26,9 +39,9 @@ default:
       model: qwen/qwen3-coder:free
 
 roles:
-  # fast — procedural worker. Preserves the existing Claude/Codex tiers
-  # while switching OpenCode to the quickest free OpenRouter pick in the
-  # current shortlist.
+  # fast — procedural worker. GLM 4.5 Air was designed by Zhipu as the
+  # lightweight counterpart to their agentic GLM 4.5; more reliable
+  # tool-call schema compliance than MiniMax on the Geometra flows.
   fast:
     provider: anthropic
     model: claude-haiku-4-5
@@ -38,10 +51,10 @@ roles:
         model: gpt-5.4-mini
       opencode:
         provider: openrouter
-        model: minimax/minimax-m2.5:free
+        model: z-ai/glm-4.5-air:free
 
-  # quality — best free OpenRouter alternative for OpenCode while keeping
-  # opus / gpt-5.4 on the native harnesses.
+  # quality — best free OpenRouter model for long-form writing. 262k
+  # ctx, 80B params, instruct-tuned. Claude/Codex still run Opus / GPT-5.4.
   quality:
     provider: anthropic
     model: claude-opus-4-7
@@ -53,10 +66,12 @@ roles:
         reasoning: high
       opencode:
         provider: openrouter
-        model: openai/gpt-oss-120b:free
+        model: qwen/qwen3-next-80b-a3b-instruct:free
 
-  # minimal — smallest credible tool-capable OpenRouter pick from the
-  # current free shortlist.
+  # minimal — GPT-OSS-20B is dense-trained for structured outputs, has
+  # 131k ctx (plenty for extraction), and is typically less contended
+  # than the Gemma variants which get hammered as default small-model
+  # picks across many apps.
   minimal:
     provider: anthropic
     model: claude-haiku-4-5
@@ -66,4 +81,4 @@ roles:
         model: gpt-5.4-nano
       opencode:
         provider: openrouter
-        model: google/gemma-4-26b-a4b-it:free
+        model: openai/gpt-oss-20b:free

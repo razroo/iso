@@ -84,9 +84,11 @@ test("extends openrouter-free: OpenCode targets use explicit free OpenRouter mod
   assert.equal(policy.default.targets?.opencode?.model, "qwen/qwen3-coder:free");
   const quality = policy.roles.find((r) => r.name === "quality")!;
   assert.equal(quality.targets?.opencode?.provider, "openrouter");
-  assert.equal(quality.targets?.opencode?.model, "openai/gpt-oss-120b:free");
+  assert.equal(quality.targets?.opencode?.model, "qwen/qwen3-next-80b-a3b-instruct:free");
+  const fast = policy.roles.find((r) => r.name === "fast")!;
+  assert.equal(fast.targets?.opencode?.model, "z-ai/glm-4.5-air:free");
   const minimal = policy.roles.find((r) => r.name === "minimal")!;
-  assert.equal(minimal.targets?.opencode?.model, "google/gemma-4-26b-a4b-it:free");
+  assert.equal(minimal.targets?.opencode?.model, "openai/gpt-oss-20b:free");
 });
 
 test("extends standard: scalar override on default replaces just that scalar", () => {

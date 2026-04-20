@@ -1,5 +1,25 @@
 # @razroo/iso-route
 
+## 0.5.1
+
+### Patch Changes
+
+- Retune the `openrouter-free` preset after real-world usage showed
+  `qwen/qwen3-coder:free` is the most contended free model on OpenRouter's
+  shared pool. Keeps it as the orchestrator default (still the strongest
+  free agentic model) but spreads subagent load:
+
+  - `fast`: `minimax/minimax-m2.5:free` → `z-ai/glm-4.5-air:free`
+    (more reliable tool-call schema compliance on Geometra flows)
+  - `minimal`: `google/gemma-4-26b-a4b-it:free` → `openai/gpt-oss-20b:free`
+    (less contended, better structured-output adherence)
+  - `quality`: kept on `qwen/qwen3-next-80b-a3b-instruct:free`
+    (upgraded from `gpt-oss-120b:free`, matching JobForge's override;
+    the preset now ships the actually-best free writing model)
+
+  No breaking changes — existing consumers get better defaults on next
+  install.
+
 ## 0.5.0
 
 ### Minor Changes
