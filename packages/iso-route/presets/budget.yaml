@@ -1,0 +1,79 @@
+# @razroo/iso-route — budget preset
+#
+# Cost-optimized variant of `standard`. Pushes every tier one step
+# cheaper than the quality-first defaults:
+#
+#   standard.default  (sonnet)  →  budget.default  (haiku)
+#   standard.quality  (opus)    →  budget.quality  (sonnet)
+#   standard.fast     (haiku)   →  budget.fast     (haiku)     [same]
+#   standard.minimal  (haiku)   →  budget.minimal  (haiku)     [same]
+#
+# On OpenCode, opts into free-tier and pay-once models; on Codex,
+# drops one tier on every OpenAI pick. Verified against 2026-04
+# provider catalogs.
+#
+# Use when your project is hobby-scale / personal-budget or when
+# Anthropic's opus pricing isn't justified per call.
+#
+# Extend it and override only what you want to upgrade:
+#
+#   extends: budget
+#   roles:
+#     quality:
+#       targets:
+#         claude:
+#           provider: anthropic
+#           model: claude-opus-4-7  # upgrade quality back to opus
+
+default:
+  provider: anthropic
+  model: claude-haiku-4-5
+  targets:
+    codex:
+      provider: openai
+      model: gpt-5.4-mini
+    opencode:
+      provider: opencode
+      model: opencode/minimax-m2.5-free
+
+roles:
+  # fast — scripted worker. Budget and standard agree here; haiku is
+  # already the natural pick and free-tier on OpenCode.
+  fast:
+    provider: anthropic
+    model: claude-haiku-4-5
+    targets:
+      codex:
+        provider: openai
+        model: gpt-5.4-nano
+      opencode:
+        provider: opencode
+        model: opencode/minimax-m2.5-free
+
+  # quality — "best affordable" rather than "best". Drops opus for
+  # sonnet; drops gpt-5.4 for gpt-5.4-mini. Still usable for judgment
+  # calls, just with a narrower failure margin than standard.
+  quality:
+    provider: anthropic
+    model: claude-sonnet-4-6
+    targets:
+      codex:
+        provider: openai
+        model: gpt-5.4-mini
+        reasoning: medium
+      opencode:
+        provider: opencode
+        model: opencode/big-pickle
+
+  # minimal — narrow one-shot extractor. Same pick as standard; this
+  # tier is already at the floor.
+  minimal:
+    provider: anthropic
+    model: claude-haiku-4-5
+    targets:
+      codex:
+        provider: openai
+        model: gpt-5.4-nano
+      opencode:
+        provider: opencode
+        model: opencode/minimax-m2.5-free

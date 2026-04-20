@@ -1,5 +1,29 @@
 # @razroo/iso-route
 
+## 0.4.0
+
+### Minor Changes
+
+- Add the `budget` preset — cost-optimized variant of `standard` that
+  pushes every tier one step cheaper: `default` drops from sonnet to
+  haiku; `quality` drops from opus to sonnet; Codex picks drop from
+  gpt-5.4 to gpt-5.4-mini / gpt-5.4-nano; OpenCode uses
+  free-tier / pay-once models (`minimax-m2.5-free`, `big-pickle`).
+  Scaffold it with `iso-route init --preset budget`.
+
+  `listPresets()` now returns `["standard", "budget"]`. The README
+  grew a preset section explaining the `extends:` mechanic (deep
+  merge, user-wins, atomic per-harness targets) and how to override
+  selectively (e.g. upgrade `budget.quality.targets.claude` back to
+  opus with a three-line YAML block).
+
+  README also now documents per-harness overrides via `targets.<harness>`
+  (shipped in 0.2.0 but previously undocumented at the package level).
+
+  Two new tests cover the budget preset shape and selective-override
+  behavior. Preset content is verified against 2026-04 provider
+  catalogs.
+
 ## 0.3.1
 
 ### Patch Changes

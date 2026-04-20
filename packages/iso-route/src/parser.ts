@@ -58,7 +58,7 @@ export function listPresets(): string[] {
   // Kept in sync with the YAML files in presets/. Hardcoded so a package
   // consumer running the CLI doesn't have to walk the installed tarball's
   // filesystem at runtime.
-  return ["standard"];
+  return ["standard", "budget"];
 }
 
 /**

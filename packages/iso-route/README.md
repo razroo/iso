@@ -52,8 +52,74 @@ roles:
 ```
 
 Valid providers: `anthropic`, `openai`, `google`, `xai`, `deepseek`,
-`mistral`, `groq`, `ollama`, `openrouter`, `local`.
+`mistral`, `groq`, `ollama`, `openrouter`, `opencode`, `local`.
 Valid `reasoning` levels: `low`, `medium`, `high`.
+
+### Per-harness overrides
+
+Any role (and the top-level `default`) can declare a `targets.<harness>`
+block to pick a different provider + model when iso-route emits for
+that harness. Use this to run, for example, Claude on Claude Code,
+gpt-5.4 on Codex, and an OpenCode proxy token on OpenCode — all from
+one role:
+
+```yaml
+roles:
+  planner:
+    provider: anthropic
+    model: claude-opus-4-7
+    targets:
+      codex:
+        provider: openai
+        model: gpt-5.4
+      opencode:
+        provider: opencode
+        model: opencode-go/kimi-k2.5
+```
+
+When emitting for harness `X`, iso-route uses `targets.X` if present;
+otherwise falls through to the generic `provider` + `model`. Emitters
+always see a flattened policy so they don't need to know `targets:`
+exists.
+
+### Bundled presets (`extends:`)
+
+Two curated presets ship with the package so you don't have to pin
+per-harness model picks by hand. Extend one with a single line; override
+only what you want to differ.
+
+| preset    | thesis                                                                |
+| --------- | --------------------------------------------------------------------- |
+| `standard`| Quality-first. Sonnet/Opus on Claude Code, gpt-5.4 on Codex, OpenCode Zen/Go picks per tier. |
+| `budget`  | Cost-optimized. Haiku/Sonnet on Claude Code, gpt-5.4-mini/nano on Codex, free-tier and pay-once OpenCode picks. |
+
+Scaffold a starter with the right boilerplate:
+
+```bash
+iso-route init                         # writes ./models.yaml extending "standard"
+iso-route init --preset budget         # use the budget preset instead
+iso-route init --out custom/path.yaml  # different location
+iso-route init --force                 # overwrite existing
+```
+
+Or write the extension by hand:
+
+```yaml
+extends: standard   # or: extends: budget
+# ...override only what you want:
+roles:
+  quality:
+    targets:
+      codex:
+        provider: openai
+        model: gpt-5.4
+```
+
+User fields win at every key. `roles` merge by name, `targets` merge
+per harness (each harness override is atomic — a user's `targets.codex`
+replaces the preset's `targets.codex` as a unit, not field-by-field).
+Setting an override to `null` removes the preset's value for that
+harness.
 
 ## Fan-out mapping
 
@@ -72,14 +138,17 @@ time. Everything else gets a real config file.
 ## CLI
 
 ```bash
+iso-route init                               # scaffold ./models.yaml (extends "standard")
+iso-route init --preset budget               # or start from the budget preset
 iso-route build models.yaml --out .
 iso-route build models.yaml --targets claude,codex --dry-run
 iso-route plan  models.yaml
 ```
 
-`build` writes per-harness files under `--out` (defaults to `.`). Add
-`--dry-run` to preview without touching disk. `plan` prints the resolved
-role table so you can eyeball what each harness will see.
+`init` scaffolds a starter `models.yaml` that extends a built-in
+preset. `build` writes per-harness files under `--out` (defaults to
+`.`). Add `--dry-run` to preview without touching disk. `plan` prints
+the resolved role table so you can eyeball what each harness will see.
 
 ## Library API
 

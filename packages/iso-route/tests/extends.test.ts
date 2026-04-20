@@ -21,6 +21,42 @@ function writeYaml(contents: string): string {
 test("listPresets: returns the built-in preset names", () => {
   const presets = listPresets();
   assert.ok(presets.includes("standard"), `expected "standard" in ${JSON.stringify(presets)}`);
+  assert.ok(presets.includes("budget"), `expected "budget" in ${JSON.stringify(presets)}`);
+});
+
+test("extends budget: default pushed to haiku, quality lowered to sonnet", () => {
+  const path = writeYaml("extends: budget\n");
+  const policy = loadPolicy(path);
+  // Budget's thesis: everything is one tier cheaper than standard.
+  assert.equal(policy.default.model, "claude-haiku-4-5");
+  const quality = policy.roles.find((r) => r.name === "quality");
+  assert.ok(quality, "budget preset must include a quality role");
+  assert.equal(quality.model, "claude-sonnet-4-6");
+  const fast = policy.roles.find((r) => r.name === "fast");
+  assert.ok(fast);
+  assert.equal(fast.model, "claude-haiku-4-5");
+});
+
+test("extends budget: user can upgrade just the quality.targets.claude pick back to opus", () => {
+  const path = writeYaml(
+    [
+      "extends: budget",
+      "roles:",
+      "  quality:",
+      "    targets:",
+      "      claude:",
+      "        provider: anthropic",
+      "        model: claude-opus-4-7",
+      "",
+    ].join("\n"),
+  );
+  const policy = loadPolicy(path);
+  const quality = policy.roles.find((r) => r.name === "quality");
+  assert.ok(quality);
+  // Sonnet stays at the top-level (falling through on codex/opencode), but
+  // claude target is now opus again.
+  assert.equal(quality.model, "claude-sonnet-4-6");
+  assert.equal(quality.targets?.claude?.model, "claude-opus-4-7");
 });
 
 test("extends standard: user gets preset default + roles unchanged", () => {
