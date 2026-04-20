@@ -44,16 +44,37 @@ tasks:
       - { type: command, run: "test -f greeting.txt", expectExit: 0 }
 ```
 
-### Supported checks (v0.1)
+### Supported checks
 
-| type                 | asserts                                                          |
-| -------------------- | ---------------------------------------------------------------- |
-| `command`            | shell command exits with `expectExit` (default 0); optional stdout contains/matches |
-| `file_exists`        | file at `path` exists in the workspace                           |
-| `file_contains`      | file at `path` contains the literal substring `value`            |
-| `file_not_contains`  | file at `path` does NOT contain `value`                          |
-| `file_matches`       | file at `path` matches the regex `matches`                       |
-| `llm_judge`          | a user-supplied `JudgeFn` answers yes to `prompt` against runner stdout/stderr |
+| type                  | asserts                                                          |
+| --------------------- | ---------------------------------------------------------------- |
+| `command`             | shell command exits with `expectExit` (default 0); optional stdout contains/matches |
+| `file_exists`         | file at `path` exists in the workspace                           |
+| `file_contains`       | file at `path` contains the literal substring `value`            |
+| `file_not_contains`   | file at `path` does NOT contain `value`                          |
+| `file_matches`        | file at `path` matches the regex `matches`                       |
+| `llm_judge`           | a user-supplied `JudgeFn` answers yes to `prompt` against runner stdout/stderr |
+| `agentmd_adherence`   | per-rule pass rate from `agentmd test` meets `minPassRate`; optional `ruleId` filter |
+
+### `agentmd_adherence`
+
+```yaml
+- type: agentmd_adherence
+  promptFile: ../agent.md         # path to agentmd source (relative to eval.yml)
+  fixtures: ../fixtures.yml       # path to agentmd fixture file
+  ruleId: H3                      # optional — score only this rule
+  minPassRate: 0.9                # required — pass rate floor in [0, 1]
+  via: claude-code                # optional — default claude-code (api | claude-code | fake)
+  model: claude-haiku-4-5         # optional — forwarded as --model
+  timeoutMs: 180000               # optional — subprocess timeout
+```
+
+Shells out to the `agentmd` CLI (bundled as a runtime dependency) via
+`agentmd test <promptFile> --fixtures <fixtures> --format json`, parses
+the per-rule check outcomes, computes the pass rate for `ruleId` (or
+overall if omitted), and fails the check when the rate is below
+`minPassRate`. Tests can inject a fake subprocess runner via the
+library API (`AgentmdSpawnFn`) so CI doesn't need an API key.
 
 ## CLI
 

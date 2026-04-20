@@ -35,13 +35,38 @@ export interface LlmJudgeCheck {
   prompt: string;
 }
 
+/**
+ * Score per-rule adherence of an agentmd-dialect prompt against a fixture
+ * file by shelling out to `agentmd test --format json`. Fails the check when
+ * the pass rate for the named rule (or overall, if `ruleId` is omitted) is
+ * below `minPassRate`.
+ */
+export interface AgentmdAdherenceCheck {
+  type: "agentmd_adherence";
+  /** Path to the agentmd source file (agent.md). Resolved relative to the eval.yml. */
+  promptFile: string;
+  /** Path to the fixture YAML. Resolved relative to the eval.yml. */
+  fixtures: string;
+  /** Optional: only score this rule ID (e.g. "H3"). */
+  ruleId?: string;
+  /** Minimum pass rate in [0, 1] for the check to succeed. */
+  minPassRate: number;
+  /** Optional: passed through as `agentmd test --via <name>`. Default: "claude-code". */
+  via?: "api" | "claude-code" | "fake";
+  /** Optional: passed through as `agentmd test --model <id>`. */
+  model?: string;
+  /** Optional: subprocess timeout in ms. */
+  timeoutMs?: number;
+}
+
 export type Check =
   | CommandCheck
   | FileExistsCheck
   | FileMatchesCheck
   | FileContainsCheck
   | FileNotContainsCheck
-  | LlmJudgeCheck;
+  | LlmJudgeCheck
+  | AgentmdAdherenceCheck;
 
 export type RunnerName = "fake";
 

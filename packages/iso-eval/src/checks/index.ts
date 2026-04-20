@@ -1,4 +1,5 @@
 import type { Check, CheckResult, JudgeFn, RunnerResult } from "../types.js";
+import { runAgentmdAdherence, type AgentmdSpawnFn } from "./agentmd-adherence.js";
 import { runCommandCheck } from "./command.js";
 import {
   runFileContains,
@@ -12,6 +13,10 @@ export interface CheckContext {
   workspaceDir: string;
   runnerResult: RunnerResult;
   judge?: JudgeFn;
+  /** Directory the eval suite was loaded from — used to resolve suite-relative paths (e.g. agentmd_adherence's promptFile). */
+  suiteDir?: string;
+  /** Optional injected spawn function for agentmd_adherence — lets tests run offline. */
+  agentmdSpawn?: AgentmdSpawnFn;
 }
 
 export async function runCheck(
@@ -31,6 +36,11 @@ export async function runCheck(
       return runFileMatches(check, ctx.workspaceDir);
     case "llm_judge":
       return runLlmJudge(check, ctx.runnerResult, ctx.judge);
+    case "agentmd_adherence":
+      return runAgentmdAdherence(check, {
+        suiteDir: ctx.suiteDir ?? ctx.workspaceDir,
+        spawn: ctx.agentmdSpawn,
+      });
     default: {
       const exhaustive: never = check;
       throw new Error(`unhandled check type: ${JSON.stringify(exhaustive)}`);

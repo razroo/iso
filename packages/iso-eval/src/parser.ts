@@ -12,6 +12,7 @@ const VALID_CHECK_TYPES: ReadonlySet<Check["type"]> = new Set<Check["type"]>([
   "file_contains",
   "file_not_contains",
   "llm_judge",
+  "agentmd_adherence",
 ]);
 
 export function loadSuite(path: string): Suite {
@@ -120,7 +121,34 @@ function parseCheck(raw: unknown, taskId: string, i: number, evalPath: string): 
         `(valid: ${[...VALID_CHECK_TYPES].join(", ")})`,
     );
   }
+  if (t === "agentmd_adherence") {
+    validateAgentmdAdherence(c, taskId, i, evalPath);
+  }
   return c as unknown as Check;
+}
+
+function validateAgentmdAdherence(
+  c: Record<string, unknown>,
+  taskId: string,
+  i: number,
+  evalPath: string,
+): void {
+  const where = `${evalPath}: task "${taskId}" check #${i + 1} (agentmd_adherence)`;
+  if (typeof c.promptFile !== "string" || !c.promptFile) {
+    throw new Error(`${where}: "promptFile" (non-empty string) is required`);
+  }
+  if (typeof c.fixtures !== "string" || !c.fixtures) {
+    throw new Error(`${where}: "fixtures" (non-empty string) is required`);
+  }
+  if (typeof c.minPassRate !== "number" || c.minPassRate < 0 || c.minPassRate > 1) {
+    throw new Error(`${where}: "minPassRate" (number in [0, 1]) is required`);
+  }
+  if (c.ruleId !== undefined && (typeof c.ruleId !== "string" || !c.ruleId)) {
+    throw new Error(`${where}: "ruleId" must be a non-empty string if present`);
+  }
+  if (c.via !== undefined && !["api", "claude-code", "fake"].includes(c.via as string)) {
+    throw new Error(`${where}: "via" must be one of: api, claude-code, fake`);
+  }
 }
 
 function resolveRelative(p: string, sourceDir: string): string {

@@ -1,5 +1,36 @@
 # @razroo/iso-eval
 
+## 0.2.0
+
+### Minor Changes
+
+- New `agentmd_adherence` check type. Scores per-rule adherence of an
+  agentmd-dialect prompt against a fixture file by shelling out to
+  `agentmd test --format json`, computes the pass rate for `ruleId`
+  (or overall when omitted), and fails the check when the rate is
+  below `minPassRate`. Tests can inject a fake `AgentmdSpawnFn` via
+  the library API so CI runs offline without an API key; the default
+  spawn resolves `@razroo/agentmd`'s CLI bin via Node module resolution
+  so PATH setup doesn't matter.
+
+  Shape:
+
+  ```yaml
+  - type: agentmd_adherence
+    promptFile: ../agent.md
+    fixtures: ../fixtures.yml
+    ruleId: H3               # optional
+    minPassRate: 0.9
+    via: claude-code         # optional (api | claude-code | fake)
+    model: claude-haiku-4-5  # optional
+    timeoutMs: 180000        # optional
+  ```
+
+  Adds `@razroo/agentmd` as a runtime dependency so installing
+  iso-eval pulls in the agentmd CLI.
+
+  Closes INTEGRATIONS.md #3.
+
 ## 0.1.0
 
 ### Minor Changes

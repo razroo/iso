@@ -55,46 +55,19 @@ ends up stamped on the `workspace-researcher` subagent.
 
 ---
 
-## 3. `iso-eval` ← `agentmd_adherence` check type
+## 3. `iso-eval` ← `agentmd_adherence` check type — **DONE**
 
-**Status:** open. `iso-eval` README already anticipates this check; no
-implementation yet.
-
-**Target end-state.** A suite task can declare:
-
-```yaml
-- id: planner-follows-h3
-  prompt: …
-  workspace: …
-  checks:
-    - type: agentmd_adherence
-      prompt_file: ../agent.md
-      fixtures: ../fixtures/planner.yml
-      rule_id: H3
-      min_pass_rate: 0.9
-```
-
-On run, iso-eval shells out to `agentmd test` (or calls its library API)
-against the fixtures and fails the task when per-rule pass rate for the
-named rule is under `min_pass_rate`.
-
-**Touch.**
-
-- `packages/iso-eval/src/types.ts` — add `AgentmdAdherenceCheck`
-  interface and extend the `Check` union.
-- `packages/iso-eval/src/parser.ts` — allow `agentmd_adherence` in
-  `VALID_CHECK_TYPES`.
-- `packages/iso-eval/src/checks/` — new `agentmd-adherence.ts` module.
-- `packages/iso-eval/package.json` — add `@razroo/agentmd` to
-  `dependencies` (new cross-package dep).
-- `packages/iso-eval/README.md` — document the check row in the table.
-
-**Verify.**
-
-- Unit test under `packages/iso-eval/tests/` using a fake
-  `AgentmdAdherenceFn` so the check can run offline.
-- Example suite in `packages/iso-eval/examples/suites/` that exercises
-  the check against an agentmd fixture.
+Shipped. New `agentmd_adherence` check type scores per-rule adherence
+of an agentmd prompt against a fixture file by shelling out to
+`agentmd test --format json` and comparing the pass rate for the named
+rule (or overall) against `minPassRate`. Tests can inject a fake
+`AgentmdSpawnFn` so CI runs offline without an API key; the default
+spawn resolves `@razroo/agentmd`'s CLI bin via Node module resolution
+so PATH setup doesn't matter. Adds `@razroo/agentmd` as a runtime dep
+so installing iso-eval pulls in the agentmd CLI. Eight new tests
+cover happy-path + rule filtering + missing prompt file +
+non-zero exit + invalid JSON + empty cases + unknown rule + flag
+forwarding.
 
 ---
 

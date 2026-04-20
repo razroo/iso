@@ -1,4 +1,5 @@
 import { runCheck } from "./checks/index.js";
+import type { AgentmdSpawnFn } from "./checks/agentmd-adherence.js";
 import { snapshotWorkspace } from "./sandbox.js";
 import type {
   CheckResult,
@@ -19,6 +20,8 @@ export interface RunOptions {
   keepWorkspaces?: boolean;
   onTaskComplete?: (result: TaskResult) => void;
   timestamp?: string;
+  /** Optional: injected spawn fn used by the agentmd_adherence check. Lets tests avoid a real subprocess. */
+  agentmdSpawn?: AgentmdSpawnFn;
 }
 
 export async function run(suite: Suite, opts: RunOptions): Promise<EvalReport> {
@@ -71,6 +74,8 @@ async function runTask(
           workspaceDir: snap.dir,
           runnerResult,
           judge: opts.judge,
+          suiteDir: suite.sourceDir,
+          agentmdSpawn: opts.agentmdSpawn,
         });
         checks.push(r);
       }

@@ -7,4 +7,6 @@ export { snapshotWorkspace } from "./sandbox.js";
 export type { Snapshot } from "./sandbox.js";
 export { runCheck } from "./checks/index.js";
 export type { CheckContext } from "./checks/index.js";
+export { runAgentmdAdherence } from "./checks/agentmd-adherence.js";
+export type { AgentmdSpawnFn, RunAgentmdAdherenceOptions } from "./checks/agentmd-adherence.js";
 export * from "./types.js";
