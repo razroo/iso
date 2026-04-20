@@ -98,40 +98,18 @@ named rule is under `min_pass_rate`.
 
 ---
 
-## 4. `iso-trace` → `iso-eval` fixture export
+## 4. `iso-trace` → `iso-eval` fixture export — **DONE**
 
-**Status:** open. `iso-trace` can already export a session as JSONL or
-JSON, but nothing lifts it into an `iso-eval` task fixture.
-
-**Target end-state.** `iso-trace export-fixture <session-id> --out
-fixtures/<name>/` writes:
-
-- `fixtures/<name>/task.md` — the user prompt that kicked off the
-  session, extracted from the first user turn.
-- `fixtures/<name>/workspace/` — a snapshot of the files the agent
-  touched during the session (use `cwd` + `file_op` events to scope).
-- `fixtures/<name>/checks.yml` — a seed `file_exists` / `file_contains`
-  check per file the agent created or modified.
-
-A maintainer can then edit the emitted `checks.yml` and drop the fixture
-into an `iso-eval` suite to lock in real-world behavior as a regression
-test.
-
-**Touch.**
-
-- `packages/iso-trace/src/cli.ts` — add the `export-fixture` command.
-- `packages/iso-trace/src/fixtures.ts` (new) — fixture emission logic.
-- `packages/iso-trace/README.md` — document the command under "What
-  iso-trace is for".
-- Consider a reverse reference in `packages/iso-eval/README.md` noting
-  that fixtures can be bootstrapped from iso-trace.
-
-**Verify.**
-
-- Test using the bundled `examples/sample-session.jsonl` — export a
-  fixture and assert the emitted `task.md` / `checks.yml` shape.
-- Round-trip test: feed the exported fixture into `iso-eval run` with
-  the deterministic `fake` runner and confirm it passes.
+Shipped. `iso-trace export-fixture <id-or-prefix> --out <dir>` (or
+`--source <path>` for a single JSONL) lifts a session into an
+iso-eval-compatible directory: `task.md` (first user message),
+`workspace/` (empty placeholders for every file the agent read), and
+`checks.yml` (one `file_exists` per write, `file_exists` +
+`file_contains` with a `REPLACE_ME` placeholder per edit). Seven new
+tests cover message extraction, workspace seeding, check emission,
+absolute-path fallthrough, no-op sessions, missing user messages, and
+directory layout stability. Exposed as `exportFixture(...)` in the
+library API for callers that want to skip the CLI.
 
 ---
 

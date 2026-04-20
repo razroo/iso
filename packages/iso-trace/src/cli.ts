@@ -4,6 +4,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defaultRoots, discoverSessions } from "./discover.js";
 import { exportSession, type ExportFormat } from "./export.js";
+import { exportFixture } from "./fixture.js";
 import { findSessionById, iterateEvents, stats } from "./query.js";
 import { loadSessionFromPath } from "./sources/index.js";
 import type { Event, Session, SessionRef } from "./types.js";
@@ -18,6 +19,8 @@ usage:
   iso-trace stats   [<id-or-prefix>...]  [--since <7d|ISO>] [--cwd <dir>]
   iso-trace stats   --source <path>   (stats on a single transcript file, for smoke/tests)
   iso-trace export  <id-or-prefix>  [--format json|jsonl]
+  iso-trace export-fixture  <id-or-prefix>  --out <dir>
+  iso-trace export-fixture  --source <path>  --out <dir>
   iso-trace sources
   iso-trace where
 `;
@@ -182,6 +185,68 @@ async function cmdExport(args: string[]): Promise<number> {
   return 0;
 }
 
+async function cmdExportFixture(args: string[]): Promise<number> {
+  let source: string | undefined;
+  let out: string | undefined;
+  let idOrPrefix: string | undefined;
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i];
+    if (a === "--source") {
+      source = args[++i];
+    } else if (a === "--out") {
+      out = args[++i];
+    } else if (a.startsWith("--")) {
+      console.error(`iso-trace export-fixture: unknown flag "${a}"`);
+      return 2;
+    } else if (!idOrPrefix) {
+      idOrPrefix = a;
+    } else {
+      console.error(`iso-trace export-fixture: unexpected argument "${a}"`);
+      return 2;
+    }
+  }
+  if (!out) {
+    console.error("iso-trace export-fixture: --out <dir> is required");
+    return 2;
+  }
+  let session: Session;
+  if (source) {
+    if (!existsSync(source)) {
+      console.error(`iso-trace export-fixture: --source file not found: ${source}`);
+      return 2;
+    }
+    session = loadSessionFromPath(resolve(source));
+  } else {
+    if (!idOrPrefix) {
+      console.error(
+        "iso-trace export-fixture: pass <id-or-prefix> or --source <path>",
+      );
+      return 2;
+    }
+    const refs = await discoverSessions();
+    const ref = findSessionById(refs, idOrPrefix);
+    if (!ref) {
+      console.error(`iso-trace export-fixture: no session matches "${idOrPrefix}"`);
+      return 2;
+    }
+    session = loadSessionFromPath(
+      (ref as SessionRef).source.path,
+      (ref as SessionRef).source.harness,
+    );
+  }
+  const result = exportFixture(session, { out });
+  console.log(`iso-trace: wrote fixture to ${result.outDir}`);
+  console.log(`  task:      ${result.taskMdPath}`);
+  console.log(`  workspace: ${result.workspaceDir} (${result.readFiles.length} baseline file(s) seeded)`);
+  console.log(`  checks:    ${result.checksYmlPath} (${result.writtenFiles.length} write(s), ${result.editedFiles.length} edit(s))`);
+  console.log(``);
+  console.log(`next:`);
+  console.log(`  1. Edit ${result.checksYmlPath} — replace each REPLACE_ME placeholder`);
+  console.log(`  2. Fill in workspace/ baseline files if your task depends on starting content`);
+  console.log(`  3. Run: iso-eval run ${result.checksYmlPath}`);
+  return 0;
+}
+
 function cmdSources(): number {
   for (const r of defaultRoots()) {
     const marker = r.exists ? "✓" : "·";
@@ -340,6 +405,7 @@ async function main(argv: string[]): Promise<number> {
   if (cmd === "show") return cmdShow(rest);
   if (cmd === "stats") return cmdStats(rest);
   if (cmd === "export") return cmdExport(rest);
+  if (cmd === "export-fixture") return cmdExportFixture(rest);
   if (cmd === "sources") return cmdSources();
   if (cmd === "where") return cmdWhere();
   console.error(`iso-trace: unknown command "${cmd}"\n`);

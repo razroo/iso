@@ -6,4 +6,6 @@ export { filter, iterateEvents, stats, findSessionById } from "./query.js";
 export type { EventPredicate, Stats, StatsOptions } from "./query.js";
 export { exportSession } from "./export.js";
 export type { ExportFormat } from "./export.js";
+export { exportFixture } from "./fixture.js";
+export type { ExportFixtureOptions, FixtureExportResult } from "./fixture.js";
 export * from "./types.js";

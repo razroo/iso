@@ -75,11 +75,33 @@ iso-trace stats --source path/to/sample.jsonl       # one file, no discovery nee
 
 iso-trace export <id> --format jsonl > session.jsonl
 iso-trace export <id> --format json
+
+iso-trace export-fixture <id> --out fixtures/my-task/         # lift a session into an iso-eval fixture
+iso-trace export-fixture --source path/to/sample.jsonl --out fixtures/my-task/
 ```
 
 Session IDs are 8-char prefixes derived from path + first-line hash, so
 they're stable across reads and unambiguous by design. Prefix matching
 follows git's semantics: unique prefix wins, multiple matches errors.
+
+### `export-fixture` — turn an observed session into a regression fixture
+
+When a real session does something you want to lock in as an `iso-eval`
+regression test, `export-fixture` lifts it into a fresh suite:
+
+```
+fixtures/my-task/
+├── task.md      — the first user message from the session
+├── workspace/   — empty placeholders for every file the agent read
+└── checks.yml   — file_exists per write, file_exists + file_contains
+                   per edit (value defaults to REPLACE_ME so you notice)
+```
+
+This is a *seed*, not a perfect replay — iso-trace can't know the
+agent's starting workspace, and it can't guess what "success" should
+assert. Review `checks.yml` and fill in any baseline workspace files,
+then drop the directory into an iso-eval suite and run
+`iso-eval run fixtures/my-task/checks.yml`.
 
 ## Library API
 
