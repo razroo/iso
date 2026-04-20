@@ -1,5 +1,26 @@
 # @razroo/iso-route
 
+## 0.5.0
+
+### Minor Changes
+
+- Add the `openrouter-free` preset plus an advisory `iso-route catalog
+  openrouter` command.
+
+  `openrouter-free` keeps the `standard` Claude Code / Codex picks but
+  switches OpenCode to explicit free OpenRouter model IDs:
+
+  - `default`: `qwen/qwen3-coder:free`
+  - `quality`: `openai/gpt-oss-120b:free`
+  - `fast`: `minimax/minimax-m2.5:free`
+  - `minimal`: `google/gemma-4-26b-a4b-it:free`
+
+  `catalog openrouter` fetches the live OpenRouter `/api/v1/models`
+  response, filters to free + tool-capable models by default, ranks a
+  shortlist for OpenCode, and prints suggested picks for the default /
+  quality / fast / minimal roles. It is advisory only — `build` still
+  does not validate model IDs at compile time.
+
 ## 0.4.0
 
 ### Minor Changes

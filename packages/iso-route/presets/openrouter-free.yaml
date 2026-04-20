@@ -1,0 +1,69 @@
+# @razroo/iso-route — openrouter-free preset
+#
+# Standard-like defaults for Claude Code / Codex, but routes OpenCode
+# through explicit free OpenRouter model IDs instead of OpenCode's own
+# proxy tokens. Intended for users who already have OpenRouter connected
+# inside OpenCode and want reproducible, inspectable model names.
+#
+# Verified against the live OpenRouter models API on 2026-04-20:
+#   - default:  qwen/qwen3-coder:free
+#   - quality:  openai/gpt-oss-120b:free
+#   - fast:     minimax/minimax-m2.5:free
+#   - minimal:  google/gemma-4-26b-a4b-it:free
+#
+# Use `iso-route catalog openrouter` to refresh the shortlist when
+# upstream offerings change.
+
+default:
+  provider: anthropic
+  model: claude-sonnet-4-6
+  targets:
+    codex:
+      provider: openai
+      model: gpt-5.4
+    opencode:
+      provider: openrouter
+      model: qwen/qwen3-coder:free
+
+roles:
+  # fast — procedural worker. Preserves the existing Claude/Codex tiers
+  # while switching OpenCode to the quickest free OpenRouter pick in the
+  # current shortlist.
+  fast:
+    provider: anthropic
+    model: claude-haiku-4-5
+    targets:
+      codex:
+        provider: openai
+        model: gpt-5.4-mini
+      opencode:
+        provider: openrouter
+        model: minimax/minimax-m2.5:free
+
+  # quality — best free OpenRouter alternative for OpenCode while keeping
+  # opus / gpt-5.4 on the native harnesses.
+  quality:
+    provider: anthropic
+    model: claude-opus-4-7
+    reasoning: high
+    targets:
+      codex:
+        provider: openai
+        model: gpt-5.4
+        reasoning: high
+      opencode:
+        provider: openrouter
+        model: openai/gpt-oss-120b:free
+
+  # minimal — smallest credible tool-capable OpenRouter pick from the
+  # current free shortlist.
+  minimal:
+    provider: anthropic
+    model: claude-haiku-4-5
+    targets:
+      codex:
+        provider: openai
+        model: gpt-5.4-nano
+      opencode:
+        provider: openrouter
+        model: google/gemma-4-26b-a4b-it:free

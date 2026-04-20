@@ -22,6 +22,10 @@ test("listPresets: returns the built-in preset names", () => {
   const presets = listPresets();
   assert.ok(presets.includes("standard"), `expected "standard" in ${JSON.stringify(presets)}`);
   assert.ok(presets.includes("budget"), `expected "budget" in ${JSON.stringify(presets)}`);
+  assert.ok(
+    presets.includes("openrouter-free"),
+    `expected "openrouter-free" in ${JSON.stringify(presets)}`,
+  );
 });
 
 test("extends budget: default pushed to haiku, quality lowered to sonnet", () => {
@@ -70,6 +74,19 @@ test("extends standard: user gets preset default + roles unchanged", () => {
   assert.equal(fast.provider, "anthropic");
   assert.equal(fast.model, "claude-haiku-4-5");
   assert.equal(fast.targets?.opencode?.model, "opencode/big-pickle");
+});
+
+test("extends openrouter-free: OpenCode targets use explicit free OpenRouter model IDs", () => {
+  const path = writeYaml("extends: openrouter-free\n");
+  const policy = loadPolicy(path);
+  assert.equal(policy.default.provider, "anthropic");
+  assert.equal(policy.default.targets?.opencode?.provider, "openrouter");
+  assert.equal(policy.default.targets?.opencode?.model, "qwen/qwen3-coder:free");
+  const quality = policy.roles.find((r) => r.name === "quality")!;
+  assert.equal(quality.targets?.opencode?.provider, "openrouter");
+  assert.equal(quality.targets?.opencode?.model, "openai/gpt-oss-120b:free");
+  const minimal = policy.roles.find((r) => r.name === "minimal")!;
+  assert.equal(minimal.targets?.opencode?.model, "google/gemma-4-26b-a4b-it:free");
 });
 
 test("extends standard: scalar override on default replaces just that scalar", () => {

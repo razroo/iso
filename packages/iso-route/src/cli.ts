@@ -3,6 +3,11 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { ALL_TARGETS, build } from "./build.js";
+import {
+  buildOpenRouterCatalog,
+  fetchOpenRouterModels,
+  formatOpenRouterCatalog,
+} from "./catalog.js";
 import { listPresets, loadPolicy } from "./parser.js";
 import type { HarnessTarget } from "./types.js";
 
@@ -15,6 +20,7 @@ usage:
                                   [--dry-run]
   iso-route plan   <models.yaml>
   iso-route init   [--preset <name>] [--out <path>] [--force]
+  iso-route catalog openrouter [--limit <n>] [--json] [--allow-paid] [--allow-no-tools]
 
 targets default to all four. --dry-run emits nothing but prints every file it *would* write.
 "init" scaffolds a starter models.yaml from a built-in preset. Run "iso-route init --help"
@@ -185,13 +191,74 @@ function cmdInit(args: string[]): number {
   return 0;
 }
 
+async function cmdCatalog(args: string[]): Promise<number> {
+  if (args.length === 0 || args[0] === "--help" || args[0] === "-h") {
+    console.log(
+      `iso-route catalog openrouter — fetch the live OpenRouter model list and rank an advisory shortlist for OpenCode\n\n` +
+        `usage:\n` +
+        `  iso-route catalog openrouter [--limit <n>] [--json] [--allow-paid] [--allow-no-tools]\n\n` +
+        `flags:\n` +
+        `  --limit <n>       number of ranked candidates to print (default: 12)\n` +
+        `  --json            emit machine-readable JSON instead of text\n` +
+        `  --allow-paid      include paid models in the shortlist\n` +
+        `  --allow-no-tools  include models that do not advertise tool support\n`,
+    );
+    return 0;
+  }
+  const provider = args[0];
+  if (provider !== "openrouter") {
+    console.error(`iso-route catalog: unknown provider "${provider}" — only "openrouter" is supported today`);
+    return 2;
+  }
+
+  let freeOnly = true;
+  let toolsOnly = true;
+  let limit = 12;
+  let asJson = false;
+  let showHelp = false;
+  for (let i = 1; i < args.length; i++) {
+    const a = args[i];
+    if (a === "--limit") {
+      const raw = args[++i] ?? "";
+      const parsed = Number(raw);
+      if (!Number.isFinite(parsed) || parsed < 1) {
+        console.error("iso-route catalog: --limit requires a positive integer");
+        return 2;
+      }
+      limit = Math.floor(parsed);
+    } else if (a === "--json") {
+      asJson = true;
+    } else if (a === "--allow-paid") {
+      freeOnly = false;
+    } else if (a === "--allow-no-tools") {
+      toolsOnly = false;
+    } else if (a === "--help" || a === "-h") {
+      showHelp = true;
+    } else {
+      console.error(`iso-route catalog: unknown flag "${a}"`);
+      return 2;
+    }
+  }
+
+  if (showHelp) return cmdCatalog(["--help"]);
+
+  const models = await fetchOpenRouterModels();
+  const result = buildOpenRouterCatalog(models, { freeOnly, toolsOnly, limit });
+  if (asJson) {
+    console.log(JSON.stringify(result, null, 2));
+    return 0;
+  }
+  console.log(formatOpenRouterCatalog(result));
+  return 0;
+}
+
 function formatBytes(n: number): string {
   if (n < 1024) return `${n} B`;
   if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
   return `${(n / 1024 / 1024).toFixed(2)} MB`;
 }
 
-function main(argv: string[]): number {
+async function main(argv: string[]): Promise<number> {
   const args = argv.slice(2);
   if (args.length === 0 || args[0] === "--help" || args[0] === "-h") {
     console.log(USAGE);
@@ -206,15 +273,18 @@ function main(argv: string[]): number {
   if (cmd === "build") return cmdBuild(rest);
   if (cmd === "plan") return cmdPlan(rest);
   if (cmd === "init") return cmdInit(rest);
+  if (cmd === "catalog") return cmdCatalog(rest);
   console.error(`iso-route: unknown command "${cmd}"\n`);
   console.error(USAGE);
   return 2;
 }
 
-try {
-  process.exit(main(process.argv));
-} catch (err: unknown) {
-  const msg = err instanceof Error ? err.message : String(err);
-  console.error(`iso-route: ${msg}`);
-  process.exit(1);
-}
+main(process.argv)
+  .then((code) => {
+    process.exit(code);
+  })
+  .catch((err: unknown) => {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`iso-route: ${msg}`);
+    process.exit(1);
+  });

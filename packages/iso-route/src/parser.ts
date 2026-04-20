@@ -49,7 +49,7 @@ function resolvePresetPath(name: string): string {
   ];
   for (const c of candidates) if (existsSync(c)) return c;
   throw new Error(
-    `@razroo/iso-route: preset "${name}" not found. Built-in presets: standard. ` +
+    `@razroo/iso-route: preset "${name}" not found. Built-in presets: ${listPresets().join(", ")}. ` +
       `Searched: ${candidates.join(", ")}`,
   );
 }
@@ -58,7 +58,7 @@ export function listPresets(): string[] {
   // Kept in sync with the YAML files in presets/. Hardcoded so a package
   // consumer running the CLI doesn't have to walk the installed tarball's
   // filesystem at runtime.
-  return ["standard", "budget"];
+  return ["standard", "budget", "openrouter-free"];
 }
 
 /**

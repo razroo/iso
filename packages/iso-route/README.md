@@ -88,16 +88,18 @@ Two curated presets ship with the package so you don't have to pin
 per-harness model picks by hand. Extend one with a single line; override
 only what you want to differ.
 
-| preset    | thesis                                                                |
-| --------- | --------------------------------------------------------------------- |
-| `standard`| Quality-first. Sonnet/Opus on Claude Code, gpt-5.4 on Codex, OpenCode Zen/Go picks per tier. |
-| `budget`  | Cost-optimized. Haiku/Sonnet on Claude Code, gpt-5.4-mini/nano on Codex, free-tier and pay-once OpenCode picks. |
+| preset             | thesis                                                                |
+| ------------------ | --------------------------------------------------------------------- |
+| `standard`         | Quality-first. Sonnet/Opus on Claude Code, gpt-5.4 on Codex, OpenCode Zen/Go picks per tier. |
+| `budget`           | Cost-optimized. Haiku/Sonnet on Claude Code, gpt-5.4-mini/nano on Codex, free-tier and pay-once OpenCode picks. |
+| `openrouter-free`  | Standard-like Claude/Codex picks, but OpenCode routes through explicit free OpenRouter model IDs. |
 
 Scaffold a starter with the right boilerplate:
 
 ```bash
 iso-route init                         # writes ./models.yaml extending "standard"
 iso-route init --preset budget         # use the budget preset instead
+iso-route init --preset openrouter-free
 iso-route init --out custom/path.yaml  # different location
 iso-route init --force                 # overwrite existing
 ```
@@ -105,7 +107,7 @@ iso-route init --force                 # overwrite existing
 Or write the extension by hand:
 
 ```yaml
-extends: standard   # or: extends: budget
+extends: standard   # or: budget / openrouter-free
 # ...override only what you want:
 roles:
   quality:
@@ -140,15 +142,38 @@ time. Everything else gets a real config file.
 ```bash
 iso-route init                               # scaffold ./models.yaml (extends "standard")
 iso-route init --preset budget               # or start from the budget preset
+iso-route init --preset openrouter-free      # OpenCode => free OpenRouter shortlist
 iso-route build models.yaml --out .
 iso-route build models.yaml --targets claude,codex --dry-run
 iso-route plan  models.yaml
+iso-route catalog openrouter                 # live advisory shortlist for OpenCode
+iso-route catalog openrouter --limit 20 --json
 ```
 
 `init` scaffolds a starter `models.yaml` that extends a built-in
 preset. `build` writes per-harness files under `--out` (defaults to
 `.`). Add `--dry-run` to preview without touching disk. `plan` prints
 the resolved role table so you can eyeball what each harness will see.
+
+### Advisory OpenRouter catalog
+
+`iso-route catalog openrouter` fetches the live OpenRouter models API
+and ranks an **advisory** shortlist for OpenCode. By default it filters
+to models that are both:
+
+- free (`prompt == 0` and `completion == 0`)
+- tool-capable (`supported_parameters` includes `tools`)
+
+This command is intentionally separate from `build`: it helps you pick
+candidate model IDs, but `iso-route build` still does not validate that
+the upstream provider recognizes the model name you typed.
+
+```bash
+iso-route catalog openrouter
+iso-route catalog openrouter --limit 8
+iso-route catalog openrouter --allow-paid
+iso-route catalog openrouter --allow-no-tools --json
+```
 
 ## Library API
 
@@ -184,9 +209,10 @@ back-to-back — the `@razroo/iso` wrapper will compose them for you.
   based on prompt complexity belongs in a proxy (OpenRouter, LiteLLM,
   Portkey, Not Diamond). iso-route is a build-time transpiler, not an
   inference-path component.
-- **Not a model catalog.** It validates provider names, not model IDs.
-  If you type a model name your provider doesn't recognize, you'll find
-  out at runtime. A catalog package may land in v0.2.
+- **Not a build-time model validator.** `iso-route catalog openrouter`
+  is advisory only. `build` validates provider names, not model IDs. If
+  you type a model name your provider doesn't recognize, you'll still
+  find out at runtime.
 
 ## License
 
