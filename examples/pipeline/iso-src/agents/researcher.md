@@ -1,7 +1,6 @@
 ---
 name: researcher
 description: Researches technical topics and reports findings concisely.
-model: sonnet
 tools:
   - Read
   - Grep

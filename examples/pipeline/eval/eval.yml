@@ -1,0 +1,16 @@
+suite: pipeline-smoke
+runner: fake
+timeoutMs: 10000
+
+# A single-task suite exercised by the fake runner. The prompt's
+# "$ …" line is executed in the snapshotted workspace, so the checks
+# run against the state it produces.
+tasks:
+  - id: write-smoke-file
+    prompt: tasks/write-smoke-file.md
+    workspace: workspace/
+    trials: 1
+    checks:
+      - { type: file_exists,       path: smoke.txt }
+      - { type: file_contains,     path: smoke.txt, value: "ok" }
+      - { type: file_not_contains, path: smoke.txt, value: "TODO" }

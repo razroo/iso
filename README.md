@@ -273,11 +273,16 @@ build, and `npm publish --provenance`.
 ## End-to-end example
 
 [`examples/pipeline/`](./examples/pipeline) is an executable demonstration
-of the composed pipeline: one authored `agent.md` is structurally linted,
-rendered, prose-linted, and fanned out into the 11 files each coding-agent
-harness expects. Run `npm run test:pipeline` to exercise the core pipeline,
-or use `@razroo/iso` in your own project when you want the same chain behind
-one CLI.
+that exercises **all seven packages end-to-end** in one `npm run
+test:pipeline` invocation: `agentmd lint` + `render` → `isolint lint` →
+`iso-route build` (from a bundled `models.yaml` that extends the
+`standard` preset) → `iso-harness build` (which consumes iso-route's
+resolved map and stamps `model:` onto the Claude subagent) →
+`iso-eval run` against a tiny fake-runner suite → `iso-trace stats`
+against a bundled sample session. The assertion set includes a
+cross-package check that the `researcher` subagent's emitted
+frontmatter contains `model: claude-opus-4-7`, driven from the
+`models.yaml` policy.
 
 [`examples/dogfood/`](./examples/dogfood) is a local dogfood project for the
 wrapper CLI itself. It starts from `agent.md` + `iso/` source and runs the

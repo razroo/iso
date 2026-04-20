@@ -1,0 +1,14 @@
+# Model policy for the pipeline example.
+#
+# `extends: standard` pulls in the bundled preset from
+# @razroo/iso-route; the `researcher` role below binds to the subagent
+# of the same name in iso-src/agents/researcher.md so iso-harness can
+# stamp `model: claude-opus-4-7` onto the emitted Claude subagent.
+
+extends: standard
+
+roles:
+  researcher:
+    provider: anthropic
+    model: claude-opus-4-7
+    reasoning: high

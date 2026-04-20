@@ -135,35 +135,19 @@ test.
 
 ---
 
-## 5. `examples/pipeline/` ← exercise all seven packages
+## 5. `examples/pipeline/` ← exercise all seven packages — **DONE**
 
-**Status:** open. `examples/pipeline/build.mjs` currently drives only
-`agentmd → isolint → iso-harness`.
-
-**Target end-state.** A single `npm run test:pipeline` exercises the
-whole loop:
-
-1. `agentmd lint` + `agentmd render`
-2. `isolint lint` the rendered prompt
-3. `iso-route build` against a sample `models.yaml`
-4. `iso-harness build` (reads the resolved map from step 3)
-5. `iso-eval run` against a tiny bundled suite using the `fake` runner
-6. `iso-trace stats --source` on a bundled sample session
-
-Green on the whole chain = full integration smoke.
-
-**Touch.**
-
-- `examples/pipeline/build.mjs` — append the three missing steps.
-- `examples/pipeline/models.yaml` (new) — minimal two-role example.
-- `examples/pipeline/eval/eval.yml` (new) — one task suite using the
-  `fake` runner.
-- `examples/pipeline/sessions/sample.jsonl` (new, or reuse
-  `packages/iso-trace/examples/sample-session.jsonl`).
-- Root `README.md` — update the "End-to-end example" paragraph to name
-  all the packages the pipeline now exercises.
-
-**Verify.** `npm run test:pipeline` exits 0 on a clean clone.
+Shipped. `examples/pipeline/build.mjs` now drives the full chain
+(`agentmd lint + render → isolint lint → iso-route build →
+iso-harness build → iso-eval run → iso-trace stats`) in one invocation.
+Bundled assets: `examples/pipeline/models.yaml` extends the `standard`
+preset with a `researcher` role, `examples/pipeline/eval/` ships a
+one-task suite that the fake runner passes offline, and iso-trace runs
+against `packages/iso-trace/examples/sample-session.jsonl`. The
+assertion set includes the cross-package contract from #1 + #2 — the
+emitted Claude subagent file must contain
+`model: claude-opus-4-7` driven from the resolved role map.
+`npm run test:pipeline` exits 0 and reports 14 harness files produced.
 
 ---
 
