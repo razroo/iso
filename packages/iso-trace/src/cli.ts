@@ -2,12 +2,13 @@
 import { readFileSync, existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { defaultRoots, discoverSessions } from "./discover.js";
+import { defaultRoots, discoverSessions, parseSinceCutoff } from "./discover.js";
 import { exportSession, type ExportFormat } from "./export.js";
 import { exportFixture } from "./fixture.js";
 import { findSessionById, iterateEvents, stats } from "./query.js";
+import { modelScorecardFromRefs, type ModelScore } from "./scorecard.js";
 import { loadSessionFromPath } from "./sources/index.js";
-import type { Event, Session, SessionRef } from "./types.js";
+import type { Event, HarnessName, Session, SessionRef } from "./types.js";
 
 const USAGE = `iso-trace — local observability for AI coding agent transcripts
 
@@ -18,6 +19,7 @@ usage:
   iso-trace show    <id-or-prefix>  [--events <kinds>] [--grep <regex>]
   iso-trace stats   [<id-or-prefix>...]  [--since <7d|ISO>] [--cwd <dir>]
   iso-trace stats   --source <path>   (stats on a single transcript file, for smoke/tests)
+  iso-trace model-score [--since <7d|ISO> | --since-hours <n>] [--cwd <dir>] [--harness <name>] [--tool <name>] [--fail-on-schema] [--fail-on-model <provider/model>] [--json]
   iso-trace export  <id-or-prefix>  [--format json|jsonl]
   iso-trace export-fixture  <id-or-prefix>  --out <dir>
   iso-trace export-fixture  --source <path>  --out <dir>
@@ -122,11 +124,11 @@ async function cmdStats(args: string[]): Promise<number> {
 
   let sessions: Session[];
   if (source) {
-    if (!existsSync(source)) {
+    if (!sourceExists(source)) {
       console.error(`iso-trace stats: --source file not found: ${source}`);
       return 2;
     }
-    sessions = [loadSessionFromPath(resolve(source))];
+    sessions = [loadSessionFromPath(resolveSourcePath(source))];
   } else if (positional.length > 0) {
     const refs = await discoverSessions();
     sessions = [];
@@ -185,6 +187,42 @@ async function cmdExport(args: string[]): Promise<number> {
   return 0;
 }
 
+async function cmdModelScore(args: string[]): Promise<number> {
+  const opts = parseModelScoreArgs(args);
+  if (opts.error) {
+    console.error(opts.error);
+    return 2;
+  }
+
+  const refs = await discoverModelScoreRefs(opts);
+  if (refs.length === 0) {
+    console.error("iso-trace model-score: no sessions found");
+    return 2;
+  }
+
+  const scores = modelScorecardFromRefs(
+    refs,
+    (ref) => loadSessionFromPath(ref.source.path, ref.source.harness),
+    { tool: opts.tool, sinceMs: opts.sinceMs },
+  );
+  if (scores.length === 0) {
+    console.error(`iso-trace model-score: no matching tool calls found`);
+    return 2;
+  }
+
+  if (opts.json) {
+    console.log(JSON.stringify(scores, null, 2));
+  } else {
+    console.log(formatModelScoreTable(scores, opts.tool));
+  }
+
+  const failures = modelScoreFailureReasons(scores, opts);
+  for (const failure of failures) {
+    console.error(`iso-trace model-score: ${failure}`);
+  }
+  return failures.length > 0 ? 1 : 0;
+}
+
 async function cmdExportFixture(args: string[]): Promise<number> {
   let source: string | undefined;
   let out: string | undefined;
@@ -211,11 +249,11 @@ async function cmdExportFixture(args: string[]): Promise<number> {
   }
   let session: Session;
   if (source) {
-    if (!existsSync(source)) {
+    if (!sourceExists(source)) {
       console.error(`iso-trace export-fixture: --source file not found: ${source}`);
       return 2;
     }
-    session = loadSessionFromPath(resolve(source));
+    session = loadSessionFromPath(resolveSourcePath(source));
   } else {
     if (!idOrPrefix) {
       console.error(
@@ -250,8 +288,7 @@ async function cmdExportFixture(args: string[]): Promise<number> {
 function cmdSources(): number {
   for (const r of defaultRoots()) {
     const marker = r.exists ? "✓" : "·";
-    const note =
-      r.harness === "claude-code" ? "parser ready" : "parser lands in v0.2";
+    const note = r.harness === "opencode" ? "parser ready (sqlite db)" : "parser ready";
     console.log(`${marker} ${r.harness.padEnd(12)} ${r.root}  (${note})`);
   }
   return 0;
@@ -269,6 +306,132 @@ interface CommonFilters {
   error?: string;
 }
 
+export interface ParsedModelScoreArgs {
+  since?: string;
+  sinceMs?: number;
+  cwd?: string;
+  tool?: string;
+  harness?: HarnessName;
+  json: boolean;
+  failOnSchema: boolean;
+  failOnModels: string[];
+  error?: string;
+}
+
+export function parseModelScoreArgs(args: string[]): ParsedModelScoreArgs {
+  const out: ParsedModelScoreArgs = {
+    json: false,
+    failOnSchema: false,
+    failOnModels: [],
+  };
+
+  let usedSince = false;
+  let usedSinceHours = false;
+
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i];
+    if (a === "--since") {
+      const value = args[++i];
+      if (!value) {
+        out.error = "iso-trace model-score: --since requires a value";
+        return out;
+      }
+      if (usedSinceHours) {
+        out.error = "iso-trace model-score: pass either --since or --since-hours, not both";
+        return out;
+      }
+      out.since = value;
+      usedSince = true;
+    } else if (a === "--since-hours") {
+      const raw = args[++i];
+      const hours = Number(raw);
+      if (!raw || !Number.isFinite(hours) || hours <= 0) {
+        out.error = "iso-trace model-score: --since-hours must be a positive number";
+        return out;
+      }
+      if (usedSince) {
+        out.error = "iso-trace model-score: pass either --since or --since-hours, not both";
+        return out;
+      }
+      out.sinceMs = Date.now() - hours * 3_600_000;
+      out.since = new Date(out.sinceMs).toISOString();
+      usedSinceHours = true;
+    } else if (a === "--cwd") {
+      out.cwd = args[++i];
+      if (!out.cwd) {
+        out.error = "iso-trace model-score: --cwd requires a value";
+        return out;
+      }
+    } else if (a === "--tool") {
+      out.tool = args[++i];
+      if (!out.tool) {
+        out.error = "iso-trace model-score: --tool requires a value";
+        return out;
+      }
+    } else if (a === "--harness") {
+      const raw = args[++i];
+      if (raw !== "claude-code" && raw !== "codex" && raw !== "opencode") {
+        out.error = "iso-trace model-score: --harness must be claude-code, codex, or opencode";
+        return out;
+      }
+      out.harness = raw;
+    } else if (a === "--fail-on-schema") {
+      out.failOnSchema = true;
+    } else if (a === "--fail-on-model") {
+      const model = args[++i];
+      if (!model) {
+        out.error = "iso-trace model-score: --fail-on-model requires a provider/model value";
+        return out;
+      }
+      out.failOnModels.push(model);
+    } else if (a === "--json") {
+      out.json = true;
+    } else {
+      out.error = `iso-trace model-score: unknown flag "${a}"`;
+      return out;
+    }
+  }
+
+  if (out.sinceMs === undefined) {
+    try {
+      out.sinceMs = parseSinceCutoff(out.since);
+    } catch (error) {
+      out.error = error instanceof Error ? error.message : String(error);
+      return out;
+    }
+  }
+
+  return out;
+}
+
+export function modelScoreFailureReasons(
+  scores: ModelScore[],
+  opts: Pick<ParsedModelScoreArgs, "failOnSchema" | "failOnModels">,
+): string[] {
+  const reasons: string[] = [];
+
+  if (opts.failOnSchema) {
+    const offenders = scores.filter((score) => score.schemaErrors > 0);
+    if (offenders.length > 0) {
+      reasons.push(
+        `schema errors observed: ${offenders.map((score) => `${score.model} (${score.schemaErrors})`).join(", ")}`,
+      );
+    }
+  }
+
+  const blocked = new Set(opts.failOnModels.filter(Boolean));
+  if (blocked.size > 0) {
+    const offenders = scores.filter((score) => blocked.has(score.model) && score.calls > 0);
+    if (offenders.length > 0) {
+      reasons.push(
+        `blocked models observed: ${offenders.map((score) => `${score.model} (${score.calls})`).join(", ")}`,
+      );
+    }
+  }
+
+  return reasons;
+}
+
 function parseCommonFilters(args: string[]): CommonFilters {
   const out: CommonFilters = { json: false };
   for (let i = 0; i < args.length; i++) {
@@ -282,6 +445,31 @@ function parseCommonFilters(args: string[]): CommonFilters {
     }
   }
   return out;
+}
+
+async function discoverModelScoreRefs(opts: ParsedModelScoreArgs): Promise<SessionRef[]> {
+  if (opts.sinceMs === undefined) {
+    return discoverSessions({ since: opts.since, cwd: opts.cwd, harness: opts.harness });
+  }
+
+  if (opts.harness === "claude-code" || opts.harness === "codex") {
+    return discoverSessions({ since: opts.since, cwd: opts.cwd, harness: opts.harness });
+  }
+
+  if (opts.harness === "opencode") {
+    return discoverSessions({ cwd: opts.cwd, harness: "opencode" });
+  }
+
+  const roots = defaultRoots();
+  const opencodeRoots = roots.filter((root) => root.harness === "opencode").map((root) => root.root);
+  const otherRoots = roots.filter((root) => root.harness !== "opencode").map((root) => root.root);
+  const [opencodeRefs, otherRefs] = await Promise.all([
+    discoverSessions({ cwd: opts.cwd, harness: "opencode", roots: opencodeRoots }),
+    discoverSessions({ since: opts.since, cwd: opts.cwd, roots: otherRoots }),
+  ]);
+  return [...opencodeRefs, ...otherRefs].sort((a, b) =>
+    b.startedAt > a.startedAt ? 1 : b.startedAt < a.startedAt ? -1 : 0,
+  );
 }
 
 function formatSessionTable(refs: SessionRef[]): string {
@@ -359,6 +547,33 @@ function formatStats(s: ReturnType<typeof stats>): string {
   return lines.join("\n");
 }
 
+function formatModelScoreTable(scores: ModelScore[], tool?: string): string {
+  const includeReadShapes = tool === "read";
+  const header = includeReadShapes
+    ? ["model", "sessions", "calls", "ok", "err", "schema", "filePath", "path", "file_path", "success", "latest"]
+    : ["model", "sessions", "calls", "ok", "err", "schema", "success", "latest"];
+  const rows = scores.map((score) => {
+    const base = [
+      shorten(score.model, 42),
+      String(score.sessions),
+      String(score.calls),
+      String(score.completed),
+      String(score.errors),
+      String(score.schemaErrors),
+    ];
+    const tail = [formatPercent(score.successRate), score.latestAt];
+    if (!includeReadShapes) return [...base, ...tail];
+    return [
+      ...base,
+      String(score.readInputShapes.filePath),
+      String(score.readInputShapes.path),
+      String(score.readInputShapes.file_path),
+      ...tail,
+    ];
+  });
+  return formatTable([header, ...rows]);
+}
+
 function formatTable(rows: string[][]): string {
   if (rows.length === 0) return "";
   const widths = rows[0].map((_, colIdx) => Math.max(...rows.map((r) => (r[colIdx] ?? "").length)));
@@ -385,11 +600,26 @@ function prettyBytes(n: number): string {
   return `${(n / (1024 * 1024)).toFixed(2)}MB`;
 }
 
+function formatPercent(value: number): string {
+  return `${(value * 100).toFixed(1)}%`;
+}
+
+function sourceExists(path: string): boolean {
+  const hash = path.indexOf("#session=");
+  return existsSync(hash === -1 ? path : path.slice(0, hash));
+}
+
+function resolveSourcePath(path: string): string {
+  const hash = path.indexOf("#session=");
+  if (hash === -1) return resolve(path);
+  return `${resolve(path.slice(0, hash))}${path.slice(hash)}`;
+}
+
 function shorten(s: string, max: number): string {
   return s.length <= max ? s : s.slice(0, Math.max(0, max - 1)) + "…";
 }
 
-async function main(argv: string[]): Promise<number> {
+export async function main(argv: string[]): Promise<number> {
   const args = argv.slice(2);
   if (args.length === 0 || args[0] === "--help" || args[0] === "-h") {
     console.log(USAGE);
@@ -404,6 +634,7 @@ async function main(argv: string[]): Promise<number> {
   if (cmd === "list") return cmdList(rest);
   if (cmd === "show") return cmdShow(rest);
   if (cmd === "stats") return cmdStats(rest);
+  if (cmd === "model-score") return cmdModelScore(rest);
   if (cmd === "export") return cmdExport(rest);
   if (cmd === "export-fixture") return cmdExportFixture(rest);
   if (cmd === "sources") return cmdSources();
@@ -413,11 +644,19 @@ async function main(argv: string[]): Promise<number> {
   return 2;
 }
 
-main(process.argv).then(
-  (code) => process.exit(code),
-  (err: unknown) => {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error(`iso-trace: ${msg}`);
-    process.exit(1);
-  },
-);
+function isDirectExecution(argv: string[]): boolean {
+  const entry = argv[1];
+  if (!entry) return false;
+  return resolve(entry) === fileURLToPath(import.meta.url);
+}
+
+if (isDirectExecution(process.argv)) {
+  main(process.argv).then(
+    (code) => process.exit(code),
+    (err: unknown) => {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`iso-trace: ${msg}`);
+      process.exit(1);
+    },
+  );
+}

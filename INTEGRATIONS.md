@@ -1,19 +1,14 @@
 # Integrations
 
 This repo ships seven packages that **work on their own** but are **designed
-to compose**. Some of the useful compositions are already wired up; others
-are still open and deliberately documented here so an AI coding agent (or a
-human) can pick one up without guessing at intent.
+to compose**. The planned cross-package compositions listed here are already
+shipped, so this file now serves as:
 
-Each entry below is actionable:
+- a ledger of the integrations that exist on purpose
+- a record of the design boundaries that are still deliberate
 
-- **Target end-state** — the observable behavior when it's done.
-- **Touch** — the files that need to change.
-- **Verify** — how a test proves it works.
-
-Treat this as a backlog. If you implement one, delete that section (or
-mark it done) in the same PR, and add an entry to `examples/pipeline/` or
-a dedicated example if it's user-visible.
+If a new cross-package composition lands, update this file in the same PR.
+If a tempting composition is *not* listed here, it is not implicitly planned.
 
 Rules of the road:
 
@@ -25,6 +20,8 @@ Rules of the road:
 - **Prefer on-disk contracts over in-process imports.** The packages are
   published and versioned independently; coupling through a JSON file in
   the output directory is safer than coupling through TypeScript types.
+
+At the moment there is no open integration backlog in this repo.
 
 ---
 
@@ -117,6 +114,7 @@ don't "fix" them without a conversation first.
   (OpenRouter, LiteLLM, Portkey) — not in a build-time transpiler. The
   resolved map records the chain so a proxy can read it; the harness
   config only names the primary.
-- **No central model catalog.** iso-route validates provider names, not
-  model IDs. A shared catalog package may land later but is explicitly
-  out of scope for v0.1 — typos surface at runtime, not build time.
+- **No build-time model validation.** `iso-route catalog openrouter`
+  may offer an advisory shortlist, but `iso-route build` still
+  validates provider names, not model IDs. Typos surface at runtime,
+  not build time.

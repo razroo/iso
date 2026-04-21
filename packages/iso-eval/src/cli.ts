@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { loadSuite } from "./parser.js";
 import { formatReport, toJSON } from "./report.js";
 import { run } from "./runner.js";
+import { codexRunner } from "./runners/codex.js";
 import { fakeRunner } from "./runners/fake.js";
 import type { RunnerFn, RunnerName } from "./types.js";
 
@@ -17,16 +18,18 @@ usage:
                         [--json] [--keep-workspaces]
   iso-eval plan <suite>
 
-runners (v0.1): fake
+runners: fake, codex
 `;
 
 function getRunner(name: RunnerName): RunnerFn {
   switch (name) {
     case "fake":
       return fakeRunner;
+    case "codex":
+      return codexRunner;
     default: {
       const exhaustive: never = name;
-      throw new Error(`runner "${String(exhaustive)}" is not implemented in iso-eval v0.1`);
+      throw new Error(`runner "${String(exhaustive)}" is not implemented in iso-eval`);
     }
   }
 }

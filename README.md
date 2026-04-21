@@ -113,13 +113,13 @@ project that exercises the wrapper end-to-end.
   per task, hands it to a runner with the task prompt, then scores the
   resulting filesystem / command state — answering "did the agent
   actually do it?" that structural and prose lints can't. Ships a
-  deterministic `fake` runner for CI smoke; real-agent runners plug in
-  via the library `RunnerFn` interface.
+  deterministic `fake` runner for CI smoke plus a real `codex` runner;
+  other harnesses plug in via the library `RunnerFn` interface.
 
 - **[`packages/iso-trace`](./packages/iso-trace)** — [`@razroo/iso-trace`](https://www.npmjs.com/package/@razroo/iso-trace)
-  Local observability for real agent transcripts. Parses Claude Code
-  JSONL sessions (Codex / OpenCode additive) into a harness-agnostic
-  event model so you can ask "which rules ever actually fired?", "which
+  Local observability for real agent transcripts. Parses Claude Code,
+  Codex, and OpenCode sessions into a harness-agnostic event model so
+  you can ask "which rules ever actually fired?", "which
   tools does my agent reach for most?", and "which captured sessions
   would make good regression fixtures?" Zero upload — everything is
   local reads and user-controlled output.
@@ -128,10 +128,10 @@ Each package is independently published on npm and works on its own.
 They're in one repo because they're designed to compose.
 
 **Working on integrations across packages?** Read
-[`INTEGRATIONS.md`](./INTEGRATIONS.md). It lists the open composition
-work with target end-states, touch points, and verification steps — so
-an AI agent (or human) pointed at this repo knows which compositions
-are planned vs. which are deliberately kept decoupled.
+[`INTEGRATIONS.md`](./INTEGRATIONS.md). It now serves as the shipped
+composition ledger plus the list of deliberate non-integrations, so an
+AI agent (or human) pointed at this repo can tell what is already wired
+up vs. what is intentionally kept decoupled.
 
 ## Commands cheat sheet
 
@@ -207,6 +207,9 @@ iso-trace show <id-or-prefix> [--events tool_call,file_op]
 iso-trace show <id> --grep "H3"                           # regex across messages + tool input
 iso-trace stats [ids…] [--since 7d] [--cwd .]             # aggregate tool/rule stats
 iso-trace stats --source path/to/sample.jsonl             # one file, no discovery
+iso-trace model-score --cwd . --harness opencode --tool read
+iso-trace model-score --cwd . --harness opencode --tool read --since-hours 24 --fail-on-schema
+iso-trace model-score --cwd . --harness opencode --tool read --since-hours 24 --fail-on-model openrouter/z-ai/glm-4.5-air:free
 iso-trace export <id> --format jsonl > session.jsonl
 ```
 

@@ -67,6 +67,7 @@ async function runTask(
         workspaceDir: snap.dir,
         taskPrompt: task.prompt,
         timeoutMs: suite.timeoutMs,
+        harnessSource: suite.harnessSource,
       });
       const checks: CheckResult[] = [];
       for (const c of task.checks) {

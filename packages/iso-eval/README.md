@@ -12,11 +12,15 @@ and a set of checks — and it snapshots the workspace per trial, hands it
 to a runner, then verifies the resulting filesystem / command state
 against your checks.
 
-> **v0.1 scope:** ships a deterministic `fake` runner (executes `$ …`
-> lines from the prompt as shell in the snapshotted workspace) so the
-> orchestration layer can be exercised offline and in CI. Real-agent
-> runners (`claude-code`, `codex`, `cursor-agent`) are coming in v0.2;
-> the library API already accepts any `RunnerFn` today.
+Built-in runners today:
+
+- `fake` — deterministic CI/offline runner that executes `$ ...` lines
+  from the prompt as shell in the snapshotted workspace.
+- `codex` — real-agent runner that shells out to `codex exec` in the
+  per-trial workspace and captures the final assistant message.
+
+The library API still accepts any `RunnerFn`, so you can plug in other
+harnesses without waiting on a packaged runner.
 
 ## Install
 
@@ -29,8 +33,10 @@ npm install -D @razroo/iso-eval
 ```yaml
 # eval.yml
 suite: refactor-basic
-runner: fake              # v0.1 ships fake; custom runners via the library API
+runner: fake              # or codex for a real-agent run
 timeoutMs: 120000
+harness:
+  source: ../dist         # optional: stage AGENTS.md / .codex into each trial
 
 tasks:
   - id: write-greeting
@@ -88,6 +94,28 @@ iso-eval run eval.yml --keep-workspaces           # skip tmpdir cleanup for debu
 
 `run` exits 0 on all-pass, 1 on any failure, 2 on invalid invocation.
 
+## Codex runner
+
+Set `runner: codex` to run each task through the local Codex CLI:
+
+```yaml
+suite: refactor-basic
+runner: codex
+timeoutMs: 180000
+harness:
+  source: ../dist
+```
+
+`harness.source` is optional. When present, iso-eval stages Codex-facing
+harness files into each snapshotted workspace before execution:
+
+- a project directory containing `AGENTS.md` and/or `.codex/`
+- a direct `AGENTS.md` path
+- a direct `.codex/config.toml` path
+
+This keeps each trial self-contained: Codex sees the task workspace plus
+the generated harness files you actually want to test.
+
 ## Library API
 
 ```ts
@@ -111,8 +139,9 @@ accepts any `RunnerFn`:
 ```ts
 import type { RunnerFn } from "@razroo/iso-eval";
 
-const myRunner: RunnerFn = async ({ workspaceDir, taskPrompt, timeoutMs }) => {
+const myRunner: RunnerFn = async ({ workspaceDir, taskPrompt, timeoutMs, harnessSource }) => {
   // spawn your agent (claude -p / codex exec / …) with cwd = workspaceDir
+  // optionally stage files from harnessSource before invoking it
   // return { exitCode, stdout, stderr, durationMs }
 };
 ```
@@ -147,9 +176,9 @@ agent.md  →  agentmd lint  →  agentmd render  →  isolint lint  →  iso-ha
   (snapshot dir → agent acts → filesystem state → check).
 
 The two compose: an `iso-eval` suite can include `llm_judge` checks that
-reuse the same judge convention (`yes` = rule followed) and, in the
-future, an explicit `agentmd_adherence` check that folds a fixture-level
-adherence score into the task report.
+reuse the same judge convention (`yes` = rule followed), plus
+`agentmd_adherence` checks that fold a fixture-level adherence score into
+the task report.
 
 ## License
 

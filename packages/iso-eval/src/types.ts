@@ -68,7 +68,7 @@ export type Check =
   | LlmJudgeCheck
   | AgentmdAdherenceCheck;
 
-export type RunnerName = "fake";
+export type RunnerName = "fake" | "codex";
 
 export interface Task {
   id: string;
@@ -93,6 +93,7 @@ export interface RunnerContext {
   workspaceDir: string;
   taskPrompt: string;
   timeoutMs?: number;
+  harnessSource?: string;
 }
 
 export interface RunnerResult {

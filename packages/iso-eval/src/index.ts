@@ -3,6 +3,8 @@ export { run } from "./runner.js";
 export type { RunOptions } from "./runner.js";
 export { formatReport, toJSON } from "./report.js";
 export { fakeRunner } from "./runners/fake.js";
+export { codexRunner, makeCodexRunner } from "./runners/codex.js";
+export type { CodexSpawnFn } from "./runners/codex.js";
 export { snapshotWorkspace } from "./sandbox.js";
 export type { Snapshot } from "./sandbox.js";
 export { runCheck } from "./checks/index.js";

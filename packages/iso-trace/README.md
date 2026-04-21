@@ -8,21 +8,27 @@ success on synthetic workspaces. All of those work off signals *you
 authored*. Once the agent is in a real user's hands, the rest of the
 chain goes blind — and that's the gap this package closes.
 
-`iso-trace` parses the transcript files Claude Code (and, in future
-releases, Codex and OpenCode) already write to disk, normalises them
-into one event model, and lets you ask the questions the rest of the
-chain can't:
+`iso-trace` parses the transcript files Claude Code, Codex, and
+OpenCode already write to disk, normalises them into one event model,
+and lets you ask the questions the rest of the chain can't:
 
 - Which rules ever actually fire in production? (candidates to remove)
 - Which tools does my agent reach for, in what order? (pattern drift)
 - Which captured sessions would make good regression eval fixtures?
 - Did the tool-call mix change after the last prompt edit?
 
-> **v0.1 scope:** Claude Code JSONL parser only (the transcripts in
-> `~/.claude/projects/<encoded-cwd>/*.jsonl`). Codex and OpenCode
-> parsers land additively in v0.2. The event model is harness-agnostic,
-> so consumers don't need to care where a session came from.
->
+Supported local sources today:
+
+- Claude Code JSONL sessions in `~/.claude/projects/<encoded-cwd>/*.jsonl`
+- Codex JSONL sessions in `~/.codex/sessions/**.jsonl`
+- OpenCode sessions discovered from `~/.local/share/opencode/opencode.db`
+  and loaded via `opencode export <session-id>` for full-session reads.
+  OpenCode `model-score` queries the SQLite store directly instead of
+  replaying every export.
+
+The event model is harness-agnostic, so consumers do not need to care
+where a session came from.
+
 > **Zero upload.** The tool never opens a network connection. Everything
 > is local reads and stdout / user-specified file output.
 
@@ -46,12 +52,13 @@ type Event =
   | { kind: "token_usage",input: number, output: number, cacheRead: number, cacheCreated: number, model?: string };
 ```
 
-`file_op` events are *derived* from the file-touching tools (`Read`,
-`Write`, `Edit`, `NotebookEdit`, `Glob`, `Grep`). The original
-`tool_call` is always preserved alongside — nothing is lossy.
+`file_op` events are *derived* from the file-touching tools each harness
+emits (`Read`/`Write`/`Edit`, Codex `apply_patch` and common shell reads,
+OpenCode `read`/`grep`/`glob`, and so on). The original `tool_call` is
+always preserved alongside — nothing is lossy.
 
-Claude Code `thinking` blocks are deliberately dropped in v0.1 to keep
-exported data safe to share. Everything else round-trips.
+Claude Code `thinking` blocks are deliberately dropped on parse to keep
+exported data safer to share. Everything else round-trips.
 
 ## CLI
 
@@ -73,6 +80,10 @@ iso-trace stats cc_abcd1234 cc_abcd5678
 iso-trace stats --since 7d --cwd .
 iso-trace stats --source path/to/sample.jsonl       # one file, no discovery needed
 
+iso-trace model-score --cwd . --harness opencode --tool read
+iso-trace model-score --since-hours 24 --harness opencode --tool read --fail-on-schema
+iso-trace model-score --since 7d --tool Bash --json # model success/error scorecard
+
 iso-trace export <id> --format jsonl > session.jsonl
 iso-trace export <id> --format json
 
@@ -83,6 +94,43 @@ iso-trace export-fixture --source path/to/sample.jsonl --out fixtures/my-task/
 Session IDs are 8-char prefixes derived from path + first-line hash, so
 they're stable across reads and unambiguous by design. Prefix matching
 follows git's semantics: unique prefix wins, multiple matches errors.
+
+### `model-score` — which models are using tools correctly?
+
+`model-score` groups tool calls by the model that emitted them and
+reports call volume, success/error counts, schema-error counts, and the
+latest observed timestamp.
+
+For OpenCode, `--tool read` also breaks out the observed input shape, so
+you can spot schema drift immediately:
+
+```bash
+iso-trace model-score --cwd /path/to/project --harness opencode --tool read
+```
+
+If a weak route is sending `read({ path: ... })` instead of
+`read({ filePath: ... })`, the scorecard will show that in the `path` /
+`file_path` columns together with the schema-error rate.
+
+OpenCode windows are filtered by the actual tool event timestamp, not
+just the session start time, so long-running sessions do not hide fresh
+regressions near the end of a conversation.
+
+For routing and schema guardrails, `model-score` can also fail
+non-zero:
+
+```bash
+iso-trace model-score \
+  --cwd /path/to/project \
+  --harness opencode \
+  --tool read \
+  --since-hours 24 \
+  --fail-on-schema \
+  --fail-on-model openrouter/minimax/minimax-m2.5:free
+```
+
+`--fail-on-model` is repeatable, so you can block multiple routes in one
+check.
 
 ### `export-fixture` — turn an observed session into a regression fixture
 
@@ -110,7 +158,7 @@ import {
   discoverSessions, loadSessionFromPath, filter, stats, exportSession,
 } from "@razroo/iso-trace";
 
-// discovery: autodetects ~/.claude/projects on this machine
+// discovery: autodetects Claude Code, Codex, and OpenCode local sources
 const refs = await discoverSessions({ since: "7d", cwd: process.cwd() });
 
 // load + normalise one session
@@ -127,8 +175,8 @@ const s = stats([session]);
 process.stdout.write(exportSession(session, "jsonl"));
 ```
 
-Bring your own roots (e.g. a CI agent that captures transcripts to an
-arbitrary directory):
+Bring your own roots (e.g. a CI agent that captures Claude/Codex JSONL
+under an arbitrary directory, or a host with OpenCode's default DB):
 
 ```ts
 await discoverSessions({ roots: ["/path/to/captured/transcripts"] });
@@ -147,7 +195,7 @@ agent.md → agentmd → isolint → iso-harness → CLAUDE.md / AGENTS.md / .cu
                      normalised Session / Event stream
                  ┌───────────────────┼───────────────────┐
                  ▼                   ▼                   ▼
-        iso-trace stats      (future) export    (future) agentmd
+        iso-trace stats       export             agentmd
         (firing rates,        → iso-eval         adherence from
          tool patterns)        regression        production traces
                                fixtures
@@ -165,8 +213,8 @@ still gets value from `iso-trace` alone.
   tool will never edit, move, or delete a transcript.
 - `thinking` blocks are stripped on parse so exports don't accidentally
   publish internal reasoning.
-- A richer redaction pass (path scrubbing, regex denylist) lands in v0.2.
-  Until then, inspect exports manually before sharing.
+- A richer redaction pass (path scrubbing, regex denylist) is still not
+  shipped. Inspect exports manually before sharing.
 
 ## License
 

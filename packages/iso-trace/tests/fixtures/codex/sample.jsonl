@@ -1,0 +1,9 @@
+{"timestamp":"2026-04-19T15:00:00.000Z","type":"session_meta","payload":{"id":"codex-session-1","cwd":"/tmp/codex-project","timestamp":"2026-04-19T15:00:00.000Z"}}
+{"timestamp":"2026-04-19T15:00:00.100Z","type":"turn_context","payload":{"cwd":"/tmp/codex-project","model":"gpt-5.4"}}
+{"timestamp":"2026-04-19T15:00:00.200Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"Inspect src/app.ts and patch it."}]}}
+{"timestamp":"2026-04-19T15:00:01.000Z","type":"response_item","payload":{"type":"function_call","name":"exec_command","call_id":"call_read","arguments":"{\"cmd\":\"sed -n '1,5p' src/app.ts\",\"workdir\":\"/tmp/codex-project\"}"}}
+{"timestamp":"2026-04-19T15:00:01.100Z","type":"response_item","payload":{"type":"function_call_output","call_id":"call_read","output":"const message = 'old';\n"}}
+{"timestamp":"2026-04-19T15:00:02.000Z","type":"response_item","payload":{"type":"function_call","name":"apply_patch","call_id":"call_patch","arguments":"*** Begin Patch\n*** Update File: src/app.ts\n@@\n-const message = 'old';\n+const message = 'new';\n*** Add File: notes.txt\n+patched\n*** End Patch\n"}}
+{"timestamp":"2026-04-19T15:00:02.200Z","type":"response_item","payload":{"type":"function_call_output","call_id":"call_patch","output":"Success. Updated the following files:\nM src/app.ts\nA notes.txt\n"}}
+{"timestamp":"2026-04-19T15:00:03.000Z","type":"event_msg","payload":{"type":"token_count","info":{"last_token_usage":{"input_tokens":11,"output_tokens":7,"cached_input_tokens":3}}}}
+{"timestamp":"2026-04-19T15:00:04.500Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"Updated src/app.ts and added notes.txt."}]}}

@@ -200,7 +200,7 @@ function recordToEvents(rec: RawRecord, usageAccum: TokenUsage): Event[] {
           const fileOp = deriveFileOp(name, input);
           if (fileOp) events.push(fileOp);
         }
-        // thinking blocks intentionally skipped in v0.1
+        // thinking blocks are intentionally skipped on parse
       }
     }
     if (msg.usage) {

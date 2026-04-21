@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
+import { defaultOpenCodeDbPath, discoverOpenCodeSessionRefs } from "./sources/opencode.js";
 import { refFromPath } from "./sources/index.js";
 import type { DiscoverOptions, HarnessName, SessionRef } from "./types.js";
 
@@ -10,18 +11,15 @@ export interface SourceRoot {
   exists: boolean;
 }
 
-// Default transcript roots. Only claude-code is parseable in v0.1, but we
-// report the others so `iso-trace sources` is honest about what's detected
-// on disk and what will land in future versions.
 export function defaultRoots(): SourceRoot[] {
   const home = homedir();
   const roots: SourceRoot[] = [
     { harness: "claude-code", root: join(home, ".claude", "projects"), exists: false },
     { harness: "codex", root: join(home, ".codex", "sessions"), exists: false },
-    { harness: "opencode", root: join(home, ".opencode", "sessions"), exists: false },
+    { harness: "opencode", root: defaultOpenCodeDbPath(), exists: false },
   ];
   for (const r of roots) {
-    r.exists = safeIsDir(r.root);
+    r.exists = safeExists(r.root);
   }
   return roots;
 }
@@ -37,7 +35,21 @@ export async function discoverSessions(opts: DiscoverOptions = {}): Promise<Sess
 
   const refs: SessionRef[] = [];
   for (const { path, harness } of roots) {
-    if (harness !== "claude-code") continue;
+    if (harness === "opencode") {
+      if (!safeExists(path)) continue;
+      try {
+        for (const ref of discoverOpenCodeSessionRefs(path)) {
+          if (cwdFilter && ref.cwd !== cwdFilter) continue;
+          if (sinceMs !== undefined && Date.parse(ref.startedAt) < sinceMs) continue;
+          refs.push(ref);
+        }
+      } catch (error) {
+        if (shouldSurfaceDiscoverError(opts, harness)) throw error;
+        // skip unreadable / malformed sources silently — `show` surfaces the real error
+      }
+      continue;
+    }
+
     if (!safeIsDir(path)) continue;
     for (const file of enumerateJsonl(path)) {
       try {
@@ -46,7 +58,7 @@ export async function discoverSessions(opts: DiscoverOptions = {}): Promise<Sess
         if (sinceMs !== undefined && Date.parse(ref.startedAt) < sinceMs) continue;
         refs.push(ref);
       } catch {
-        // skip unreadable / malformed files silently — `show` surfaces the real error
+        // skip unreadable / malformed sources silently — `show` surfaces the real error
       }
     }
   }
@@ -54,12 +66,25 @@ export async function discoverSessions(opts: DiscoverOptions = {}): Promise<Sess
   return refs;
 }
 
+function shouldSurfaceDiscoverError(opts: DiscoverOptions, harness: HarnessName): boolean {
+  if (opts.harness === harness) return true;
+  return (opts.roots?.length ?? 0) === 1;
+}
+
 function inferHarnessFromRoot(root: string): HarnessName | undefined {
   const norm = root.replace(/\\/g, "/");
   if (norm.includes("/.claude/")) return "claude-code";
   if (norm.includes("/.codex/")) return "codex";
-  if (norm.includes("/.opencode/")) return "opencode";
+  if (norm.endsWith("/opencode.db") || norm.includes("/.local/share/opencode/")) return "opencode";
   return undefined;
+}
+
+function safeExists(p: string): boolean {
+  try {
+    return existsSync(p);
+  } catch {
+    return false;
+  }
 }
 
 function safeIsDir(p: string): boolean {

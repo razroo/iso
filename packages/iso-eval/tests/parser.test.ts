@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { loadSuite } from "../src/parser.js";
 
 function writeSuite(body: string): { path: string; cleanup: () => void } {
@@ -27,6 +27,29 @@ test("rejects unknown runner", () => {
   );
   try {
     assert.throws(() => loadSuite(s.path), /runner/);
+  } finally {
+    s.cleanup();
+  }
+});
+
+test("accepts codex as a built-in runner and resolves harness.source", () => {
+  const s = writeSuite(
+    [
+      "suite: x",
+      "runner: codex",
+      "harness:",
+      "  source: ./dist-harness",
+      "tasks:",
+      "  - id: t1",
+      '    prompt: "hi"',
+      "    workspace: .",
+      "    checks: []",
+    ].join("\n"),
+  );
+  try {
+    const suite = loadSuite(s.path);
+    assert.equal(suite.runner, "codex");
+    assert.equal(suite.harnessSource, join(dirname(s.path), "dist-harness"));
   } finally {
     s.cleanup();
   }
