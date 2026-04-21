@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseClaudeCode } from "../src/sources/claude-code.js";
+import { loadSessionFromPath } from "../src/sources/index.js";
 import type { FileOpEvent, ToolCallEvent, ToolResultEvent } from "../src/types.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -18,6 +19,12 @@ test("parses the sample transcript into a session", () => {
   assert.equal(s.endedAt, "2026-04-18T10:00:05.000Z");
   assert.equal(s.durationMs, 5000);
   assert.ok(s.turns.length >= 5, `expected ≥5 turns, got ${s.turns.length}`);
+});
+
+test("generic loader infers claude-code when a metadata record appears first", () => {
+  const s = loadSessionFromPath(FIXTURE);
+  assert.equal(s.source.harness, "claude-code");
+  assert.equal(s.startedAt, "2026-04-18T10:00:00.000Z");
 });
 
 test("token usage sums across all assistant turns", () => {

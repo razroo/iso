@@ -40,33 +40,41 @@ function inferHarnessFromPath(path: string): HarnessName | undefined {
   const raw = readFileSync(path, "utf8");
   if (looksLikeOpenCodeExport(raw)) return "opencode";
 
-  const firstLine = raw
+  const lines = raw
     .split(/\r?\n/)
     .map((line) => line.trim())
-    .find(Boolean);
+    .filter(Boolean);
+  const firstLine = lines[0];
   if (!firstLine) return undefined;
   if (firstLine.startsWith("Exporting session:")) return "opencode";
 
-  try {
-    const first = JSON.parse(firstLine) as { type?: unknown; message?: unknown };
-    if (
-      first.type === "session_meta" ||
-      first.type === "response_item" ||
-      first.type === "turn_context" ||
-      first.type === "event_msg"
-    ) {
-      return "codex";
+  // Claude Code transcripts can begin with metadata records like
+  // `permission-mode` before the first user/assistant message, so we scan
+  // a small prefix of JSONL records rather than assuming record 1 carries
+  // the harness signature.
+  for (const line of lines.slice(0, 10)) {
+    try {
+      const rec = JSON.parse(line) as { type?: unknown; message?: unknown };
+      if (
+        rec.type === "session_meta" ||
+        rec.type === "response_item" ||
+        rec.type === "turn_context" ||
+        rec.type === "event_msg"
+      ) {
+        return "codex";
+      }
+      if (
+        rec.message !== undefined ||
+        rec.type === "user" ||
+        rec.type === "assistant" ||
+        rec.type === "system" ||
+        rec.type === "permission-mode"
+      ) {
+        return "claude-code";
+      }
+    } catch {
+      return undefined;
     }
-    if (
-      first.message !== undefined ||
-      first.type === "user" ||
-      first.type === "assistant" ||
-      first.type === "system"
-    ) {
-      return "claude-code";
-    }
-  } catch {
-    return undefined;
   }
 
   return undefined;

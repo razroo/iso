@@ -1,5 +1,15 @@
 # @razroo/iso-trace
 
+## 0.3.1
+
+### Patch Changes
+
+- Improve harness inference for Claude Code JSONL sessions that begin
+  with metadata records such as `permission-mode` before the first
+  user/assistant message. This fixes `iso-trace stats --source ...`
+  against newer Claude Code exports and restores the CI sample-session
+  smoke test.
+
 ## 0.3.0
 
 ### Minor Changes
