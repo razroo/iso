@@ -1,5 +1,16 @@
 # @razroo/iso-eval
 
+## 0.3.0
+
+### Minor Changes
+
+- 5f4178f: Add a built-in Codex runner to `iso-eval` so suites can execute against a
+  real coding harness instead of only the fake runner.
+
+  Expand `iso-trace` with Codex and OpenCode transcript support, session
+  discovery across those harnesses, `model-score` reporting, and
+  CI-friendly routing/schema regression gates for OpenCode tool usage.
+
 ## 0.2.0
 
 ### Minor Changes
@@ -19,11 +30,11 @@
   - type: agentmd_adherence
     promptFile: ../agent.md
     fixtures: ../fixtures.yml
-    ruleId: H3               # optional
+    ruleId: H3 # optional
     minPassRate: 0.9
-    via: claude-code         # optional (api | claude-code | fake)
-    model: claude-haiku-4-5  # optional
-    timeoutMs: 180000        # optional
+    via: claude-code # optional (api | claude-code | fake)
+    model: claude-haiku-4-5 # optional
+    timeoutMs: 180000 # optional
   ```
 
   Adds `@razroo/agentmd` as a runtime dependency so installing

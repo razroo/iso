@@ -1,5 +1,16 @@
 # @razroo/iso-trace
 
+## 0.3.0
+
+### Minor Changes
+
+- 5f4178f: Add a built-in Codex runner to `iso-eval` so suites can execute against a
+  real coding harness instead of only the fake runner.
+
+  Expand `iso-trace` with Codex and OpenCode transcript support, session
+  discovery across those harnesses, `model-score` reporting, and
+  CI-friendly routing/schema regression gates for OpenCode tool usage.
+
 ## 0.2.0
 
 ### Minor Changes
@@ -29,9 +40,9 @@
 ### Minor Changes
 
 - Initial release. Parse Claude Code JSONL session transcripts into a
-  harness-agnostic event model so you can ask *which rules ever
-  actually fired?*, *which tools does my agent reach for most?*, and
-  *which captured sessions would make good regression fixtures?* Ships
+  harness-agnostic event model so you can ask _which rules ever
+  actually fired?_, _which tools does my agent reach for most?_, and
+  _which captured sessions would make good regression fixtures?_ Ships
   `sources`, `list`, `show`, `stats`, and `export` commands. Zero
   upload — everything is local reads and user-controlled output. Codex
   and OpenCode parsers are additive and planned for later minor
