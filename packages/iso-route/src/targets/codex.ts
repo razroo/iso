@@ -48,12 +48,17 @@ function providerBlocks(policy: ModelPolicy, warnings: string[]): string[] {
     seen.add(key);
     const block = providerBlock(r.provider);
     if (block) out.push(...block, "");
-    else
+    else if (!codexReservedBuiltinProvider(r.provider))
       warnings.push(
         `codex: provider "${r.provider}" has no known TOML template — user must fill in [model_providers.${key}] manually`,
       );
   }
   return out;
+}
+
+/** Codex CLI reserves these IDs — `[model_providers.<id>]` overrides are rejected at load time. */
+function codexReservedBuiltinProvider(p: ProviderModel["provider"]): boolean {
+  return p === "openai" || p === "ollama";
 }
 
 function providerBlock(provider: ProviderModel["provider"]): string[] | null {
@@ -66,12 +71,9 @@ function providerBlock(provider: ProviderModel["provider"]): string[] | null {
         `env_key = "ANTHROPIC_API_KEY"`,
       ];
     case "openai":
-      return [
-        `[model_providers.openai]`,
-        `name = "OpenAI"`,
-        `base_url = "https://api.openai.com/v1"`,
-        `env_key = "OPENAI_API_KEY"`,
-      ];
+      // Built-in — use `model_provider = "openai"` only. Custom base URL:
+      // top-level `openai_base_url` or `OPENAI_BASE_URL` (Codex docs).
+      return null;
     case "google":
       return [
         `[model_providers.google]`,
@@ -87,12 +89,8 @@ function providerBlock(provider: ProviderModel["provider"]): string[] | null {
         `env_key = "OPENROUTER_API_KEY"`,
       ];
     case "ollama":
-      return [
-        `[model_providers.ollama]`,
-        `name = "Ollama"`,
-        `base_url = "http://localhost:11434/v1"`,
-        `env_key = ""`,
-      ];
+      // Built-in — use `model_provider = "ollama"` (or `--oss`) only.
+      return null;
     default:
       return null;
   }

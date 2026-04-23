@@ -61,7 +61,8 @@ test("codex: writes config.toml with default model + a profile per role", () => 
   assert.match(s, /model_reasoning_effort = "high"/);
   assert.match(s, /\[profiles\.reviewer\]/);
   assert.match(s, /\[model_providers\.anthropic\]/);
-  assert.match(s, /\[model_providers\.openai\]/);
+  assert.match(s, /\[profiles\.reviewer\][\s\S]*model_provider = "openai"/);
+  assert.doesNotMatch(s, /\[model_providers\.openai\]/);
 });
 
 test("opencode: writes opencode.json with provider-qualified model and per-agent overrides", () => {

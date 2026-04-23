@@ -131,7 +131,7 @@ harness.
 | `roles.<name>.model`      | resolved map (iso-harness stamps)    | `[profiles.<name>]` in `config.toml`                 | `agent.<name>.model` in `opencode.json`| advisory row in README note      |
 | `reasoning`               | closest model tier                   | `model_reasoning_effort`                             | provider-specific                      | advisory                         |
 | `fallback[]`              | resolved map only (runtime unsupported) | resolved map only                                 | resolved map only                      | resolved map only                |
-| provider auth             | env var convention                   | `[model_providers.<name>]` block                     | `provider` block with `npm` package    | —                                |
+| provider auth             | env var convention                   | `[model_providers.<name>]` block (not for reserved Codex built-ins `openai` / `ollama`) | `provider` block with `npm` package    | —                                |
 
 Cursor has no programmatic way to bind a model to a rule or chat, so
 iso-route emits a README note at `.cursor/iso-route.md` and warns at build

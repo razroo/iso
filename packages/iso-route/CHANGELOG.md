@@ -1,5 +1,16 @@
 # @razroo/iso-route
 
+## 0.5.2
+
+### Patch Changes
+
+- **Codex:** Stop emitting `[model_providers.openai]` and
+  `[model_providers.ollama]`. Recent Codex CLI versions treat those IDs as
+  reserved built-ins and refuse to load `config.toml` if they are
+  redefined. `model_provider = "openai"` / `"ollama"` still selects the
+  built-in providers; use top-level `openai_base_url` or
+  `OPENAI_BASE_URL` when only the OpenAI endpoint needs overriding.
+
 ## 0.5.1
 
 ### Patch Changes
