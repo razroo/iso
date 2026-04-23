@@ -144,8 +144,10 @@ iso-route init                               # scaffold ./models.yaml (extends "
 iso-route init --preset budget               # or start from the budget preset
 iso-route init --preset openrouter-free      # OpenCode => free OpenRouter shortlist
 iso-route build models.yaml --out .
+iso-route build models.yaml --verify-models  # verify model IDs first, then emit
 iso-route build models.yaml --targets claude,codex --dry-run
 iso-route plan  models.yaml
+iso-route verify models.yaml                 # verify model IDs without emitting files
 iso-route catalog openrouter                 # live advisory shortlist for OpenCode
 iso-route catalog openrouter --limit 20 --json
 ```
@@ -154,6 +156,26 @@ iso-route catalog openrouter --limit 20 --json
 preset. `build` writes per-harness files under `--out` (defaults to
 `.`). Add `--dry-run` to preview without touching disk. `plan` prints
 the resolved role table so you can eyeball what each harness will see.
+
+### Opt-in model verification
+
+`iso-route verify` and `iso-route build --verify-models` check declared
+OpenRouter model IDs against the live Models API before you ship the
+config. This keeps typo checking opt-in instead of turning the default
+build path into a networked step.
+
+Non-OpenRouter providers are still reported as *unverifiable* rather
+than guessed. That means a mixed policy can still pass:
+
+```bash
+iso-route verify models.yaml
+iso-route verify models.yaml --fail-on-unverifiable
+iso-route build models.yaml --out . --verify-models
+```
+
+`--endpoint <url>` is also available on both commands for custom
+gateways or tests that want to point at a fixture server instead of the
+default OpenRouter API endpoint.
 
 ### Advisory OpenRouter catalog
 
@@ -164,9 +186,9 @@ to models that are both:
 - free (`prompt == 0` and `completion == 0`)
 - tool-capable (`supported_parameters` includes `tools`)
 
-This command is intentionally separate from `build`: it helps you pick
-candidate model IDs, but `iso-route build` still does not validate that
-the upstream provider recognizes the model name you typed.
+This command is intentionally separate from the default `build` path: it
+helps you pick candidate model IDs, while `verify` / `build
+--verify-models` provide the opt-in validation step.
 
 ```bash
 iso-route catalog openrouter
@@ -178,14 +200,20 @@ iso-route catalog openrouter --allow-no-tools --json
 ## Library API
 
 ```ts
-import { build, loadPolicy } from "@razroo/iso-route";
+import { build, loadPolicy, verifyModelFile } from "@razroo/iso-route";
 
 const result = build({ source: "./models.yaml", out: "./.out", dryRun: true });
 for (const w of result.warnings) console.warn(w);
+
+const verify = await verifyModelFile("./models.yaml");
+console.log(verify.passed ? "ok" : "fix model ids");
 ```
 
 Individual emitters are exported too (`emitClaude`, `emitCodex`,
-`emitOpenCode`, `emitCursor`) if you only need one target.
+`emitOpenCode`, `emitCursor`) if you only need one target. Verification
+helpers are exported too (`verifyModelFile`, `verifyPolicyModels`,
+`formatVerifyResult`) for callers that want to keep the network check in
+their own pipeline code.
 
 ## How this fits the rest of the pipeline
 
@@ -210,9 +238,10 @@ back-to-back — the `@razroo/iso` wrapper will compose them for you.
   Portkey, Not Diamond). iso-route is a build-time transpiler, not an
   inference-path component.
 - **Not a build-time model validator.** `iso-route catalog openrouter`
-  is advisory only. `build` validates provider names, not model IDs. If
-  you type a model name your provider doesn't recognize, you'll still
-  find out at runtime.
+  is advisory only, and the default `build` path still validates
+  provider names, not model IDs. `verify` / `build --verify-models` are
+  opt-in checks. If you skip them and type a model name your provider
+  doesn't recognize, you'll still find out at runtime.
 
 ## License
 

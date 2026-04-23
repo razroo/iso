@@ -5,8 +5,9 @@ import {
   formatVerifyResult,
   verifyPolicyModels,
   type VerifyResult,
-} from "../src/verify.js";
-import type { ModelPolicy, OpenRouterModel } from "../src/index.js";
+  type ModelPolicy,
+  type OpenRouterModel,
+} from "../src/index.js";
 
 function policy(): ModelPolicy {
   return {

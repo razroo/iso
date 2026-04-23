@@ -9,6 +9,7 @@ import {
   formatOpenRouterCatalog,
 } from "./catalog.js";
 import { listPresets, loadPolicy } from "./parser.js";
+import { formatVerifyResult, verifyModelFile } from "./verify.js";
 import type { HarnessTarget } from "./types.js";
 
 const USAGE = `iso-route — one model policy, every harness
@@ -17,8 +18,10 @@ usage:
   iso-route --version | -v
   iso-route --help | -h
   iso-route build  <models.yaml> [--out <dir>] [--targets claude,codex,opencode,cursor]
-                                  [--dry-run]
+                                  [--dry-run] [--verify-models]
+                                  [--fail-on-unverifiable] [--endpoint <url>]
   iso-route plan   <models.yaml>
+  iso-route verify <models.yaml> [--fail-on-unverifiable] [--endpoint <url>]
   iso-route init   [--preset <name>] [--out <path>] [--force]
   iso-route catalog openrouter [--limit <n>] [--json] [--allow-paid] [--allow-no-tools]
 
@@ -49,31 +52,98 @@ function parseTargets(s: string): HarnessTarget[] {
   return out;
 }
 
-function cmdBuild(args: string[]): number {
+function parseVerifyOptions(
+  args: string[],
+  opts: { allowVerifyToggle: boolean },
+): {
+  source: string;
+  rest: string[];
+  verifyModels: boolean;
+  failOnUnverifiable: boolean;
+  endpoint?: string;
+  error?: string;
+} {
   if (args.length === 0) {
-    console.error("iso-route build: missing <models.yaml> path");
-    return 2;
+    return { source: "", rest: [], verifyModels: false, failOnUnverifiable: false, error: "missing <models.yaml> path" };
   }
   const source = args[0];
+  const rest: string[] = [];
+  let verifyModels = !opts.allowVerifyToggle;
+  let failOnUnverifiable = false;
+  let endpoint: string | undefined;
+  for (let i = 1; i < args.length; i++) {
+    const a = args[i];
+    if (opts.allowVerifyToggle && a === "--verify-models") {
+      verifyModels = true;
+    } else if (a === "--fail-on-unverifiable") {
+      failOnUnverifiable = true;
+    } else if (a === "--endpoint") {
+      endpoint = args[++i] ?? "";
+      if (!endpoint) {
+        return {
+          source,
+          rest,
+          verifyModels,
+          failOnUnverifiable,
+          error: "--endpoint requires a URL",
+        };
+      }
+    } else {
+      rest.push(a);
+    }
+  }
+  if (!verifyModels && (failOnUnverifiable || endpoint)) {
+    return {
+      source,
+      rest,
+      verifyModels,
+      failOnUnverifiable,
+      error: "--fail-on-unverifiable and --endpoint require --verify-models",
+    };
+  }
+  return { source, rest, verifyModels, failOnUnverifiable, endpoint };
+}
+
+async function cmdBuild(args: string[]): Promise<number> {
+  const verify = parseVerifyOptions(args, { allowVerifyToggle: true });
+  if (verify.error) {
+    console.error(`iso-route build: ${verify.error}`);
+    return 2;
+  }
+  const source = verify.source;
   let out = ".";
   let targets: HarnessTarget[] | undefined;
   let dryRun = false;
-  for (let i = 1; i < args.length; i++) {
-    const a = args[i];
+  for (let i = 0; i < verify.rest.length; i++) {
+    const a = verify.rest[i];
     if (a === "--out") {
-      out = args[++i] ?? "";
+      out = verify.rest[++i] ?? "";
       if (!out) {
         console.error("iso-route build: --out requires a directory");
         return 2;
       }
     } else if (a === "--targets") {
-      targets = parseTargets(args[++i] ?? "");
+      targets = parseTargets(verify.rest[++i] ?? "");
     } else if (a === "--dry-run") {
       dryRun = true;
     } else {
       console.error(`iso-route build: unknown flag "${a}"`);
       return 2;
     }
+  }
+
+  if (verify.verifyModels) {
+    const verifyResult = await verifyModelFile(source, {
+      endpoint: verify.endpoint,
+      failOnUnverifiable: verify.failOnUnverifiable,
+    });
+    console.log(
+      formatVerifyResult(verifyResult, {
+        failOnUnverifiable: verify.failOnUnverifiable,
+      }),
+    );
+    if (!verifyResult.passed) return 1;
+    console.log("");
   }
 
   const result = build({ source, out, targets, dryRun });
@@ -118,6 +188,24 @@ function cmdPlan(args: string[]): number {
     console.log(`  - ${r.name}: ${r.provider}/${r.model}${reasoning}${fb}`);
   }
   return 0;
+}
+
+async function cmdVerify(args: string[]): Promise<number> {
+  const verify = parseVerifyOptions(args, { allowVerifyToggle: false });
+  if (verify.error) {
+    console.error(`iso-route verify: ${verify.error}`);
+    return 2;
+  }
+  const result = await verifyModelFile(verify.source, {
+    endpoint: verify.endpoint,
+    failOnUnverifiable: verify.failOnUnverifiable,
+  });
+  console.log(
+    formatVerifyResult(result, {
+      failOnUnverifiable: verify.failOnUnverifiable,
+    }),
+  );
+  return result.passed ? 0 : 1;
 }
 
 function cmdInit(args: string[]): number {
@@ -272,6 +360,7 @@ async function main(argv: string[]): Promise<number> {
   const rest = args.slice(1);
   if (cmd === "build") return cmdBuild(rest);
   if (cmd === "plan") return cmdPlan(rest);
+  if (cmd === "verify") return cmdVerify(rest);
   if (cmd === "init") return cmdInit(rest);
   if (cmd === "catalog") return cmdCatalog(rest);
   console.error(`iso-route: unknown command "${cmd}"\n`);

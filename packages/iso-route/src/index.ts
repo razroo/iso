@@ -6,6 +6,12 @@ export {
   buildOpenRouterCatalog,
   formatOpenRouterCatalog,
 } from "./catalog.js";
+export {
+  collectModelReferences,
+  verifyPolicyModels,
+  verifyModelFile,
+  formatVerifyResult,
+} from "./verify.js";
 export type {
   OpenRouterModel,
   OpenRouterCatalogOptions,
@@ -13,6 +19,12 @@ export type {
   OpenRouterCatalogSuggestions,
   OpenRouterCatalogResult,
 } from "./catalog.js";
+export type {
+  ModelReference,
+  VerifyIssue,
+  VerifyResult,
+  VerifyOptions,
+} from "./verify.js";
 export { emitClaude } from "./targets/claude.js";
 export { emitCodex } from "./targets/codex.js";
 export { emitCursor } from "./targets/cursor.js";
