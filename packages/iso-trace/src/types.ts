@@ -1,4 +1,4 @@
-export type HarnessName = "claude-code" | "codex" | "opencode";
+export type HarnessName = "claude-code" | "cursor" | "codex" | "opencode";
 
 export interface SourceInfo {
   harness: HarnessName;

@@ -32,11 +32,11 @@ test("rejects unknown runner", () => {
   }
 });
 
-test("accepts codex as a built-in runner and resolves harness.source", () => {
+test("accepts built-in real runners and resolves harness.source", () => {
   const s = writeSuite(
     [
       "suite: x",
-      "runner: codex",
+      "runner: claude-code",
       "harness:",
       "  source: ./dist-harness",
       "tasks:",
@@ -48,8 +48,48 @@ test("accepts codex as a built-in runner and resolves harness.source", () => {
   );
   try {
     const suite = loadSuite(s.path);
-    assert.equal(suite.runner, "codex");
+    assert.equal(suite.runner, "claude-code");
     assert.equal(suite.harnessSource, join(dirname(s.path), "dist-harness"));
+  } finally {
+    s.cleanup();
+  }
+});
+
+test("accepts opencode as a built-in runner", () => {
+  const s = writeSuite(
+    [
+      "suite: x",
+      "runner: opencode",
+      "tasks:",
+      "  - id: t1",
+      '    prompt: "hi"',
+      "    workspace: .",
+      "    checks: []",
+    ].join("\n"),
+  );
+  try {
+    const suite = loadSuite(s.path);
+    assert.equal(suite.runner, "opencode");
+  } finally {
+    s.cleanup();
+  }
+});
+
+test("accepts cursor as a built-in runner", () => {
+  const s = writeSuite(
+    [
+      "suite: x",
+      "runner: cursor",
+      "tasks:",
+      "  - id: t1",
+      '    prompt: "hi"',
+      "    workspace: .",
+      "    checks: []",
+    ].join("\n"),
+  );
+  try {
+    const suite = loadSuite(s.path);
+    assert.equal(suite.runner, "cursor");
   } finally {
     s.cleanup();
   }

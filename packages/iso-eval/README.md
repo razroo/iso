@@ -18,6 +18,12 @@ Built-in runners today:
   from the prompt as shell in the snapshotted workspace.
 - `codex` — real-agent runner that shells out to `codex exec` in the
   per-trial workspace and captures the final assistant message.
+- `claude-code` — real-agent runner that shells out to `claude -p` in
+  the per-trial workspace.
+- `cursor` — real-agent runner that shells out to `cursor-agent --print`
+  in the per-trial workspace.
+- `opencode` — real-agent runner that shells out to `opencode run` in
+  the per-trial workspace.
 
 The library API still accepts any `RunnerFn`, so you can plug in other
 harnesses without waiting on a packaged runner.
@@ -33,10 +39,10 @@ npm install -D @razroo/iso-eval
 ```yaml
 # eval.yml
 suite: refactor-basic
-runner: fake              # or codex for a real-agent run
+runner: fake              # fake | codex | claude-code | cursor | opencode
 timeoutMs: 120000
 harness:
-  source: ../dist         # optional: stage AGENTS.md / .codex into each trial
+  source: ../dist         # optional: stage generated harness files into each trial
 
 tasks:
   - id: write-greeting
@@ -89,14 +95,24 @@ iso-eval run  examples/suites/echo-basic/eval.yml
 iso-eval plan examples/suites/echo-basic/eval.yml
 
 iso-eval run eval.yml --filter write-greeting --concurrency 2 --json
+iso-eval run eval.yml --runner claude-code --harness-source ../dist
+iso-eval run eval.yml --runner cursor --harness-source ../dist
+iso-eval run eval.yml --runner opencode --harness-source ../dist
 iso-eval run eval.yml --keep-workspaces           # skip tmpdir cleanup for debugging
 ```
 
 `run` exits 0 on all-pass, 1 on any failure, 2 on invalid invocation.
 
-## Codex runner
+`--runner` and `--harness-source` let you replay the same suite through a
+different packaged harness without rewriting `checks.yml`.
 
-Set `runner: codex` to run each task through the local Codex CLI:
+## Real runners and harness staging
+
+Set `runner:` in YAML, or override it at the CLI with `--runner`.
+`harness.source` is optional; when present, iso-eval stages the generated
+harness files you want the runner to see into each snapshotted workspace.
+
+### `codex`
 
 ```yaml
 suite: refactor-basic
@@ -106,15 +122,55 @@ harness:
   source: ../dist
 ```
 
-`harness.source` is optional. When present, iso-eval stages Codex-facing
-harness files into each snapshotted workspace before execution:
+Accepted `harness.source` shapes:
 
 - a project directory containing `AGENTS.md` and/or `.codex/`
 - a direct `AGENTS.md` path
 - a direct `.codex/config.toml` path
 
-This keeps each trial self-contained: Codex sees the task workspace plus
-the generated harness files you actually want to test.
+### `claude-code`
+
+Accepted `harness.source` shapes:
+
+- a project directory containing `CLAUDE.md`, `.claude/`, and/or `.mcp.json`
+- a direct `CLAUDE.md` path
+- a direct `.claude/` path
+- a direct `.claude/settings.json` path
+- a direct `.mcp.json` path
+
+The runner shells out to `claude -p --no-session-persistence` and passes
+`.mcp.json` through `--mcp-config` when present.
+
+### `opencode`
+
+Accepted `harness.source` shapes:
+
+- a project directory containing `AGENTS.md`, `opencode.json`, and/or `.opencode/`
+- a direct `AGENTS.md` path
+- a direct `opencode.json` path
+- a direct `.opencode/` path
+
+The runner shells out to `opencode run --dir <workspace>` and defaults to
+`--pure` so each trial stays self-contained.
+
+### `cursor`
+
+Accepted `harness.source` shapes:
+
+- a project directory containing `.cursor/`, `AGENTS.md`, and/or `CLAUDE.md`
+- a direct `.cursor/` path
+- a direct `.cursor/rules/` path
+- a direct `.cursor/rules/*.mdc` path
+- a direct `.cursor/mcp.json` path
+- a direct `AGENTS.md` path
+- a direct `CLAUDE.md` path
+
+The runner shells out to `cursor-agent --print --output-format text
+--workspace <workspace>` and stages any Cursor harness files you exported
+with `iso-harness` into the per-trial workspace first.
+
+This lets one suite exported from `iso-trace` be replayed across the
+packaged runners with the same task prompt and checks.
 
 ## Library API
 

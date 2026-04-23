@@ -81,6 +81,46 @@ test("discoverSessions with a Codex root picks up .jsonl files", async () => {
   }
 });
 
+test("discoverSessions with a Cursor root picks up agent transcripts", async () => {
+  const base = mkdtempSync(join(tmpdir(), "iso-trace-disc-cursor-"));
+  const fakeRoot = join(base, ".cursor", "projects");
+  const projectDir = join(fakeRoot, "Users-demo-cursor-project");
+  const sessionId = "11111111-2222-4333-8444-555555555555";
+  const transcriptDir = join(projectDir, "agent-transcripts", sessionId);
+  mkdirSync(transcriptDir, { recursive: true });
+  writeFileSync(
+    join(projectDir, ".workspace-trusted"),
+    JSON.stringify({
+      trustedAt: "2026-04-22T10:00:00.000Z",
+      workspacePath: "/tmp/cursor-project",
+    }, null, 2) + "\n",
+  );
+  writeFileSync(
+    join(transcriptDir, `${sessionId}.jsonl`),
+    [
+      JSON.stringify({
+        role: "user",
+        message: { content: [{ type: "text", text: "hi" }] },
+      }),
+      JSON.stringify({
+        role: "assistant",
+        message: {
+          content: [{ type: "tool_use", name: "Read", input: { path: "/tmp/cursor-project/README.md" } }],
+        },
+      }),
+    ].join("\n") + "\n",
+  );
+  try {
+    const refs = await discoverSessions({ roots: [fakeRoot] });
+    assert.equal(refs.length, 1);
+    assert.equal(refs[0].source.harness, "cursor");
+    assert.equal(refs[0].cwd, "/tmp/cursor-project");
+    assert.equal(refs[0].turnCount, 2);
+  } finally {
+    rmSync(base, { recursive: true, force: true });
+  }
+});
+
 test("sessionRefsFromOpenCodeRows converts sqlite rows into session refs", () => {
   const refs = sessionRefsFromOpenCodeRows(
     [

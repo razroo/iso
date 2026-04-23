@@ -2,6 +2,7 @@ export { discoverSessions, defaultRoots, parseSinceCutoff } from "./discover.js"
 export type { SourceRoot } from "./discover.js";
 export { loadSessionFromPath, refFromPath } from "./sources/index.js";
 export { parseClaudeCode, refForClaudeCode, CLAUDE_CODE_FORMAT } from "./sources/claude-code.js";
+export { parseCursor, refForCursor, CURSOR_FORMAT } from "./sources/cursor.js";
 export { parseCodex, refForCodex, CODEX_FORMAT } from "./sources/codex.js";
 export {
   parseOpenCode,
@@ -22,4 +23,6 @@ export { exportSession } from "./export.js";
 export type { ExportFormat } from "./export.js";
 export { exportFixture } from "./fixture.js";
 export type { ExportFixtureOptions, FixtureExportResult } from "./fixture.js";
+export { createRedactor, redactSession } from "./redact.js";
+export type { RedactionOptions, Redactor } from "./redact.js";
 export * from "./types.js";

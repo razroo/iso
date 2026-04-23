@@ -5,8 +5,11 @@ import { fileURLToPath } from "node:url";
 import { loadSuite } from "./parser.js";
 import { formatReport, toJSON } from "./report.js";
 import { run } from "./runner.js";
+import { claudeCodeRunner } from "./runners/claude-code.js";
 import { codexRunner } from "./runners/codex.js";
+import { cursorRunner } from "./runners/cursor.js";
 import { fakeRunner } from "./runners/fake.js";
+import { opencodeRunner } from "./runners/opencode.js";
 import type { RunnerFn, RunnerName } from "./types.js";
 
 const USAGE = `iso-eval — behavioral eval runner for AI coding agents
@@ -14,11 +17,12 @@ const USAGE = `iso-eval — behavioral eval runner for AI coding agents
 usage:
   iso-eval --version | -v
   iso-eval --help | -h
-  iso-eval run  <suite> [--filter <task-id>] [--concurrency N]
+  iso-eval run  <suite> [--filter <task-id>] [--concurrency N] [--runner <name>]
+                        [--harness-source <path>]
                         [--json] [--keep-workspaces]
   iso-eval plan <suite>
 
-runners: fake, codex
+runners: fake, codex, claude-code, cursor, opencode
 `;
 
 function getRunner(name: RunnerName): RunnerFn {
@@ -27,6 +31,12 @@ function getRunner(name: RunnerName): RunnerFn {
       return fakeRunner;
     case "codex":
       return codexRunner;
+    case "claude-code":
+      return claudeCodeRunner;
+    case "cursor":
+      return cursorRunner;
+    case "opencode":
+      return opencodeRunner;
     default: {
       const exhaustive: never = name;
       throw new Error(`runner "${String(exhaustive)}" is not implemented in iso-eval`);
@@ -49,6 +59,8 @@ async function cmdRun(args: string[]): Promise<number> {
   const suitePath = args[0];
   let filter: string | undefined;
   let concurrency = 1;
+  let runnerOverride: RunnerName | undefined;
+  let harnessSourceOverride: string | undefined;
   let json = false;
   let keepWorkspaces = false;
   for (let i = 1; i < args.length; i++) {
@@ -61,6 +73,19 @@ async function cmdRun(args: string[]): Promise<number> {
         console.error(`iso-eval run: --concurrency must be a positive integer`);
         return 2;
       }
+    } else if (a === "--runner") {
+      const raw = args[++i] as RunnerName | undefined;
+      if (!raw || !["fake", "codex", "claude-code", "cursor", "opencode"].includes(raw)) {
+        console.error(`iso-eval run: --runner must be one of: fake, codex, claude-code, cursor, opencode`);
+        return 2;
+      }
+      runnerOverride = raw;
+    } else if (a === "--harness-source") {
+      harnessSourceOverride = args[++i];
+      if (!harnessSourceOverride) {
+        console.error(`iso-eval run: --harness-source requires a path`);
+        return 2;
+      }
     } else if (a === "--json") {
       json = true;
     } else if (a === "--keep-workspaces") {
@@ -71,8 +96,16 @@ async function cmdRun(args: string[]): Promise<number> {
     }
   }
   const suite = loadSuite(suitePath);
-  const runner = getRunner(suite.runner);
-  const report = await run(suite, {
+  const effectiveSuite =
+    runnerOverride || harnessSourceOverride
+      ? {
+          ...suite,
+          runner: runnerOverride ?? suite.runner,
+          harnessSource: harnessSourceOverride ?? suite.harnessSource,
+        }
+      : suite;
+  const runner = getRunner(effectiveSuite.runner);
+  const report = await run(effectiveSuite, {
     runner,
     concurrency,
     keepWorkspaces,

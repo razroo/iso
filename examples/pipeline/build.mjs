@@ -8,6 +8,7 @@
 //   iso-src/ + map   → iso-harness build        (one source → every harness)
 //   eval suite       → iso-eval run             (behavioral score via fake runner)
 //   sample session   → iso-trace stats          (observability on a real transcript)
+//   captured trace   → iso-trace export-fixture (seed a regression suite)
 //
 // Asserts every expected harness file is produced AND that the
 // iso-route → iso-harness handoff stamped model: onto the Claude
@@ -36,6 +37,7 @@ const traceSample = resolve(
   repoRoot,
   'packages/iso-trace/examples/sample-session.jsonl',
 );
+const traceFixtureOut = resolve(here, 'trace-fixture-out');
 
 function run(cmd, args, cwd = repoRoot) {
   console.log(`\n$ ${cmd} ${args.join(' ')}`);
@@ -61,8 +63,10 @@ run('node', [isolintCli, 'lint', renderedInstructions]);
 
 // 4. iso-route build — compile the model policy into per-harness config
 //    so the resolved role map is on disk when iso-harness reads it.
+//    `--verify-models` keeps typo checking opt-in while still exercising
+//    the early-validation path in this example.
 if (existsSync(out)) rmSync(out, { recursive: true, force: true });
-run('node', [isoRouteCli, 'build', modelsYaml, '--out', out]);
+run('node', [isoRouteCli, 'build', modelsYaml, '--out', out, '--verify-models']);
 
 // 5. iso-harness build — fan out one source into every target harness.
 //    Picks up the resolved role map from step 4 and stamps the
@@ -76,32 +80,55 @@ run('node', [isoEvalCli, 'run', evalYml]);
 // 7. iso-trace stats — print observability stats on a bundled session.
 run('node', [isoTraceCli, 'stats', '--source', traceSample]);
 
-// 8. assert every expected harness file was produced
+// 8. iso-trace export-fixture — lift the bundled trace into a reusable
+//    regression suite, then make sure iso-eval can parse it.
+if (existsSync(traceFixtureOut)) rmSync(traceFixtureOut, { recursive: true, force: true });
+run('node', [
+  isoTraceCli,
+  'export-fixture',
+  '--source',
+  traceSample,
+  '--out',
+  traceFixtureOut,
+  '--redact',
+  '--runner',
+  'codex',
+  '--edit-checks',
+  'exists-only',
+]);
+run('node', [isoEvalCli, 'plan', resolve(traceFixtureOut, 'checks.yml')]);
+
+// 9. assert every expected harness file was produced
 const expected = [
   // iso-harness outputs
-  'CLAUDE.md',
-  '.claude/agents/researcher.md',
-  '.claude/commands/review.md',
-  '.mcp.json',
-  '.cursor/rules/main.mdc',
-  '.cursor/mcp.json',
-  'AGENTS.md',
-  '.codex/config.toml',
-  'opencode.json',
-  '.opencode/agents/researcher.md',
-  '.opencode/skills/review.md',
+  [out, 'CLAUDE.md'],
+  [out, '.claude/agents/researcher.md'],
+  [out, '.claude/commands/review.md'],
+  [out, '.mcp.json'],
+  [out, '.cursor/rules/main.mdc'],
+  [out, '.cursor/mcp.json'],
+  [out, 'AGENTS.md'],
+  [out, '.codex/config.toml'],
+  [out, 'opencode.json'],
+  [out, '.opencode/agents/researcher.md'],
+  [out, '.opencode/skills/review.md'],
   // iso-route outputs
-  '.claude/settings.json',
-  '.claude/iso-route.resolved.json',
-  '.cursor/iso-route.md',
+  [out, '.claude/settings.json'],
+  [out, '.claude/iso-route.resolved.json'],
+  [out, '.cursor/iso-route.md'],
+  // trace → fixture outputs
+  [traceFixtureOut, 'task.md'],
+  [traceFixtureOut, 'checks.yml'],
 ];
-const missing = expected.filter((f) => !existsSync(resolve(out, f)));
+const missing = expected.filter(([root, path]) => !existsSync(resolve(root, path)));
 if (missing.length) {
-  console.error(`\nmissing expected outputs:\n  ${missing.join('\n  ')}`);
+  console.error(
+    `\nmissing expected outputs:\n  ${missing.map(([root, path]) => resolve(root, path)).join('\n  ')}`,
+  );
   process.exit(1);
 }
 
-// 9. assert the iso-route → iso-harness handoff actually stamped a model
+// 10. assert the iso-route → iso-harness handoff actually stamped a model
 //    onto the Claude subagent. This is the cross-package contract from
 //    INTEGRATIONS.md #1 + #2.
 const resolvedMap = JSON.parse(
@@ -123,5 +150,5 @@ if (!/^model:\s*claude-opus-4-7\b/m.test(researcherAgent)) {
 }
 
 console.log(
-  `\npipeline ok — all 7 packages exercised, ${expected.length} harness files under ${out}`,
+  `\npipeline ok — all 7 packages exercised, ${expected.length} expected artifacts checked`,
 );

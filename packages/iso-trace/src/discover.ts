@@ -15,6 +15,7 @@ export function defaultRoots(): SourceRoot[] {
   const home = homedir();
   const roots: SourceRoot[] = [
     { harness: "claude-code", root: join(home, ".claude", "projects"), exists: false },
+    { harness: "cursor", root: join(home, ".cursor", "projects"), exists: false },
     { harness: "codex", root: join(home, ".codex", "sessions"), exists: false },
     { harness: "opencode", root: defaultOpenCodeDbPath(), exists: false },
   ];
@@ -74,6 +75,7 @@ function shouldSurfaceDiscoverError(opts: DiscoverOptions, harness: HarnessName)
 function inferHarnessFromRoot(root: string): HarnessName | undefined {
   const norm = root.replace(/\\/g, "/");
   if (norm.includes("/.claude/")) return "claude-code";
+  if (norm.includes("/.cursor/projects")) return "cursor";
   if (norm.includes("/.codex/")) return "codex";
   if (norm.endsWith("/opencode.db") || norm.includes("/.local/share/opencode/")) return "opencode";
   return undefined;

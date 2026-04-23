@@ -2,12 +2,15 @@ import { existsSync, readFileSync } from "node:fs";
 import type { HarnessName, Session, SessionRef } from "../types.js";
 import { parseClaudeCode, refForClaudeCode } from "./claude-code.js";
 import { parseCodex, refForCodex } from "./codex.js";
+import { parseCursor, refForCursor } from "./cursor.js";
 import { looksLikeOpenCodeExport, parseOpenCode, refForOpenCode } from "./opencode.js";
 
 export function loadSessionFromPath(path: string, harness?: HarnessName): Session {
   switch (harness ?? inferHarnessFromPath(path)) {
     case "claude-code":
       return parseClaudeCode(path);
+    case "cursor":
+      return parseCursor(path);
     case "codex":
       return parseCodex(path);
     case "opencode":
@@ -21,6 +24,8 @@ export function refFromPath(path: string, harness?: HarnessName): SessionRef {
   switch (harness ?? inferHarnessFromPath(path)) {
     case "claude-code":
       return refForClaudeCode(path);
+    case "cursor":
+      return refForCursor(path);
     case "codex":
       return refForCodex(path);
     case "opencode":
@@ -34,6 +39,7 @@ function inferHarnessFromPath(path: string): HarnessName | undefined {
   const norm = path.replace(/\\/g, "/");
   if (/#session=/.test(path) || /(?:^|\/)opencode\.db(?:#|$)/.test(norm)) return "opencode";
   if (norm.includes("/.claude/")) return "claude-code";
+  if (norm.includes("/.cursor/projects/") || norm.includes("/agent-transcripts/")) return "cursor";
   if (norm.includes("/.codex/")) return "codex";
   if (!existsSync(path)) return undefined;
 
@@ -54,14 +60,22 @@ function inferHarnessFromPath(path: string): HarnessName | undefined {
   // the harness signature.
   for (const line of lines.slice(0, 10)) {
     try {
-      const rec = JSON.parse(line) as { type?: unknown; message?: unknown };
+      const rec = JSON.parse(line) as { type?: unknown; message?: unknown; role?: unknown; timestamp?: unknown };
       if (
         rec.type === "session_meta" ||
         rec.type === "response_item" ||
         rec.type === "turn_context" ||
         rec.type === "event_msg"
-      ) {
+        ) {
         return "codex";
+      }
+      if (
+        typeof rec.role === "string" &&
+        rec.message !== undefined &&
+        rec.type === undefined &&
+        !("timestamp" in rec)
+      ) {
+        return "cursor";
       }
       if (
         rec.message !== undefined ||

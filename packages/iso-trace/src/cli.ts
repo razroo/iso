@@ -1,10 +1,12 @@
 #!/usr/bin/env node
+import { spawnSync } from "node:child_process";
 import { readFileSync, existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defaultRoots, discoverSessions, parseSinceCutoff } from "./discover.js";
 import { exportSession, type ExportFormat } from "./export.js";
 import { exportFixture } from "./fixture.js";
+import { redactSession, type RedactionOptions } from "./redact.js";
 import { findSessionById, iterateEvents, stats } from "./query.js";
 import { modelScorecardFromRefs, type ModelScore } from "./scorecard.js";
 import { loadSessionFromPath } from "./sources/index.js";
@@ -20,9 +22,9 @@ usage:
   iso-trace stats   [<id-or-prefix>...]  [--since <7d|ISO>] [--cwd <dir>]
   iso-trace stats   --source <path>   (stats on a single transcript file, for smoke/tests)
   iso-trace model-score [--since <7d|ISO> | --since-hours <n>] [--cwd <dir>] [--harness <name>] [--tool <name>] [--fail-on-schema] [--fail-on-model <provider/model>] [--json]
-  iso-trace export  <id-or-prefix>  [--format json|jsonl]
-  iso-trace export-fixture  <id-or-prefix>  --out <dir>
-  iso-trace export-fixture  --source <path>  --out <dir>
+  iso-trace export  <id-or-prefix>  [--format json|jsonl] [--redact] [--redact-regex <pattern>]
+  iso-trace export-fixture  <id-or-prefix>  --out <dir> [--runner <name>] [--harness-source <path>] [--edit-checks placeholder|exists-only] [--redact] [--redact-regex <pattern>] [--run]
+  iso-trace export-fixture  --source <path>  --out <dir> [--runner <name>] [--harness-source <path>] [--edit-checks placeholder|exists-only] [--redact] [--redact-regex <pattern>] [--run]
   iso-trace sources
   iso-trace where
 `;
@@ -162,6 +164,8 @@ async function cmdExport(args: string[]): Promise<number> {
   }
   const idOrPrefix = args[0];
   let format: ExportFormat = "json";
+  let redact = false;
+  const redactionPatterns: RegExp[] = [];
   for (let i = 1; i < args.length; i++) {
     const a = args[i];
     if (a === "--format") {
@@ -171,6 +175,16 @@ async function cmdExport(args: string[]): Promise<number> {
         return 2;
       }
       format = raw;
+    } else if (a === "--redact") {
+      redact = true;
+    } else if (a === "--redact-regex") {
+      const compiled = compileRedactionPattern(args[++i], "iso-trace export");
+      if (compiled instanceof Error) {
+        console.error(compiled.message);
+        return 2;
+      }
+      redact = true;
+      redactionPatterns.push(compiled);
     } else {
       console.error(`iso-trace export: unknown flag "${a}"`);
       return 2;
@@ -182,7 +196,10 @@ async function cmdExport(args: string[]): Promise<number> {
     console.error(`iso-trace export: no session matches "${idOrPrefix}"`);
     return 2;
   }
-  const session = loadSessionFromPath((ref as SessionRef).source.path, (ref as SessionRef).source.harness);
+  let session = loadSessionFromPath((ref as SessionRef).source.path, (ref as SessionRef).source.harness);
+  if (redact) {
+    session = redactSession(session, { patterns: redactionPatterns });
+  }
   process.stdout.write(exportSession(session, format));
   return 0;
 }
@@ -227,12 +244,53 @@ async function cmdExportFixture(args: string[]): Promise<number> {
   let source: string | undefined;
   let out: string | undefined;
   let idOrPrefix: string | undefined;
+  let runner: "fake" | "codex" | "claude-code" | "cursor" | "opencode" | undefined;
+  let harnessSource: string | undefined;
+  let editChecks: "placeholder" | "exists-only" = "placeholder";
+  let redact = false;
+  const redactionPatterns: RegExp[] = [];
+  let run = false;
+  let keepWorkspaces = false;
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
     if (a === "--source") {
       source = args[++i];
     } else if (a === "--out") {
       out = args[++i];
+    } else if (a === "--runner") {
+      const raw = args[++i];
+      if (raw !== "fake" && raw !== "codex" && raw !== "claude-code" && raw !== "cursor" && raw !== "opencode") {
+        console.error(`iso-trace export-fixture: --runner must be fake, codex, claude-code, cursor, or opencode`);
+        return 2;
+      }
+      runner = raw;
+    } else if (a === "--harness-source") {
+      harnessSource = args[++i];
+      if (!harnessSource) {
+        console.error(`iso-trace export-fixture: --harness-source requires a path`);
+        return 2;
+      }
+    } else if (a === "--edit-checks") {
+      const raw = args[++i];
+      if (raw !== "placeholder" && raw !== "exists-only") {
+        console.error(`iso-trace export-fixture: --edit-checks must be placeholder or exists-only`);
+        return 2;
+      }
+      editChecks = raw;
+    } else if (a === "--redact") {
+      redact = true;
+    } else if (a === "--redact-regex") {
+      const compiled = compileRedactionPattern(args[++i], "iso-trace export-fixture");
+      if (compiled instanceof Error) {
+        console.error(compiled.message);
+        return 2;
+      }
+      redact = true;
+      redactionPatterns.push(compiled);
+    } else if (a === "--run") {
+      run = true;
+    } else if (a === "--keep-workspaces") {
+      keepWorkspaces = true;
     } else if (a.startsWith("--")) {
       console.error(`iso-trace export-fixture: unknown flag "${a}"`);
       return 2;
@@ -245,6 +303,14 @@ async function cmdExportFixture(args: string[]): Promise<number> {
   }
   if (!out) {
     console.error("iso-trace export-fixture: --out <dir> is required");
+    return 2;
+  }
+  if (run && !runner) {
+    console.error("iso-trace export-fixture: --run requires --runner <codex|claude-code|cursor|opencode>");
+    return 2;
+  }
+  if (run && runner === "fake") {
+    console.error("iso-trace export-fixture: --run is only useful with a real runner (codex, claude-code, cursor, or opencode)");
     return 2;
   }
   let session: Session;
@@ -272,16 +338,45 @@ async function cmdExportFixture(args: string[]): Promise<number> {
       (ref as SessionRef).source.harness,
     );
   }
-  const result = exportFixture(session, { out });
+  const redaction: RedactionOptions | undefined = redact ? { patterns: redactionPatterns } : undefined;
+  const result = exportFixture(session, {
+    out,
+    runner,
+    harnessSource,
+    editChecks,
+    redact: redaction,
+  });
   console.log(`iso-trace: wrote fixture to ${result.outDir}`);
   console.log(`  task:      ${result.taskMdPath}`);
   console.log(`  workspace: ${result.workspaceDir} (${result.readFiles.length} baseline file(s) seeded)`);
   console.log(`  checks:    ${result.checksYmlPath} (${result.writtenFiles.length} write(s), ${result.editedFiles.length} edit(s))`);
+  if (run) {
+    if (editChecks === "placeholder" && result.editedFiles.length > 0) {
+      console.error(
+        `iso-trace export-fixture: --run with placeholder edit checks will fail until you replace REPLACE_ME values; use --edit-checks exists-only for an immediate smoke rerun`,
+      );
+      return 2;
+    }
+    if (!harnessSource) {
+      console.error(`iso-trace export-fixture: warning: no --harness-source supplied; the rerun will not stage generated harness files`);
+    }
+    const evalArgs = ["run", result.checksYmlPath, "--runner", runner!];
+    if (harnessSource) evalArgs.push("--harness-source", harnessSource);
+    if (keepWorkspaces) evalArgs.push("--keep-workspaces");
+    console.log(``);
+    console.log(`running: iso-eval ${evalArgs.join(" ")}`);
+    return runIsoEval(evalArgs);
+  }
   console.log(``);
   console.log(`next:`);
-  console.log(`  1. Edit ${result.checksYmlPath} — replace each REPLACE_ME placeholder`);
-  console.log(`  2. Fill in workspace/ baseline files if your task depends on starting content`);
-  console.log(`  3. Run: iso-eval run ${result.checksYmlPath}`);
+  if (editChecks === "placeholder" && result.editedFiles.length > 0) {
+    console.log(`  1. Edit ${result.checksYmlPath} — replace each REPLACE_ME placeholder`);
+    console.log(`  2. Fill in workspace/ baseline files if your task depends on starting content`);
+    console.log(`  3. Run: iso-eval run ${result.checksYmlPath}${runner ? ` --runner ${runner}` : ""}${harnessSource ? ` --harness-source ${harnessSource}` : ""}`);
+  } else {
+    console.log(`  1. Fill in workspace/ baseline files if your task depends on starting content`);
+    console.log(`  2. Run: iso-eval run ${result.checksYmlPath}${runner ? ` --runner ${runner}` : ""}${harnessSource ? ` --harness-source ${harnessSource}` : ""}`);
+  }
   return 0;
 }
 
@@ -462,7 +557,9 @@ async function discoverModelScoreRefs(opts: ParsedModelScoreArgs): Promise<Sessi
 
   const roots = defaultRoots();
   const opencodeRoots = roots.filter((root) => root.harness === "opencode").map((root) => root.root);
-  const otherRoots = roots.filter((root) => root.harness !== "opencode").map((root) => root.root);
+  const otherRoots = roots
+    .filter((root) => root.harness !== "opencode" && root.harness !== "cursor")
+    .map((root) => root.root);
   const [opencodeRefs, otherRefs] = await Promise.all([
     discoverSessions({ cwd: opts.cwd, harness: "opencode", roots: opencodeRoots }),
     discoverSessions({ since: opts.since, cwd: opts.cwd, roots: otherRoots }),
@@ -602,6 +699,34 @@ function prettyBytes(n: number): string {
 
 function formatPercent(value: number): string {
   return `${(value * 100).toFixed(1)}%`;
+}
+
+function compileRedactionPattern(raw: string | undefined, prefix: string): RegExp | Error {
+  if (!raw) return new Error(`${prefix}: --redact-regex requires a pattern`);
+  try {
+    const parsed = new RegExp(raw);
+    const flags = parsed.flags.includes("g") ? parsed.flags : `${parsed.flags}g`;
+    return new RegExp(parsed.source, flags);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return new Error(`${prefix}: invalid --redact-regex: ${message}`);
+  }
+}
+
+function runIsoEval(args: string[]): number {
+  const direct = spawnSync("iso-eval", args, { stdio: "inherit", encoding: "utf8" });
+  if (!(direct.error && "code" in direct.error && direct.error.code === "ENOENT")) {
+    return direct.status ?? 1;
+  }
+  const fallback = spawnSync("npx", ["--no-install", "iso-eval", ...args], {
+    stdio: "inherit",
+    encoding: "utf8",
+  });
+  if (fallback.error && "code" in fallback.error && fallback.error.code === "ENOENT") {
+    console.error("iso-trace export-fixture: could not find `iso-eval` on PATH (or via `npx --no-install`)");
+    return 2;
+  }
+  return fallback.status ?? 1;
 }
 
 function sourceExists(path: string): boolean {

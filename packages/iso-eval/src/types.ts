@@ -68,7 +68,7 @@ export type Check =
   | LlmJudgeCheck
   | AgentmdAdherenceCheck;
 
-export type RunnerName = "fake" | "codex";
+export type RunnerName = "fake" | "codex" | "claude-code" | "cursor" | "opencode";
 
 export interface Task {
   id: string;

@@ -6,10 +6,12 @@
 
 **Write your AI agent instructions once. Run them anywhere, on any model.**
 
-`iso` is Razroo's toolchain for making agent harnesses *isomorphic* — the
-same authored source produces the same agent behavior across every coding
-harness (Cursor, Claude Code, Codex, OpenCode) and across every model tier
-(frontier models down to 7B local models).
+`iso` is Razroo's toolchain for making agent harnesses *isomorphic* — one
+authored source fans out to every coding harness (Cursor, Claude Code,
+Codex, OpenCode) and stays legible across model tiers (frontier models down
+to 7B local models). The packaged feedback loop now ships across all four
+harnesses; the only narrower surface is `iso-trace model-score`, which
+still depends on transcripts exposing stable model metadata.
 
 Today, writing agent instructions is fragmented on two axes:
 
@@ -70,6 +72,31 @@ See [`packages/iso`](./packages/iso) for the full CLI reference and
 library API, or [`examples/dogfood/`](./examples/dogfood) for a runnable
 project that exercises the wrapper end-to-end.
 
+## Shipped Support Matrix
+
+Build, replay, and transcript parsing now ship across all four harnesses.
+The remaining narrower surface is `iso-trace model-score`, which is only
+available where the source transcript exposes stable model metadata.
+
+| Harness       | Prompt/config build | Model binding      | `iso-eval` runner | `iso-trace` parser | `model-score` |
+| ------------- | ------------------- | ------------------ | ----------------- | ------------------ | ------------- |
+| Claude Code   | yes                 | yes                | yes               | yes                | yes           |
+| Codex         | yes                 | yes                | yes               | yes                | yes           |
+| OpenCode      | yes                 | yes                | yes               | yes                | yes           |
+| Cursor        | yes                 | advisory note only | yes               | yes                | not yet       |
+
+## Tiny-Model Loop
+
+If the real target is "the same workflow still works on smaller models,"
+the repo now supports a tighter loop:
+
+- `isolint` rewrites authored prose into smaller-model-safe instructions.
+- `iso-route` lets you pin cheaper or local roles without forking prompts.
+- `iso-trace model-score` catches tool-schema failures that weaker routes
+  tend to surface first on Claude Code, Codex, and OpenCode.
+- `iso-trace export-fixture --runner <name>` turns a real failure into an
+  `iso-eval` suite you can replay across shipped runners.
+
 ## Packages
 
 - **[`packages/iso`](./packages/iso)** — [`@razroo/iso`](https://www.npmjs.com/package/@razroo/iso) · *recommended entry point*
@@ -113,16 +140,20 @@ project that exercises the wrapper end-to-end.
   per task, hands it to a runner with the task prompt, then scores the
   resulting filesystem / command state — answering "did the agent
   actually do it?" that structural and prose lints can't. Ships a
-  deterministic `fake` runner for CI smoke plus a real `codex` runner;
-  other harnesses plug in via the library `RunnerFn` interface.
+  deterministic `fake` runner for CI smoke plus packaged real runners for
+  Cursor, Codex, Claude Code, and OpenCode. The library still accepts
+  custom `RunnerFn`s for teams that need a different invocation surface.
 
 - **[`packages/iso-trace`](./packages/iso-trace)** — [`@razroo/iso-trace`](https://www.npmjs.com/package/@razroo/iso-trace)
   Local observability for real agent transcripts. Parses Claude Code,
-  Codex, and OpenCode sessions into a harness-agnostic event model so
+  Cursor, Codex, and OpenCode sessions into a harness-agnostic event model so
   you can ask "which rules ever actually fired?", "which
   tools does my agent reach for most?", and "which captured sessions
-  would make good regression fixtures?" Zero upload — everything is
-  local reads and user-controlled output.
+  would make good regression fixtures?" Ships redacted export / fixture
+  helpers so that feedback loop is easier to reuse safely. `model-score`
+  currently stays on Claude Code, Codex, and OpenCode because Cursor
+  transcripts do not yet expose stable model metadata. Zero upload —
+  everything is local reads and user-controlled output.
 
 Each package is independently published on npm and works on its own.
 They're in one repo because they're designed to compose.
@@ -185,7 +216,9 @@ iso-harness build --watch                                 # rebuild on every sou
 iso-route build models.yaml --out .                       # emit .claude/settings.json, config.toml, etc.
 iso-route build models.yaml --targets claude,codex        # subset of harnesses
 iso-route build models.yaml --dry-run                     # preview without touching disk
+iso-route build models.yaml --verify-models               # opt-in early model verification
 iso-route plan  models.yaml                               # print resolved role table
+iso-route verify models.yaml                              # verify model IDs without emitting files
 ```
 
 ### `@razroo/iso-eval` — did the agent actually do the task?
@@ -193,6 +226,9 @@ iso-route plan  models.yaml                               # print resolved role 
 ```bash
 iso-eval run  eval.yml                                    # run the suite
 iso-eval run  eval.yml --filter write-greeting --concurrency 2 --json
+iso-eval run  eval.yml --runner claude-code --harness-source dist
+iso-eval run  eval.yml --runner cursor --harness-source dist
+iso-eval run  eval.yml --runner opencode --harness-source dist
 iso-eval run  eval.yml --keep-workspaces                  # keep tmpdirs for debugging
 iso-eval plan eval.yml                                    # list tasks + checks, no execution
 ```
@@ -210,7 +246,8 @@ iso-trace stats --source path/to/sample.jsonl             # one file, no discove
 iso-trace model-score --cwd . --harness opencode --tool read
 iso-trace model-score --cwd . --harness opencode --tool read --since-hours 24 --fail-on-schema
 iso-trace model-score --cwd . --harness opencode --tool read --since-hours 24 --fail-on-model openrouter/z-ai/glm-4.5-air:free
-iso-trace export <id> --format jsonl > session.jsonl
+iso-trace export <id> --format jsonl --redact > session.jsonl
+iso-trace export-fixture <id> --out fixtures/my-task --runner codex --edit-checks exists-only --run
 ```
 
 ## Layout

@@ -82,6 +82,25 @@ test("exportFixture: emits file_exists per write and file_exists + file_contains
   }
 });
 
+test("exportFixture: can emit exists-only edit checks for immediate reruns", () => {
+  const { path, cleanup } = mkOut();
+  try {
+    const result = exportFixture(mkSession(), {
+      out: path,
+      runner: "codex",
+      harnessSource: "../dist",
+      editChecks: "exists-only",
+    });
+    const yml = readFileSync(result.checksYmlPath, "utf8");
+    assert.match(yml, /runner: codex/);
+    assert.match(yml, /harness:\n  source: \.\.\/dist/);
+    assert.match(yml, /file_exists, path: src\/foo\.ts/);
+    assert.doesNotMatch(yml, /REPLACE_ME/);
+  } finally {
+    cleanup();
+  }
+});
+
 test("exportFixture: absolute paths outside cwd are kept verbatim, not silently dropped", () => {
   const session = mkSession({
     turns: [
@@ -153,6 +172,49 @@ test("exportFixture: session without a user message produces a TODO placeholder 
     const result = exportFixture(session, { out: path });
     const task = readFileSync(result.taskMdPath, "utf8");
     assert.match(task, /TODO: no user message found/);
+  } finally {
+    cleanup();
+  }
+});
+
+test("exportFixture: redacts exported task text and source paths when requested", () => {
+  const session = mkSession({
+    source: {
+      harness: "claude-code",
+      format: "jsonl-v1",
+      path: "/Users/alice/.claude/projects/proj/session.jsonl",
+    },
+    cwd: "/Users/alice/work/proj",
+    turns: [
+      {
+        index: 0,
+        role: "user",
+        at: "2026-04-20T10:00:00Z",
+        events: [
+          {
+            kind: "message",
+            role: "user",
+            text: "Update /Users/alice/work/proj/src/foo.ts with sk-1234567890abcdefghijkl",
+          },
+        ],
+      },
+      {
+        index: 1,
+        role: "assistant",
+        at: "2026-04-20T10:00:02Z",
+        events: [{ kind: "file_op", op: "write", path: "/Users/alice/work/proj/src/foo.ts", tool: "Write" }],
+      },
+    ],
+  });
+  const { path, cleanup } = mkOut();
+  try {
+    const result = exportFixture(session, { out: path, redact: {} });
+    const task = readFileSync(result.taskMdPath, "utf8");
+    const yml = readFileSync(result.checksYmlPath, "utf8");
+    assert.match(task, /<SOURCE_PATH>/);
+    assert.match(task, /\.\/src\/foo\.ts/);
+    assert.match(task, /<SECRET:OPENAI_KEY>/);
+    assert.match(yml, /file_exists, path: src\/foo\.ts/);
   } finally {
     cleanup();
   }

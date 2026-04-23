@@ -3,7 +3,13 @@ import { dirname, isAbsolute, resolve } from "node:path";
 import YAML from "yaml";
 import type { Check, RunnerName, Suite, Task } from "./types.js";
 
-const VALID_RUNNERS: ReadonlySet<RunnerName> = new Set<RunnerName>(["fake", "codex"]);
+const VALID_RUNNERS: ReadonlySet<RunnerName> = new Set<RunnerName>([
+  "fake",
+  "codex",
+  "claude-code",
+  "cursor",
+  "opencode",
+]);
 
 const VALID_CHECK_TYPES: ReadonlySet<Check["type"]> = new Set<Check["type"]>([
   "command",

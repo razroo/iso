@@ -34,11 +34,57 @@ jobs:
 
       - run: npm run build --workspace @razroo/isolint
 
+  engine-floor:
+    name: engine floor (${{ matrix.workspace }} on Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - workspace: "@razroo/iso-harness"
+            node: "18.17"
+            extra: "npm run smoke --workspace @razroo/iso-harness"
+          - workspace: "@razroo/iso-eval"
+            node: "20.6.0"
+            extra: ""
+          - workspace: "@razroo/iso-route"
+            node: "20.6.0"
+            extra: ""
+          - workspace: "@razroo/iso-trace"
+            node: "20.6.0"
+            extra: ""
+          - workspace: "@razroo/agentmd"
+            node: "22.0.0"
+            extra: ""
+          - workspace: "@razroo/iso"
+            node: "22.0.0"
+            extra: ""
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run typecheck --workspace ${{ matrix.workspace }} --if-present
+
+      - run: npm test --workspace ${{ matrix.workspace }} --if-present
+
+      - run: npm run build --workspace ${{ matrix.workspace }} --if-present
+
+      - if: ${{ matrix.extra != '' }}
+        run: ${{ matrix.extra }}
+
   build-test-lint:
     name: build-test-lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v5
         with:
@@ -46,6 +92,18 @@ jobs:
           cache: npm
 
       - run: npm ci
+
+      - name: Fetch PR base branch
+        if: ${{ github.event_name == 'pull_request' }}
+        run: git fetch --no-tags --depth=1 origin ${{ github.base_ref }}
+
+      - name: changeset status
+        if: ${{ github.event_name == 'pull_request' }}
+        run: npm run changeset:status
+
+      - name: patch hygiene
+        if: ${{ github.event_name == 'pull_request' }}
+        run: git diff --check origin/${{ github.base_ref }}...HEAD
 
       - run: npm run typecheck --workspaces --if-present
 
@@ -75,7 +133,7 @@ jobs:
         working-directory: packages/isolint
         run: node dist/cli/index.js lint . --fail-on error
 
-      - name: Pipeline integration (agentmd → isolint → iso-harness)
+      - name: Pipeline integration (all seven packages)
         run: node examples/pipeline/build.mjs
 
       - name: iso wrapper dogfood integration
@@ -87,8 +145,8 @@ jobs:
       - name: iso-trace example stats
         run: node packages/iso-trace/dist/cli.js stats --source packages/iso-trace/examples/sample-session.jsonl
 
-      - name: iso-route example build (dry-run)
-        run: node packages/iso-route/dist/cli.js build packages/iso-route/examples/models.yaml --out /tmp/iso-route-smoke --dry-run
+      - name: iso-route example build (dry-run + verify)
+        run: node packages/iso-route/dist/cli.js build packages/iso-route/examples/models.yaml --out /tmp/iso-route-smoke --dry-run --verify-models
 
       - name: iso-route example plan
         run: node packages/iso-route/dist/cli.js plan packages/iso-route/examples/models.yaml

@@ -8,7 +8,7 @@ success on synthetic workspaces. All of those work off signals *you
 authored*. Once the agent is in a real user's hands, the rest of the
 chain goes blind — and that's the gap this package closes.
 
-`iso-trace` parses the transcript files Claude Code, Codex, and
+`iso-trace` parses the transcript files Claude Code, Cursor, Codex, and
 OpenCode already write to disk, normalises them into one event model,
 and lets you ask the questions the rest of the chain can't:
 
@@ -20,6 +20,8 @@ and lets you ask the questions the rest of the chain can't:
 Supported local sources today:
 
 - Claude Code JSONL sessions in `~/.claude/projects/<encoded-cwd>/*.jsonl`
+- Cursor JSONL agent transcripts in
+  `~/.cursor/projects/<encoded-cwd>/agent-transcripts/<chat-id>/<chat-id>.jsonl`
 - Codex JSONL sessions in `~/.codex/sessions/**.jsonl`
 - OpenCode sessions discovered from `~/.local/share/opencode/opencode.db`
   and loaded via `opencode export <session-id>` for full-session reads.
@@ -84,11 +86,12 @@ iso-trace model-score --cwd . --harness opencode --tool read
 iso-trace model-score --since-hours 24 --harness opencode --tool read --fail-on-schema
 iso-trace model-score --since 7d --tool Bash --json # model success/error scorecard
 
-iso-trace export <id> --format jsonl > session.jsonl
-iso-trace export <id> --format json
+iso-trace export <id> --format jsonl --redact > session.jsonl
+iso-trace export <id> --format json --redact-regex 'gho_[A-Za-z0-9]+'
 
 iso-trace export-fixture <id> --out fixtures/my-task/         # lift a session into an iso-eval fixture
 iso-trace export-fixture --source path/to/sample.jsonl --out fixtures/my-task/
+iso-trace export-fixture <id> --out fixtures/my-task/ --runner claude-code --harness-source dist --edit-checks exists-only --run
 ```
 
 Session IDs are 8-char prefixes derived from path + first-line hash, so
@@ -96,6 +99,11 @@ they're stable across reads and unambiguous by design. Prefix matching
 follows git's semantics: unique prefix wins, multiple matches errors.
 
 ### `model-score` — which models are using tools correctly?
+
+`model-score` is currently available for Claude Code, Codex, and
+OpenCode. Cursor transcripts are parsed and exportable, but they do not
+yet expose stable model IDs or tool-result metadata, so Cursor is
+intentionally excluded from scorecards for now.
 
 `model-score` groups tool calls by the model that emitted them and
 reports call volume, success/error counts, schema-error counts, and the
@@ -141,8 +149,8 @@ regression test, `export-fixture` lifts it into a fresh suite:
 fixtures/my-task/
 ├── task.md      — the first user message from the session
 ├── workspace/   — empty placeholders for every file the agent read
-└── checks.yml   — file_exists per write, file_exists + file_contains
-                   per edit (value defaults to REPLACE_ME so you notice)
+└── checks.yml   — runner metadata plus file_exists per write; edits can
+                   emit file_contains placeholders or exists-only checks
 ```
 
 This is a *seed*, not a perfect replay — iso-trace can't know the
@@ -151,6 +159,17 @@ assert. Review `checks.yml` and fill in any baseline workspace files,
 then drop the directory into an iso-eval suite and run
 `iso-eval run fixtures/my-task/checks.yml`.
 
+For a faster path from "observed failure" to "rerunnable suite":
+
+- `--runner <fake|codex|claude-code|cursor|opencode>` persists the intended eval runner.
+- `--harness-source <path>` persists which generated harness files should
+  be staged into each rerun workspace.
+- `--edit-checks exists-only` avoids `REPLACE_ME` placeholders so the
+  exported suite can smoke-run immediately.
+- `--run` invokes `iso-eval run` directly after export.
+- `--redact` and `--redact-regex` scrub the exported task text and paths
+  before anything is written.
+
 ## Library API
 
 ```ts
@@ -158,7 +177,7 @@ import {
   discoverSessions, loadSessionFromPath, filter, stats, exportSession,
 } from "@razroo/iso-trace";
 
-// discovery: autodetects Claude Code, Codex, and OpenCode local sources
+// discovery: autodetects Claude Code, Cursor, Codex, and OpenCode local sources
 const refs = await discoverSessions({ since: "7d", cwd: process.cwd() });
 
 // load + normalise one session
@@ -211,10 +230,15 @@ still gets value from `iso-trace` alone.
   secrets. `iso-trace` never transmits them over the network.
 - `show` and `export` write to stdout or user-specified paths only. The
   tool will never edit, move, or delete a transcript.
+- `--redact` scrubs source paths, cwd/home prefixes, common API keys,
+  bearer tokens, and private-key blocks. `--redact-regex` lets you add
+  project-specific denylist patterns.
+- `export-fixture --redact` applies the same scrubbing before it writes
+  `task.md`, `workspace/`, and `checks.yml`.
 - `thinking` blocks are stripped on parse so exports don't accidentally
   publish internal reasoning.
-- A richer redaction pass (path scrubbing, regex denylist) is still not
-  shipped. Inspect exports manually before sharing.
+- Inspect exports before sharing anyway; redaction reduces risk, it does
+  not make arbitrary transcripts safe by magic.
 
 ## License
 

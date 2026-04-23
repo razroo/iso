@@ -3,6 +3,7 @@ import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statS
 import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import type { RunnerContext, RunnerFn, RunnerResult } from "../types.js";
+import { normaliseExitCode } from "./shared.js";
 
 interface CodexSpawnContext {
   workspaceDir: string;
@@ -127,12 +128,6 @@ function copyFile(src: string, dest: string): void {
 function copyDir(src: string, dest: string): void {
   mkdirSync(dirname(dest), { recursive: true });
   cpSync(src, dest, { recursive: true, force: true });
-}
-
-function normaliseExitCode(result: CodexSpawnResult): number {
-  if (typeof result.status === "number") return result.status;
-  if (result.error && "code" in result.error && result.error.code === "ETIMEDOUT") return 124;
-  return result.signal ? 1 : 0;
 }
 
 function readLastMessage(outputFile: string, eventStream: string): string {

@@ -70,32 +70,35 @@ forwarding.
 
 ## 4. `iso-trace` → `iso-eval` fixture export — **DONE**
 
-Shipped. `iso-trace export-fixture <id-or-prefix> --out <dir>` (or
-`--source <path>` for a single JSONL) lifts a session into an
-iso-eval-compatible directory: `task.md` (first user message),
+Shipped and expanded. `iso-trace export-fixture <id-or-prefix> --out
+<dir>` (or `--source <path>` for a single JSONL) lifts a session into
+an iso-eval-compatible directory: `task.md` (first user message),
 `workspace/` (empty placeholders for every file the agent read), and
-`checks.yml` (one `file_exists` per write, `file_exists` +
-`file_contains` with a `REPLACE_ME` placeholder per edit). Seven new
-tests cover message extraction, workspace seeding, check emission,
-absolute-path fallthrough, no-op sessions, missing user messages, and
-directory layout stability. Exposed as `exportFixture(...)` in the
-library API for callers that want to skip the CLI.
+`checks.yml` (one `file_exists` per write plus either placeholder or
+exists-only edit checks). The command now also accepts `--runner`,
+`--harness-source`, `--edit-checks exists-only`, `--redact`,
+`--redact-regex`, and `--run`, so a captured trace can turn into a
+rerunnable Codex / Claude Code / OpenCode suite with one command.
+Exposed as `exportFixture(...)` in the library API for callers that
+want to skip the CLI. Tests cover message extraction, workspace
+seeding, check emission, absolute-path fallthrough, no-op sessions,
+missing user messages, redaction, and directory layout stability.
 
 ---
 
 ## 5. `examples/pipeline/` ← exercise all seven packages — **DONE**
 
-Shipped. `examples/pipeline/build.mjs` now drives the full chain
-(`agentmd lint + render → isolint lint → iso-route build →
-iso-harness build → iso-eval run → iso-trace stats`) in one invocation.
-Bundled assets: `examples/pipeline/models.yaml` extends the `standard`
-preset with a `researcher` role, `examples/pipeline/eval/` ships a
-one-task suite that the fake runner passes offline, and iso-trace runs
-against `packages/iso-trace/examples/sample-session.jsonl`. The
-assertion set includes the cross-package contract from #1 + #2 — the
-emitted Claude subagent file must contain
-`model: claude-opus-4-7` driven from the resolved role map.
-`npm run test:pipeline` exits 0 and reports 14 harness files produced.
+Shipped and expanded. `examples/pipeline/build.mjs` now drives the full
+chain (`agentmd lint + render → isolint lint → iso-route build
+--verify-models → iso-harness build → iso-eval run → iso-trace stats →
+iso-trace export-fixture`) in one invocation. Bundled assets:
+`examples/pipeline/models.yaml` extends the `standard` preset with a
+`researcher` role, `examples/pipeline/eval/` ships a one-task suite
+that the fake runner passes offline, and iso-trace runs against
+`packages/iso-trace/examples/sample-session.jsonl`. The assertion set
+includes the cross-package contract from #1 + #2 — the emitted Claude
+subagent file must contain `model: claude-opus-4-7` driven from the
+resolved role map — plus fixture export output from the trace loop.
 
 ---
 
@@ -114,7 +117,14 @@ don't "fix" them without a conversation first.
   (OpenRouter, LiteLLM, Portkey) — not in a build-time transpiler. The
   resolved map records the chain so a proxy can read it; the harness
   config only names the primary.
-- **No build-time model validation.** `iso-route catalog openrouter`
-  may offer an advisory shortlist, but `iso-route build` still
-  validates provider names, not model IDs. Typos surface at runtime,
-  not build time.
+- **Cursor feedback is shipped, but Cursor `model-score` is still
+  intentionally out of scope.** `iso-eval` now ships a packaged Cursor
+  runner and `iso-trace` parses local Cursor transcripts / exports
+  fixtures from them. `iso-trace model-score` still excludes Cursor
+  because current local transcripts do not expose stable model IDs or
+  tool-result metadata, so scorecards would imply more certainty than
+  the source data supports.
+- **No implicit build-time model validation.** `iso-route verify` and
+  `build --verify-models` exist, but the default `build` path still
+  validates provider names, not model IDs. Asking a live catalog is an
+  opt-in check, not part of the baseline transpile step.

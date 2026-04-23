@@ -1,5 +1,6 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
+import { createRedactor, type RedactionOptions } from "./redact.js";
 import type { FileOpEvent, Session } from "./types.js";
 import { iterateEvents } from "./query.js";
 
@@ -16,6 +17,14 @@ export interface FixtureExportResult {
 export interface ExportFixtureOptions {
   /** Absolute or relative directory to write the fixture into. */
   out: string;
+  /** Runner to persist in the generated eval suite. Defaults to fake. */
+  runner?: "fake" | "codex" | "claude-code" | "cursor" | "opencode";
+  /** Optional harness.source path to persist in the generated eval suite. */
+  harnessSource?: string;
+  /** How edits should be represented in generated checks. Defaults to placeholder. */
+  editChecks?: "placeholder" | "exists-only";
+  /** Optional redaction pass applied to exported text and paths. */
+  redact?: RedactionOptions;
 }
 
 /**
@@ -37,9 +46,10 @@ export interface ExportFixtureOptions {
 export function exportFixture(session: Session, opts: ExportFixtureOptions): FixtureExportResult {
   const outDir = resolve(opts.out);
   mkdirSync(outDir, { recursive: true });
+  const redactor = opts.redact ? createRedactor(session, opts.redact) : undefined;
 
   const taskMdPath = join(outDir, "task.md");
-  writeFileSync(taskMdPath, renderTaskMd(session));
+  writeFileSync(taskMdPath, renderTaskMd(session, redactor));
 
   const workspaceDir = join(outDir, "workspace");
   mkdirSync(workspaceDir, { recursive: true });
@@ -63,34 +73,43 @@ export function exportFixture(session: Session, opts: ExportFixtureOptions): Fix
   for (const p of [...reads].sort()) {
     const rel = relativeToCwd(p, session.cwd);
     if (!rel) continue;
-    const abs = join(workspaceDir, rel);
+    const safeRel = redactor ? redactor.text(rel) : rel;
+    const abs = join(workspaceDir, safeRel);
     mkdirSync(dirname(abs), { recursive: true });
     writeFileSync(abs, "");
   }
 
   const checksYmlPath = join(outDir, "checks.yml");
-  writeFileSync(checksYmlPath, renderChecksYml(session, [...writes], [...edits]));
+  writeFileSync(
+    checksYmlPath,
+    renderChecksYml(session, [...writes], [...edits], {
+      runner: opts.runner ?? "fake",
+      harnessSource: opts.harnessSource,
+      editChecks: opts.editChecks ?? "placeholder",
+      redactor,
+    }),
+  );
 
   return {
     outDir,
     taskMdPath,
     workspaceDir,
     checksYmlPath,
-    readFiles: [...reads].sort(),
-    writtenFiles: [...writes].sort(),
-    editedFiles: [...edits].sort(),
+    readFiles: mapPaths([...reads].sort(), session.cwd, redactor),
+    writtenFiles: mapPaths([...writes].sort(), session.cwd, redactor),
+    editedFiles: mapPaths([...edits].sort(), session.cwd, redactor),
   };
 }
 
-function renderTaskMd(session: Session): string {
+function renderTaskMd(session: Session, redactor?: ReturnType<typeof createRedactor>): string {
   const firstUser = findFirstUserMessage(session);
   const header =
     `# Task (exported from iso-trace session ${session.id})\n\n` +
-    `<!-- Source: ${session.source.harness} transcript at ${session.source.path} -->\n\n`;
+    `<!-- Source: ${session.source.harness} transcript at ${redactor ? redactor.text(session.source.path) : session.source.path} -->\n\n`;
   if (!firstUser) {
     return `${header}TODO: no user message found in this session — fill in the task prompt manually.\n`;
   }
-  return `${header}${firstUser.trim()}\n`;
+  return `${header}${(redactor ? redactor.text(firstUser) : firstUser).trim()}\n`;
 }
 
 function findFirstUserMessage(session: Session): string | null {
@@ -103,15 +122,34 @@ function findFirstUserMessage(session: Session): string | null {
   return null;
 }
 
-function renderChecksYml(session: Session, writes: string[], edits: string[]): string {
+function renderChecksYml(
+  session: Session,
+  writes: string[],
+  edits: string[],
+  opts: {
+    runner: "fake" | "codex" | "claude-code" | "cursor" | "opencode";
+    harnessSource?: string;
+    editChecks: "placeholder" | "exists-only";
+    redactor?: ReturnType<typeof createRedactor>;
+  },
+): string {
   const lines: string[] = [];
   lines.push(`# Seed suite for fixture exported from iso-trace session ${session.id}.`);
-  lines.push(`# Review the checks below — iso-trace emits file_exists per write and`);
-  lines.push(`# file_exists + a placeholder file_contains per edit. Replace the`);
-  lines.push(`# "REPLACE_ME" strings with the actual value you want to assert.`);
+  if (opts.editChecks === "placeholder") {
+    lines.push(`# Review the checks below — iso-trace emits file_exists per write and`);
+    lines.push(`# file_exists + a placeholder file_contains per edit. Replace the`);
+    lines.push(`# "REPLACE_ME" strings with the actual value you want to assert.`);
+  } else {
+    lines.push(`# Review the checks below — iso-trace emits file_exists per write and edit.`);
+    lines.push(`# Tighten edit assertions later if you want content-level regressions.`);
+  }
   lines.push(``);
   lines.push(`suite: fixture-${session.id}`);
-  lines.push(`runner: fake`);
+  lines.push(`runner: ${opts.runner}`);
+  if (opts.harnessSource) {
+    lines.push(`harness:`);
+    lines.push(`  source: ${yamlString(opts.harnessSource)}`);
+  }
   lines.push(``);
   lines.push(`tasks:`);
   lines.push(`  - id: exported-task`);
@@ -124,13 +162,19 @@ function renderChecksYml(session: Session, writes: string[], edits: string[]): s
     lines.push(`      # - { type: command, run: "true", expectExit: 0 }`);
   }
   for (const p of writes.sort()) {
-    const rel = relativeToCwd(p, session.cwd) ?? p;
+    const rel = opts.redactor
+      ? opts.redactor.text(relativeToCwd(p, session.cwd) ?? p)
+      : relativeToCwd(p, session.cwd) ?? p;
     lines.push(`      - { type: file_exists, path: ${yamlString(rel)} }`);
   }
   for (const p of edits.sort()) {
-    const rel = relativeToCwd(p, session.cwd) ?? p;
+    const rel = opts.redactor
+      ? opts.redactor.text(relativeToCwd(p, session.cwd) ?? p)
+      : relativeToCwd(p, session.cwd) ?? p;
     lines.push(`      - { type: file_exists, path: ${yamlString(rel)} }`);
-    lines.push(`      - { type: file_contains, path: ${yamlString(rel)}, value: "REPLACE_ME" }`);
+    if (opts.editChecks === "placeholder") {
+      lines.push(`      - { type: file_contains, path: ${yamlString(rel)}, value: "REPLACE_ME" }`);
+    }
   }
   lines.push(``);
   return lines.join("\n");
@@ -151,4 +195,15 @@ function yamlString(s: string): string {
   // Only quote when needed — paths like `out/file.txt` don't need quotes.
   if (/^[a-zA-Z0-9_\-./]+$/.test(s)) return s;
   return `"${s.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+}
+
+function mapPaths(
+  paths: string[],
+  cwd: string,
+  redactor?: ReturnType<typeof createRedactor>,
+): string[] {
+  return paths.map((path) => {
+    const rel = relativeToCwd(path, cwd) ?? path;
+    return redactor ? redactor.text(rel) : rel;
+  });
 }
