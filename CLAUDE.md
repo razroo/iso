@@ -55,7 +55,7 @@ cross-package compositions and the decouplings that are deliberate.
 - Root `scripts` fan out via `npm run <x> --workspaces --if-present`.
 - Each published package has a tag-triggered release workflow at
   `.github/workflows/<pkg>-release.yml`. The workflow waits for the
-  `build-test-lint` CI check-run on the release commit, runs
+  `ci-required` CI check-run on the release commit, runs
   `release:check-source` to verify the tag matches `package.json`, then
   `npm publish --provenance`. Mirror this pattern when adding a new
   package.

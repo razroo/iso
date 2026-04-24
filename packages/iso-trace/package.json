@@ -1,6 +1,6 @@
 {
   "name": "@razroo/iso-trace",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Parse, normalize, and query AI coding agent transcripts — Claude Code JSONL sessions first, Codex and OpenCode additive. Local-only; never uploads.",
   "license": "MIT",
   "type": "module",

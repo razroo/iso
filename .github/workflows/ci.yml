@@ -181,3 +181,28 @@ jobs:
             fi
           done
           echo "All 11 expected output files present."
+
+  ci-required:
+    name: ci-required
+    runs-on: ubuntu-latest
+    needs:
+      - build-test-lint
+      - engine-floor
+      - isolint-compat
+    if: ${{ always() }}
+    steps:
+      - name: Verify all required CI jobs passed
+        run: |
+          if [ "${{ needs.build-test-lint.result }}" != "success" ]; then
+            echo "::error::build-test-lint result: ${{ needs.build-test-lint.result }}"
+            exit 1
+          fi
+          if [ "${{ needs.engine-floor.result }}" != "success" ]; then
+            echo "::error::engine-floor result: ${{ needs.engine-floor.result }}"
+            exit 1
+          fi
+          if [ "${{ needs.isolint-compat.result }}" != "success" ]; then
+            echo "::error::isolint-compat result: ${{ needs.isolint-compat.result }}"
+            exit 1
+          fi
+          echo "All required CI jobs passed."

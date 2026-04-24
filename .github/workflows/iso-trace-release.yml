@@ -14,6 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      checks: read
       id-token: write
     steps:
       - uses: actions/checkout@v6
@@ -29,7 +30,7 @@ jobs:
           VERSION="${GITHUB_REF_NAME#iso-trace-v}"
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
-      - name: Verify CI build-test-lint passed for release commit
+      - name: Verify required CI passed for release commit
         uses: ./.github/actions/verify-release-gate
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

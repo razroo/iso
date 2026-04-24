@@ -1,5 +1,13 @@
 # @razroo/iso-eval
 
+## 0.4.0
+
+### Minor Changes
+
+- 66d2ff5: `@razroo/iso-eval` now ships packaged real-agent runners for Claude Code,
+  Cursor, and OpenCode alongside Codex, and can stage the generated harness
+  files each runner expects before replaying a suite.
+
 ## 0.3.0
 
 ### Minor Changes

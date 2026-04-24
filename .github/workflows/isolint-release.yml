@@ -6,6 +6,7 @@ on:
 
 permissions:
   contents: read
+  checks: read
   id-token: write
 
 defaults:
@@ -26,7 +27,7 @@ jobs:
           registry-url: "https://registry.npmjs.org"
           cache: npm
 
-      - name: Verify CI build-test-lint passed for release commit
+      - name: Verify required CI passed for release commit
         uses: ./.github/actions/verify-release-gate
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

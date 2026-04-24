@@ -1,5 +1,13 @@
 # @razroo/iso-trace
 
+## 0.4.0
+
+### Minor Changes
+
+- 66d2ff5: `@razroo/iso-trace` now parses Cursor transcripts, adds redaction helpers
+  for safer exports, and can lift observed sessions into seed `iso-eval`
+  fixtures for faster regression coverage.
+
 ## 0.3.1
 
 ### Patch Changes

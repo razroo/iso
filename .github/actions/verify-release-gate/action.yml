@@ -5,7 +5,7 @@ inputs:
   check-name:
     description: Check-run name that must complete successfully.
     required: false
-    default: build-test-lint
+    default: ci-required
   timeout-seconds:
     description: Maximum wait time for the check-run.
     required: false

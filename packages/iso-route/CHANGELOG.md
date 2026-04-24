@@ -1,5 +1,13 @@
 # @razroo/iso-route
 
+## 0.5.3
+
+### Patch Changes
+
+- f07c294: Restore the shipped `iso-route verify` surface by wiring the CLI command,
+  re-enabling `build --verify-models` from source builds, and exporting the
+  verification helpers from the package entrypoint.
+
 ## 0.5.2
 
 ### Patch Changes
@@ -36,7 +44,7 @@
 ### Minor Changes
 
 - Add the `openrouter-free` preset plus an advisory `iso-route catalog
-  openrouter` command.
+openrouter` command.
 
   `openrouter-free` keeps the `standard` Claude Code / Codex picks but
   switches OpenCode to explicit free OpenRouter model IDs:

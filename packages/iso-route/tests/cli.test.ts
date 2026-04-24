@@ -4,10 +4,11 @@ import { spawn } from "node:child_process";
 import { createServer } from "node:http";
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { AddressInfo } from "node:net";
 
-const CLI_SRC = resolve(import.meta.dirname, "..", "src", "cli.ts");
+const CLI_SRC = fileURLToPath(new URL("../src/cli.ts", import.meta.url));
 
 function mktmp(): string {
   return mkdtempSync(join(tmpdir(), "iso-route-cli-test-"));
