@@ -207,10 +207,11 @@ async function cmdLint(
   // not inside a git checkout — keeps non-git directories linting cleanly.
   const repoRoot = findGitRoot(cwd) ?? process.cwd();
 
-  // Load config relative to the target, not process.cwd(). Explicit
-  // --config paths are still resolved from process.cwd() for ergonomics.
+  // Load config by searching upward from the target, so `isolint lint modes/`
+  // still picks up the project-root .isolint.json. Explicit --config paths
+  // stay process.cwd()-relative for CLI ergonomics.
   const config = loadConfig(
-    cwd,
+    flagString(flags, "config") ? process.cwd() : cwd,
     flagString(flags, "config"),
   );
 
@@ -323,8 +324,12 @@ function cmdCost(
 ): void {
   const target = positional[0] ?? ".";
   const cwd = resolve(process.cwd(), target);
+  const repoRoot = findGitRoot(cwd) ?? process.cwd();
 
-  const config = loadConfig(cwd, flagString(flags, "config"));
+  const config = loadConfig(
+    flagString(flags, "config") ? process.cwd() : cwd,
+    flagString(flags, "config"),
+  );
   const extFlag = flagString(flags, "ext") ?? ".md,.mdc,.mdx";
   const include_ext = extFlag
     .split(",")
@@ -336,7 +341,8 @@ function cmdCost(
   const use_gitignore = !flagBool(flags, "no-gitignore");
   const sections = !flagBool(flags, "no-sections");
 
-  const discovered = discoverFiles(cwd, { include_ext, ignore, use_gitignore });
+  const discovered = discoverFiles(cwd, { include_ext, ignore, use_gitignore })
+    .map((f) => ({ ...f, rel_path: relative(repoRoot, f.abs_path) }));
   const report = computeCost(discovered, { sections });
 
   const format = (flagString(flags, "format") ?? "text") as "text" | "json";

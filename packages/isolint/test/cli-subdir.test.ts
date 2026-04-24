@@ -19,7 +19,7 @@ import { fileURLToPath } from "node:url";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const CLI = resolve(HERE, "..", "src", "cli", "index.ts");
-const TSX = resolve(HERE, "..", "node_modules", ".bin", "tsx");
+const TSX = resolve(HERE, "..", "..", "..", "node_modules", ".bin", "tsx");
 
 function makeRepo(): string {
   const root = mkdtempSync(join(tmpdir(), "isolint-cli-subdir-"));
@@ -30,17 +30,17 @@ function makeRepo(): string {
   return root;
 }
 
-function runCli(cwd: string, args: string[]): { stdout: string; status: number } {
+function runCli(cwd: string, args: string[]): { stdout: string; stderr: string; status: number } {
   try {
     const stdout = execFileSync(TSX, [CLI, ...args], {
       cwd,
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],
     });
-    return { stdout, status: 0 };
+    return { stdout, stderr: "", status: 0 };
   } catch (err) {
-    const e = err as { status?: number; stdout?: string };
-    return { stdout: e.stdout ?? "", status: e.status ?? 1 };
+    const e = err as { status?: number; stdout?: string; stderr?: string };
+    return { stdout: e.stdout ?? "", stderr: e.stderr ?? "", status: e.status ?? 1 };
   }
 }
 
@@ -60,6 +60,45 @@ describe("CLI: linting a subdirectory resolves paths against the repo root", () 
     assert.ok(
       !stdout.includes("stale-link-reference"),
       `expected no stale-link-reference, got:\n${stdout}`,
+    );
+  });
+
+  it("loads project-root .isolint.json when target is a subdirectory", () => {
+    const root = makeRepo();
+    mkdirSync(join(root, "iso", "agents"), { recursive: true });
+    writeFileSync(
+      join(root, ".isolint.json"),
+      JSON.stringify({ rules: { "missing-file-reference": "off" } }) + "\n",
+    );
+    writeFileSync(
+      join(root, "iso", "agents", "worker.md"),
+      "---\ndescription: worker\n---\n\nRead `cv.md` only when the orchestrator asks for it.\n",
+    );
+    execFileSync("git", ["add", "-A"], { cwd: root });
+    execFileSync("git", ["commit", "-q", "-m", "init"], { cwd: root });
+
+    const { stdout, stderr, status } = runCli(root, ["lint", "iso", "--format", "json"]);
+    assert.equal(status, 0, `expected status 0, stderr:\n${stderr}\nstdout:\n${stdout}`);
+    const report = JSON.parse(stdout) as { findings: Array<{ rule_id: string }> };
+    assert.ok(
+      !report.findings.some((f) => f.rule_id === "missing-file-reference"),
+      `expected root config to disable missing-file-reference, got:\n${stdout}`,
+    );
+  });
+
+  it("rebases cost paths against the repo root for subdirectory targets", () => {
+    const root = makeRepo();
+    mkdirSync(join(root, "iso"), { recursive: true });
+    writeFileSync(join(root, "iso", "instructions.md"), "# Agent: demo\n\nUse the demo mode.\n");
+    execFileSync("git", ["add", "-A"], { cwd: root });
+    execFileSync("git", ["commit", "-q", "-m", "init"], { cwd: root });
+
+    const { stdout, stderr, status } = runCli(root, ["cost", "iso", "--format", "json"]);
+    assert.equal(status, 0, `expected status 0, stderr:\n${stderr}\nstdout:\n${stdout}`);
+    const report = JSON.parse(stdout) as { shared_prefix: Array<{ path: string }> };
+    assert.ok(
+      report.shared_prefix.some((f) => f.path === "iso/instructions.md"),
+      `expected iso/instructions.md to be classified as shared prefix, got:\n${stdout}`,
     );
   });
 });

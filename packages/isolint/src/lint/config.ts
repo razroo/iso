@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import type { CustomRuleSpec, ResolvedConfig, Severity } from "./types.js";
 
 export interface RawConfig {
@@ -47,10 +47,7 @@ export const DEFAULT_CONFIG: ResolvedConfig = {
 export function loadConfig(cwd: string, explicitPath?: string): ResolvedConfig {
   const candidates = explicitPath
     ? [resolve(cwd, explicitPath)]
-    : [
-        resolve(cwd, ".isolint.json"),
-        resolve(cwd, ".isomodel-lint.json"),
-      ];
+    : configCandidates(cwd);
   for (const path of candidates) {
     try {
       const raw = JSON.parse(readFileSync(path, "utf8")) as RawConfig;
@@ -60,6 +57,19 @@ export function loadConfig(cwd: string, explicitPath?: string): ResolvedConfig {
     }
   }
   return { ...DEFAULT_CONFIG };
+}
+
+function configCandidates(startDir: string): string[] {
+  const out: string[] = [];
+  let dir = resolve(startDir);
+  while (true) {
+    out.push(resolve(dir, ".isolint.json"));
+    out.push(resolve(dir, ".isomodel-lint.json"));
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return out;
 }
 
 export function mergeConfig(base: ResolvedConfig, raw: RawConfig): ResolvedConfig {

@@ -1,0 +1,45 @@
+name: Verify Release Gate
+description: Wait for a required CI check-run on the release commit before publishing.
+
+inputs:
+  check-name:
+    description: Check-run name that must complete successfully.
+    required: false
+    default: build-test-lint
+  timeout-seconds:
+    description: Maximum wait time for the check-run.
+    required: false
+    default: "1800"
+
+runs:
+  using: composite
+  steps:
+    - name: Wait for required check-run
+      shell: bash
+      env:
+        CHECK_NAME: ${{ inputs.check-name }}
+        TIMEOUT_SECONDS: ${{ inputs.timeout-seconds }}
+      run: |
+        SHA=$(git rev-parse HEAD)
+        echo "Verifying ${CHECK_NAME} check-run for ${SHA}"
+        DEADLINE=$(( $(date +%s) + TIMEOUT_SECONDS ))
+        STATUS=""
+        CONCLUSION=""
+        while [ "$(date +%s)" -lt "$DEADLINE" ]; do
+          read -r STATUS CONCLUSION <<<"$(gh api "repos/${GITHUB_REPOSITORY}/commits/$SHA/check-runs" \
+            --jq "[.check_runs[] | select(.name == env.CHECK_NAME)] | sort_by(.started_at) | last | \"\\(.status // \"missing\") \\(.conclusion // \"null\")\"")"
+          echo "${CHECK_NAME} check-run: status=${STATUS} conclusion=${CONCLUSION}"
+          if [ "$STATUS" = "completed" ]; then
+            break
+          fi
+          sleep 15
+        done
+        if [ "$STATUS" != "completed" ]; then
+          echo "::error::CI ${CHECK_NAME} for ${SHA} never completed within ${TIMEOUT_SECONDS}s (last status: ${STATUS})."
+          exit 1
+        fi
+        if [ "$CONCLUSION" != "success" ]; then
+          echo "::error::CI ${CHECK_NAME} for ${SHA} did not succeed (conclusion: ${CONCLUSION}). Fix before re-releasing."
+          exit 1
+        fi
+        echo "CI ${CHECK_NAME} succeeded for ${SHA}"
