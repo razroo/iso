@@ -74,7 +74,7 @@ roles:
         model: gpt-5.4
       opencode:
         provider: opencode
-        model: opencode-go/kimi-k2.5
+        model: opencode-go/deepseek-v4-pro
 ```
 
 When emitting for harness `X`, iso-route uses `targets.X` if present;
@@ -84,7 +84,7 @@ exists.
 
 ### Bundled presets (`extends:`)
 
-Two curated presets ship with the package so you don't have to pin
+Three curated presets ship with the package so you don't have to pin
 per-harness model picks by hand. Extend one with a single line; override
 only what you want to differ.
 

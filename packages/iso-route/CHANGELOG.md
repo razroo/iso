@@ -1,5 +1,11 @@
 # @razroo/iso-route
 
+## 0.5.4
+
+### Patch Changes
+
+- Refresh the standard preset's OpenCode picks to DeepSeek V4 Flash and DeepSeek V4 Pro.
+
 ## 0.5.3
 
 ### Patch Changes

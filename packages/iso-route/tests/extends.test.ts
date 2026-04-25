@@ -70,10 +70,13 @@ test("extends standard: user gets preset default + roles unchanged", () => {
   assert.equal(policy.default.model, "claude-sonnet-4-6");
   const roleNames = policy.roles.map((r) => r.name).sort();
   assert.deepEqual(roleNames, ["fast", "minimal", "quality"]);
+  assert.equal(policy.default.targets?.opencode?.model, "opencode-go/deepseek-v4-flash");
   const fast = policy.roles.find((r) => r.name === "fast")!;
   assert.equal(fast.provider, "anthropic");
   assert.equal(fast.model, "claude-haiku-4-5");
   assert.equal(fast.targets?.opencode?.model, "opencode/big-pickle");
+  const quality = policy.roles.find((r) => r.name === "quality")!;
+  assert.equal(quality.targets?.opencode?.model, "opencode-go/deepseek-v4-pro");
 });
 
 test("extends openrouter-free: OpenCode targets use explicit free OpenRouter model IDs", () => {
@@ -100,7 +103,7 @@ default:
   assert.equal(policy.default.provider, "anthropic", "provider preserved from preset");
   assert.equal(policy.default.model, "claude-opus-4-7", "model overridden");
   // targets.opencode still from preset
-  assert.equal(policy.default.targets?.opencode?.model, "opencode/glm-5.1");
+  assert.equal(policy.default.targets?.opencode?.model, "opencode-go/deepseek-v4-flash");
 });
 
 test("extends standard: target override on a role replaces that target atomically", () => {
