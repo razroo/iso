@@ -15,3 +15,6 @@ packages/*/src/**/*.d.ts.map
 
 # iso-harness example outputs
 packages/iso-harness/examples/*/out/
+
+# Pipeline example generated output
+examples/pipeline/trace-fixture-out/

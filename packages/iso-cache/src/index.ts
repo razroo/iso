@@ -1,0 +1,40 @@
+export type {
+  CacheContentHit,
+  CacheEntry,
+  CacheIssue,
+  CacheIssueKind,
+  CacheKeyInput,
+  CacheListOptions,
+  CachePruneOptions,
+  CachePruneResult,
+  CachePutOptions,
+  CacheReadOptions,
+  CacheVerifyResult,
+  JsonArray,
+  JsonObject,
+  JsonPrimitive,
+  JsonValue,
+} from "./types.js";
+export {
+  DEFAULT_CACHE_DIR,
+  cacheEntryId,
+  cacheKey,
+  hasCacheEntry,
+  hashContent,
+  isExpired,
+  listCacheEntries,
+  pruneCache,
+  putCacheEntry,
+  readCacheContent,
+  readCacheEntry,
+  resolveCacheDir,
+  verifyCache,
+} from "./cache.js";
+export {
+  formatCacheEntries,
+  formatCacheEntry,
+  formatCacheIssue,
+  formatPruneResult,
+  formatVerifyResult,
+} from "./format.js";
+export { isJsonObject, isJsonValue, parseJson, stableStringify } from "./json.js";

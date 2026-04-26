@@ -59,6 +59,9 @@ jobs:
           - workspace: "@razroo/iso-context"
             node: "20.6.0"
             extra: ""
+          - workspace: "@razroo/iso-cache"
+            node: "20.6.0"
+            extra: ""
           - workspace: "@razroo/iso-contract"
             node: "20.6.0"
             extra: ""
@@ -185,6 +188,12 @@ jobs:
           node packages/iso-context/dist/cli.js list --policy packages/iso-context/examples/jobforge-context.json
           node packages/iso-context/dist/cli.js check apply --policy packages/iso-context/examples/jobforge-context.json --root packages/iso-context/examples/jobforge-project --budget 20000
           node packages/iso-context/dist/cli.js render apply --policy packages/iso-context/examples/jobforge-context.json --root packages/iso-context/examples/jobforge-project --target markdown
+
+      - name: iso-cache example store/verify
+        run: |
+          node packages/iso-cache/dist/cli.js put "jd:example" --cache /tmp/iso-cache-example --kind jd --ttl 7d --meta '{"url":"https://example.test/jobs/123"}' --input @packages/iso-cache/examples/job-description.md
+          node packages/iso-cache/dist/cli.js has "jd:example" --cache /tmp/iso-cache-example
+          node packages/iso-cache/dist/cli.js verify --cache /tmp/iso-cache-example
 
       - name: iso-contract example validate/render
         run: |

@@ -1,6 +1,6 @@
 # Integrations
 
-This repo ships thirteen packages that **work on their own** but are **designed
+This repo ships fourteen packages that **work on their own** but are **designed
 to compose**. The planned cross-package compositions listed here are already
 shipped, so this file now serves as:
 
@@ -164,6 +164,19 @@ to remember which reference files to load.
 
 ---
 
+## 11. `iso-cache` ← deterministic artifact reuse for domain packages — **DONE**
+
+Introduced as a standalone package. `iso-cache` does not import
+JobForge, `iso-context`, `iso-ledger`, or any other domain package; it
+provides the on-disk content-addressed cache contract that domain tools
+can share. JobForge-style use cases include JD snapshots, portal scan
+responses, rendered context bundles, and evaluation input captures, but
+the package remains generic: stable key generation, TTL-aware
+put/get/has/list, integrity verification, and expired/orphan pruning
+without asking the model to refetch or rederive safe artifacts.
+
+---
+
 ## Design questions that are *not* open integrations
 
 The following look like integrations but are deliberately decoupled —
@@ -204,3 +217,8 @@ don't "fix" them without a conversation first.
   It emits a deterministic plan/check/render surface. Harness-native
   context injection should stay explicit because every harness has
   different context-loading semantics and prompt-cache behavior.
+- **`iso-cache` does not decide artifact freshness for a domain.**
+  It stores content-addressed entries with optional TTLs and verifies
+  integrity. Domain packages still own which artifacts are safe to cache,
+  how long they stay fresh, and which side-effectful operations must never
+  be replayed from cache.

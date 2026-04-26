@@ -74,6 +74,7 @@ try {
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-guard']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-ledger']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-context']);
+  run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-cache']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-contract']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-capabilities']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-route']);
@@ -90,6 +91,7 @@ try {
   const isoGuardTgz = packWorkspace('@razroo/iso-guard', packsDir);
   const isoLedgerTgz = packWorkspace('@razroo/iso-ledger', packsDir);
   const isoContextTgz = packWorkspace('@razroo/iso-context', packsDir);
+  const isoCacheTgz = packWorkspace('@razroo/iso-cache', packsDir);
   const isoContractTgz = packWorkspace('@razroo/iso-contract', packsDir);
   const isoCapabilitiesTgz = packWorkspace('@razroo/iso-capabilities', packsDir);
   const isoRouteTgz = packWorkspace('@razroo/iso-route', packsDir);
@@ -292,6 +294,46 @@ try {
   }
   run('npx', ['--no-install', 'iso-context', 'render', 'apply', '--policy', 'context.json', '--root', isoContextDir], isoContextDir);
 
+  // Smoke the packaged iso-cache CLI against a local content-addressed cache.
+  const isoCacheDir = resolve(tmpRoot, 'iso-cache');
+  mkdirSync(isoCacheDir, { recursive: true });
+  writePackageJson(isoCacheDir);
+  writeFileSync(resolve(isoCacheDir, 'job-description.md'), '# Example role\n\nBuild deterministic agent workflow tooling.\n');
+  run('npm', ['install', isoCacheTgz], isoCacheDir);
+  const isoCacheVersion = run('npx', ['--no-install', 'iso-cache', '--version'], isoCacheDir, { capture: true });
+  if (!isoCacheVersion.stdout.trim()) {
+    throw new Error('packaged iso-cache --version produced no output');
+  }
+  const cacheKey = run(
+    'npx',
+    ['--no-install', 'iso-cache', 'key', '--namespace', 'jobforge.jd', '--part', 'https://example.test/jobs/123'],
+    isoCacheDir,
+    { capture: true },
+  ).stdout.trim();
+  run(
+    'npx',
+    [
+      '--no-install',
+      'iso-cache',
+      'put',
+      cacheKey,
+      '--kind',
+      'jd',
+      '--ttl',
+      '7d',
+      '--meta',
+      '{"url":"https://example.test/jobs/123"}',
+      '--input',
+      '@job-description.md',
+    ],
+    isoCacheDir,
+  );
+  run('npx', ['--no-install', 'iso-cache', 'has', cacheKey], isoCacheDir);
+  const cacheVerify = run('npx', ['--no-install', 'iso-cache', 'verify'], isoCacheDir, { capture: true });
+  if (!cacheVerify.stdout.includes('iso-cache: PASS')) {
+    throw new Error('packaged iso-cache verify did not report PASS');
+  }
+
   // Smoke the packaged iso-contract CLI against the bundled JobForge-style contract.
   const isoContractDir = resolve(tmpRoot, 'iso-contract');
   mkdirSync(isoContractDir, { recursive: true });
@@ -400,7 +442,7 @@ try {
   run('npx', ['--no-install', 'iso-route', 'plan', modelsPath], isoRouteDir);
 
   console.log(
-    `\npack smoke ok — verified packaged iso-harness, iso, iso-eval, iso-trace, iso-guard, iso-ledger, iso-context, iso-contract, iso-capabilities, and iso-route from ${tmpRoot}`,
+    `\npack smoke ok — verified packaged iso-harness, iso, iso-eval, iso-trace, iso-guard, iso-ledger, iso-context, iso-cache, iso-contract, iso-capabilities, and iso-route from ${tmpRoot}`,
   );
 } catch (err) {
   failed = true;
