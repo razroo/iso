@@ -9,11 +9,13 @@
 `iso` is Razroo's toolchain for making agent harnesses *isomorphic* — one
 authored source fans out to every coding harness (Cursor, Claude Code,
 Codex, OpenCode) and stays legible across model tiers (frontier models down
-to 7B local models). The packaged feedback loop now ships across all four
-harnesses; the only narrower surface is `iso-trace model-score`, which
-still depends on transcripts exposing stable model metadata.
+to 7B local models). The repo now covers the full loop: build portable
+harness files, route models, replay evals, parse production traces, audit
+runtime policy, validate artifact contracts, and persist local workflow
+truth. The only narrower surface is `iso-trace model-score`, which still
+depends on transcripts exposing stable model metadata.
 
-Today, writing agent instructions is fragmented on two axes:
+Today, agent workflow reliability is fragmented on three axes:
 
 1. **Harness fragmentation.** Each coding agent reads a different file
    layout — `CLAUDE.md`, `AGENTS.md`, `.cursor/rules/*.mdc`,
@@ -24,8 +26,13 @@ Today, writing agent instructions is fragmented on two axes:
    `when relevant`), taste words, ambiguous cross-references, and
    unstructured rationale all drop silently at 7B. You don't find out
    until the agent misbehaves in production.
+3. **Runtime fragmentation.** Workflows rely on fragile prompt prose for
+   fan-out limits, output shape, duplicate checks, and "what already
+   happened." Those invariants belong in deterministic local packages,
+   not in repeatedly re-tokenized instructions.
 
-Eleven packages solve that in one pipeline with a control layer and feedback loop:
+Eleven packages solve that in one pipeline with runtime control and a
+feedback loop:
 
 - **Four build-time tools** turn your authored source into every harness's file layout:
   [`@razroo/agentmd`](./packages/agentmd) validates *structure*,
@@ -112,6 +119,23 @@ the repo now supports a tighter loop:
 - `iso-guard audit` checks whether a real run obeyed operational policy
   without turning those rules into more prompt tokens.
 
+## Runtime Control
+
+The runtime layer is intentionally MCP-free and model-free. Domain packages
+can use it from ordinary Node scripts to keep expensive or fragile facts out
+of the prompt:
+
+- `iso-orchestrator` persists resumable `step()` results, mutexes work by
+  entity key, and bounds fan-out for side-effectful workflows.
+- `iso-contract` makes artifact shape executable: validate records, parse
+  existing TSV/markdown/JSON, and render canonical output without asking a
+  model to remember delimiters.
+- `iso-ledger` records append-only local events with idempotency keys, then
+  answers cheap `has/query/materialize` questions without loading growing
+  tracker files into context.
+- `iso-guard` audits the normalized event streams from real runs so runtime
+  policy stays verifiable after deploy.
+
 ## Packages
 
 - **[`packages/iso`](./packages/iso)** — [`@razroo/iso`](https://www.npmjs.com/package/@razroo/iso) · *recommended entry point*
@@ -177,19 +201,19 @@ the repo now supports a tighter loop:
   commands, no overlapping same-key work, and prompt secret redaction.
   No model calls, no MCP server, and no injected prompt overhead.
 
-- **[`packages/iso-ledger`](./packages/iso-ledger)** — `@razroo/iso-ledger`
+- **[`packages/iso-ledger`](./packages/iso-ledger)** — [`@razroo/iso-ledger`](https://www.npmjs.com/package/@razroo/iso-ledger)
   Append-only operational state for agent workflows. Stores local JSONL
   events with deterministic ids and idempotency keys, supports
   `append/query/has/verify/materialize`, and gives domain packages a
   canonical state source without loading tracker files into the prompt.
 
-- **[`packages/iso-contract`](./packages/iso-contract)** — `@razroo/iso-contract`
+- **[`packages/iso-contract`](./packages/iso-contract)** — [`@razroo/iso-contract`](https://www.npmjs.com/package/@razroo/iso-contract)
   Deterministic artifact contracts for agent workflows. Loads JSON
   contract catalogs, validates records, and parses/renders JSON, TSV,
   and markdown table rows so domain packages can keep artifact formats
   out of prompt prose.
 
-- **[`packages/iso-orchestrator`](./packages/iso-orchestrator)** — `@razroo/iso-orchestrator`
+- **[`packages/iso-orchestrator`](./packages/iso-orchestrator)** — [`@razroo/iso-orchestrator`](https://www.npmjs.com/package/@razroo/iso-orchestrator)
   Durable orchestration primitives for the runtime layer above a single
   agent session. Persists workflow state to local disk, memoizes
   load-bearing `step()` results, provides keyed mutexes for "same
