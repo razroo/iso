@@ -1,0 +1,31 @@
+version: 1
+rules:
+  - id: JF-H1
+    type: max-per-group
+    description: Dispatch at most two apply subagents per round.
+    match: { type: tool_call, name: task }
+    groupBy: round
+    max: 2
+
+  - id: JF-H3
+    type: require-before
+    description: Run Geometra cleanup before each apply dispatch round.
+    trigger: { type: tool_call, name: task }
+    require: { type: tool_call, name: geometra_disconnect }
+    groupBy: round
+
+  - id: JF-H6
+    type: require-after
+    description: Multi-apply runs must merge and verify before ending.
+    ifAny: { type: tool_call, name: task, fields: { mode: apply } }
+    require:
+      - { type: tool_call, name: job-forge-merge }
+      - { type: tool_call, name: job-forge-verify }
+
+  - id: JF-H8
+    type: forbid-text
+    description: Do not paste raw proxy keys into task prompts.
+    match: { type: tool_call, name: task }
+    patterns:
+      - { source: "\\bproxy\\s*:\\s*\\{", flags: "i" }
+      - { source: "\\b(server|username|password|bypass)\\s*:", flags: "i" }

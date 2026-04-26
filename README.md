@@ -25,7 +25,7 @@ Today, writing agent instructions is fragmented on two axes:
    unstructured rationale all drop silently at 7B. You don't find out
    until the agent misbehaves in production.
 
-Eight packages solve that in one pipeline with a control layer and feedback loop:
+Nine packages solve that in one pipeline with a control layer and feedback loop:
 
 - **Four build-time tools** turn your authored source into every harness's file layout:
   [`@razroo/agentmd`](./packages/agentmd) validates *structure*,
@@ -37,9 +37,10 @@ Eight packages solve that in one pipeline with a control layer and feedback loop
 - **One orchestration library** handles durable runtime control:
   [`@razroo/iso-orchestrator`](./packages/iso-orchestrator) provides resumable
   steps, keyed mutexes, and bounded fan-out for side-effectful agent workflows.
-- **Two feedback tools** close the loop after deploy:
+- **Three feedback tools** close the loop after deploy:
   [`@razroo/iso-eval`](./packages/iso-eval) scores *did the agent complete the task?* and
-  [`@razroo/iso-trace`](./packages/iso-trace) parses production transcripts to show *what the agent actually did*.
+  [`@razroo/iso-trace`](./packages/iso-trace) parses production transcripts to show *what the agent actually did*,
+  while [`@razroo/iso-guard`](./packages/iso-guard) enforces operational policies against those event streams.
 
 ```
                 authoring                          build                               output                        feedback
@@ -49,6 +50,7 @@ Eight packages solve that in one pipeline with a control layer and feedback loop
   │                    │   render  │ load-bearing why  │           │                 │               │ .cursor/rules/*       │    iso-trace ──▶  production events,
   └────────────────────┘           └───────────────────┘           └─────────────────┘               │ .opencode/agents/*    │                    which rules ever fired,
                                                                                                      │ settings.json         │                    regression-fixture mining
+                                                                                                     │                      │    iso-guard ─▶  policy pass / fail
   ┌────────────────────┐                                                                             │ .codex/config.toml    │
   │ models.yaml        │ ───────────────────── iso-route build ─────────────────────────────────────▶│ opencode.json         │
   │ (roles + fallback) │                                                                             │ .mcp.json             │
@@ -99,6 +101,8 @@ the repo now supports a tighter loop:
   tend to surface first on Claude Code, Codex, and OpenCode.
 - `iso-trace export-fixture --runner <name>` turns a real failure into an
   `iso-eval` suite you can replay across shipped runners.
+- `iso-guard audit` checks whether a real run obeyed operational policy
+  without turning those rules into more prompt tokens.
 
 ## Packages
 
@@ -157,6 +161,13 @@ the repo now supports a tighter loop:
   currently stays on Claude Code, Codex, and OpenCode because Cursor
   transcripts do not yet expose stable model metadata. Zero upload —
   everything is local reads and user-controlled output.
+
+- **[`packages/iso-guard`](./packages/iso-guard)** — [`@razroo/iso-guard`](https://www.npmjs.com/package/@razroo/iso-guard)
+  Deterministic runtime policy checks for agent workflows. Reads normalized
+  event streams or `iso-trace export` JSON/JSONL and verifies invariants
+  such as bounded fan-out, cleanup-before-dispatch, required follow-up
+  commands, no overlapping same-key work, and prompt secret redaction.
+  No model calls, no MCP server, and no injected prompt overhead.
 
 - **[`packages/iso-orchestrator`](./packages/iso-orchestrator)** — `@razroo/iso-orchestrator`
   Durable orchestration primitives for the runtime layer above a single
@@ -261,6 +272,15 @@ iso-trace export <id> --format jsonl --redact > session.jsonl
 iso-trace export-fixture <id> --out fixtures/my-task --runner codex --edit-checks exists-only --run
 ```
 
+### `@razroo/iso-guard` — did the run obey policy?
+
+```bash
+iso-guard audit guard.yaml --events session.json
+iso-guard audit guard.yaml --events session.jsonl --json
+iso-guard verify guard.yaml --events session.json --fail-on warn
+iso-guard explain guard.yaml
+```
+
 ## Layout
 
 ```
@@ -275,7 +295,8 @@ iso/
     ├── iso-route/        # one model policy → per-harness config
     ├── iso-orchestrator/ # durable runtime control above one agent session
     ├── iso-eval/         # behavioral eval on the produced harness
-    └── iso-trace/        # parse + query real agent transcripts (observability)
+    ├── iso-trace/        # parse + query real agent transcripts (observability)
+    └── iso-guard/        # deterministic runtime policy checks over events
 ```
 
 ## Build & test
@@ -290,6 +311,7 @@ npm run test:pack           # pack local tarballs and smoke installed CLIs
 npm run test:pipeline       # end-to-end demo (agentmd → isolint → iso-harness)
 npm --workspace @razroo/iso-eval  run example   # iso-eval against the bundled example suite
 npm --workspace @razroo/iso-trace run example   # iso-trace stats on the bundled sample transcript
+npm --workspace @razroo/iso-guard run test      # iso-guard policy engine tests
 
 # Target a single package
 npm run build --workspace @razroo/isolint
@@ -325,7 +347,7 @@ build, and `npm publish --provenance`.
 ## End-to-end example
 
 [`examples/pipeline/`](./examples/pipeline) is an executable demonstration
-that exercises **seven of the eight packages end-to-end** in one `npm run
+that exercises **seven of the nine packages end-to-end** in one `npm run
 test:pipeline` invocation: `agentmd lint` + `render` → `isolint lint` →
 `iso-route build` (from a bundled `models.yaml` that extends the
 `standard` preset) → `iso-harness build` (which consumes iso-route's
@@ -344,8 +366,9 @@ downstream repo would use.
 
 `npm run test:pack` goes one level further: it packs the local workspaces into
 tarballs, installs them into fresh temp projects, and smoke-tests the packaged
-`iso-harness`, `iso`, `iso-eval`, and `iso-trace` CLIs. This guards against
-packaging regressions that workspace-only tests can miss.
+`iso-harness`, `iso`, `iso-eval`, `iso-trace`, `iso-route`, and `iso-guard`
+CLIs. This guards against packaging regressions that workspace-only tests can
+miss.
 
 [`packages/iso-eval/examples/suites/echo-basic/`](./packages/iso-eval/examples/suites/echo-basic)
 is a runnable eval suite for the downstream side: a baseline workspace, a

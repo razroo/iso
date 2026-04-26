@@ -1,6 +1,6 @@
 # iso — monorepo
 
-Workspaces monorepo (npm) housing eight Razroo tools that together make
+Workspaces monorepo (npm) housing nine Razroo tools that together make
 AI-agent harnesses *isomorphic* — the same authored source producing the
 same behavior across every coding harness (Cursor, Claude Code, Codex,
 OpenCode) and every model tier (frontier → 7B local).
@@ -31,9 +31,8 @@ cross-package compositions and the decouplings that are deliberate.
 **Wrapper:**
 
 - `packages/iso` — `@razroo/iso`. Chains `agentmd → isolint →
-  iso-harness` behind one CLI. Plain ESM `.mjs`. Depends on the sibling
-  packages via workspace protocol. (iso-route is *not* composed yet — see
-  `INTEGRATIONS.md` item #2.)
+  iso-route → iso-harness` behind one CLI when `models.yaml` exists.
+  Plain ESM `.mjs`. Depends on the sibling packages via workspace protocol.
 
 **Feedback (post-deploy):**
 
@@ -43,6 +42,9 @@ cross-package compositions and the decouplings that are deliberate.
 - `packages/iso-trace` — `@razroo/iso-trace`. Parses Claude Code JSONL
   sessions into a normalized event model for local observability. Zero
   upload. TypeScript.
+- `packages/iso-guard` — `@razroo/iso-guard`. Deterministic runtime
+  policy checks over normalized event streams and `iso-trace export`
+  JSON/JSONL. TypeScript.
 
 **Runtime control:**
 

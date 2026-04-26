@@ -71,6 +71,7 @@ try {
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/isolint']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-eval']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-trace']);
+  run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-guard']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-route']);
 
   const packsDir = resolve(tmpRoot, 'packs');
@@ -82,6 +83,7 @@ try {
   const isoTgz = packWorkspace('@razroo/iso', packsDir);
   const isoEvalTgz = packWorkspace('@razroo/iso-eval', packsDir);
   const isoTraceTgz = packWorkspace('@razroo/iso-trace', packsDir);
+  const isoGuardTgz = packWorkspace('@razroo/iso-guard', packsDir);
   const isoRouteTgz = packWorkspace('@razroo/iso-route', packsDir);
 
   // Smoke the packaged iso-harness CLI directly.
@@ -188,6 +190,43 @@ try {
   );
   run('npx', ['--no-install', 'iso-trace', 'stats', '--source', fixturePath], isoTraceDir);
 
+  // Smoke the packaged iso-guard CLI against the bundled JobForge-style policy.
+  const isoGuardDir = resolve(tmpRoot, 'iso-guard');
+  mkdirSync(isoGuardDir, { recursive: true });
+  writePackageJson(isoGuardDir);
+  run('npm', ['install', isoGuardTgz], isoGuardDir);
+  const isoGuardVersion = run('npx', ['--no-install', 'iso-guard', '--version'], isoGuardDir, { capture: true });
+  if (!isoGuardVersion.stdout.trim()) {
+    throw new Error('packaged iso-guard --version produced no output');
+  }
+  const guardPolicyPath = resolve(
+    isoGuardDir,
+    'node_modules',
+    '@razroo',
+    'iso-guard',
+    'examples',
+    'jobforge-apply.yaml',
+  );
+  const guardEventsPath = resolve(isoGuardDir, 'events.json');
+  writeFileSync(
+    guardEventsPath,
+    JSON.stringify([
+      { type: 'tool_call', name: 'geometra_disconnect', data: { round: 1 } },
+      { type: 'tool_call', name: 'task', data: { round: 1, mode: 'apply' } },
+      { type: 'tool_call', name: 'job-forge-merge' },
+      { type: 'tool_call', name: 'job-forge-verify' },
+    ], null, 2),
+  );
+  const isoGuardAudit = run(
+    'npx',
+    ['--no-install', 'iso-guard', 'audit', guardPolicyPath, '--events', guardEventsPath],
+    isoGuardDir,
+    { capture: true },
+  );
+  if (!isoGuardAudit.stdout.includes('iso-guard: PASS')) {
+    throw new Error('packaged iso-guard audit did not report PASS');
+  }
+
   // Smoke the packaged iso-route CLI against the bundled example policy.
   const isoRouteDir = resolve(tmpRoot, 'iso-route');
   mkdirSync(isoRouteDir, { recursive: true });
@@ -210,7 +249,7 @@ try {
   run('npx', ['--no-install', 'iso-route', 'plan', modelsPath], isoRouteDir);
 
   console.log(
-    `\npack smoke ok — verified packaged iso-harness, iso, iso-eval, iso-trace, and iso-route from ${tmpRoot}`,
+    `\npack smoke ok — verified packaged iso-harness, iso, iso-eval, iso-trace, iso-guard, and iso-route from ${tmpRoot}`,
   );
 } catch (err) {
   failed = true;

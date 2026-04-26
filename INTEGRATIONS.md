@@ -1,6 +1,6 @@
 # Integrations
 
-This repo ships eight packages that **work on their own** but are **designed
+This repo ships nine packages that **work on their own** but are **designed
 to compose**. The planned cross-package compositions listed here are already
 shipped, so this file now serves as:
 
@@ -102,6 +102,18 @@ resolved role map — plus fixture export output from the trace loop.
 
 ---
 
+## 6. `iso-guard` ← consumes `iso-trace export` JSON/JSONL — **DONE**
+
+Introduced with `@razroo/iso-guard`'s initial release. The guard package
+accepts either small normalized event arrays or `iso-trace export
+<session> --format json|jsonl` output, flattens those events, and
+evaluates deterministic runtime policy rules (`max-per-group`,
+`require-before`, `require-after`, `forbid-text`, `no-overlap`). This
+keeps enforcement outside the prompt/MCP surface while still letting a
+project audit real agent behavior after a run.
+
+---
+
 ## Design questions that are *not* open integrations
 
 The following look like integrations but are deliberately decoupled —
@@ -128,3 +140,8 @@ don't "fix" them without a conversation first.
   `build --verify-models` exist, but the default `build` path still
   validates provider names, not model IDs. Asking a live catalog is an
   opt-in check, not part of the baseline transpile step.
+- **`iso-guard` is not an MCP server.** It is a CLI/library that reads
+  event files and emits compact pass/fail output. If a domain package
+  wants in-loop preflight, it should call the CLI and feed only the
+  concise result back to the agent, not load the whole policy into the
+  prompt prefix.

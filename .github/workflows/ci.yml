@@ -56,6 +56,9 @@ jobs:
           - workspace: "@razroo/iso-trace"
             node: "20.6.0"
             extra: ""
+          - workspace: "@razroo/iso-guard"
+            node: "20.6.0"
+            extra: ""
           - workspace: "@razroo/agentmd"
             node: "22.0.0"
             extra: ""
@@ -147,6 +150,18 @@ jobs:
 
       - name: iso-trace example stats
         run: node packages/iso-trace/dist/cli.js stats --source packages/iso-trace/examples/sample-session.jsonl
+
+      - name: iso-guard example audit
+        run: |
+          cat > /tmp/iso-guard-events.json <<'JSON'
+          [
+            { "type": "tool_call", "name": "geometra_disconnect", "data": { "round": 1 } },
+            { "type": "tool_call", "name": "task", "data": { "round": 1, "mode": "apply" } },
+            { "type": "tool_call", "name": "job-forge-merge" },
+            { "type": "tool_call", "name": "job-forge-verify" }
+          ]
+          JSON
+          node packages/iso-guard/dist/cli.js audit packages/iso-guard/examples/jobforge-apply.yaml --events /tmp/iso-guard-events.json
 
       - name: iso-route example build (dry-run + verify)
         run: node packages/iso-route/dist/cli.js build packages/iso-route/examples/models.yaml --out /tmp/iso-route-smoke --dry-run --verify-models
