@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "sources": [
+    {
+      "name": "reports",
+      "include": ["reports/*.md"],
+      "format": "text",
+      "rules": [
+        {
+          "kind": "jobforge.report.url",
+          "pattern": "^\\*\\*URL:\\*\\*\\s*(?<url>https?://\\S+)",
+          "flags": "i",
+          "key": "url:{url}",
+          "value": "{source}",
+          "fields": {
+            "url": "{url}",
+            "report": "{source}"
+          },
+          "tags": ["report", "url"]
+        },
+        {
+          "kind": "jobforge.report.score",
+          "pattern": "^\\*\\*Score:\\*\\*\\s*(?<score>[0-9.]+/5)",
+          "flags": "i",
+          "key": "report:{source}:score",
+          "value": "{score}",
+          "fields": {
+            "score": "{score}",
+            "report": "{source}"
+          },
+          "tags": ["report", "score"]
+        }
+      ]
+    },
+    {
+      "name": "applications",
+      "include": ["data/applications/*.md"],
+      "format": "markdown-table",
+      "records": [
+        {
+          "kind": "jobforge.application",
+          "key": "company-role:{Company|slug}:{Role|slug}",
+          "value": "{Status}",
+          "fields": ["#", "Date", "Company", "Role", "Score", "Status", "PDF", "Report", "Notes"],
+          "tags": ["tracker"]
+        },
+        {
+          "kind": "jobforge.report-ref",
+          "key": "{Report}",
+          "value": "{Company} — {Role}",
+          "fields": {
+            "company": "{Company}",
+            "role": "{Role}",
+            "status": "{Status}",
+            "report": "{Report}"
+          },
+          "tags": ["tracker", "report"]
+        }
+      ]
+    },
+    {
+      "name": "scan-history",
+      "include": ["data/scan-history.tsv"],
+      "format": "tsv",
+      "records": [
+        {
+          "kind": "jobforge.scan.url",
+          "key": "url:{url}",
+          "value": "{company} — {role}",
+          "fields": ["date", "company", "role", "url", "ats"],
+          "tags": ["scan"]
+        }
+      ]
+    },
+    {
+      "name": "ledger",
+      "include": [".jobforge-ledger/*.jsonl"],
+      "format": "jsonl",
+      "records": [
+        {
+          "kind": "jobforge.ledger.event",
+          "key": "{key}",
+          "value": "{type}",
+          "fields": {
+            "type": "{type}",
+            "key": "{key}",
+            "status": "{data.status}",
+            "source": "{source}"
+          },
+          "tags": ["ledger"]
+        }
+      ]
+    }
+  ]
+}

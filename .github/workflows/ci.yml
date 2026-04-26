@@ -62,6 +62,9 @@ jobs:
           - workspace: "@razroo/iso-cache"
             node: "20.6.0"
             extra: ""
+          - workspace: "@razroo/iso-index"
+            node: "20.6.0"
+            extra: ""
           - workspace: "@razroo/iso-contract"
             node: "20.6.0"
             extra: ""
@@ -194,6 +197,13 @@ jobs:
           node packages/iso-cache/dist/cli.js put "jd:example" --cache /tmp/iso-cache-example --kind jd --ttl 7d --meta '{"url":"https://example.test/jobs/123"}' --input @packages/iso-cache/examples/job-description.md
           node packages/iso-cache/dist/cli.js has "jd:example" --cache /tmp/iso-cache-example
           node packages/iso-cache/dist/cli.js verify --cache /tmp/iso-cache-example
+
+      - name: iso-index example build/query
+        run: |
+          node packages/iso-index/dist/cli.js build --config packages/iso-index/examples/jobforge-index.json --root packages/iso-index/examples/jobforge-project --out /tmp/jobforge.iso-index.json
+          node packages/iso-index/dist/cli.js has --index /tmp/jobforge.iso-index.json --key "company-role:example-labs:staff-agent-engineer"
+          node packages/iso-index/dist/cli.js query --index /tmp/jobforge.iso-index.json --kind jobforge.report.url --key "url:https://example.test/jobs/123"
+          node packages/iso-index/dist/cli.js verify --index /tmp/jobforge.iso-index.json
 
       - name: iso-contract example validate/render
         run: |

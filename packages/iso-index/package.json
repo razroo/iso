@@ -1,0 +1,65 @@
+{
+  "name": "@razroo/iso-index",
+  "version": "0.1.0",
+  "description": "Deterministic local artifact index for AI-agent workflows: build, query, and verify where authoritative facts live without model calls.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "iso-index": "dist/cli.js"
+  },
+  "files": [
+    "dist/**/*.js",
+    "dist/**/*.d.ts",
+    "examples",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rm -rf dist",
+    "dev": "tsc -p tsconfig.json --watch",
+    "test": "node --test --import tsx tests/*.test.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "ci": "npm run typecheck && npm test",
+    "release:check-source": "node ./scripts/release/check-source.mjs",
+    "prepublishOnly": "npm run clean && npm run build && npm test"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.2"
+  },
+  "engines": {
+    "node": ">=20.6.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/razroo/iso.git",
+    "directory": "packages/iso-index"
+  },
+  "homepage": "https://github.com/razroo/iso/tree/main/packages/iso-index#readme",
+  "bugs": {
+    "url": "https://github.com/razroo/iso/issues"
+  },
+  "keywords": [
+    "agent",
+    "index",
+    "artifacts",
+    "workflow",
+    "lookup",
+    "harness",
+    "ai",
+    "coding-agent",
+    "claude-code",
+    "cursor",
+    "codex",
+    "opencode"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}

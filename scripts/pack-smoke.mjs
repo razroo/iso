@@ -75,6 +75,7 @@ try {
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-ledger']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-context']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-cache']);
+  run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-index']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-contract']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-capabilities']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-route']);
@@ -92,6 +93,7 @@ try {
   const isoLedgerTgz = packWorkspace('@razroo/iso-ledger', packsDir);
   const isoContextTgz = packWorkspace('@razroo/iso-context', packsDir);
   const isoCacheTgz = packWorkspace('@razroo/iso-cache', packsDir);
+  const isoIndexTgz = packWorkspace('@razroo/iso-index', packsDir);
   const isoContractTgz = packWorkspace('@razroo/iso-contract', packsDir);
   const isoCapabilitiesTgz = packWorkspace('@razroo/iso-capabilities', packsDir);
   const isoRouteTgz = packWorkspace('@razroo/iso-route', packsDir);
@@ -334,6 +336,38 @@ try {
     throw new Error('packaged iso-cache verify did not report PASS');
   }
 
+  // Smoke the packaged iso-index CLI against the bundled JobForge-style artifact index.
+  const isoIndexDir = resolve(tmpRoot, 'iso-index');
+  mkdirSync(isoIndexDir, { recursive: true });
+  writePackageJson(isoIndexDir);
+  run('npm', ['install', isoIndexTgz], isoIndexDir);
+  const isoIndexVersion = run('npx', ['--no-install', 'iso-index', '--version'], isoIndexDir, { capture: true });
+  if (!isoIndexVersion.stdout.trim()) {
+    throw new Error('packaged iso-index --version produced no output');
+  }
+  const indexPackageDir = resolve(isoIndexDir, 'node_modules', '@razroo', 'iso-index');
+  const indexConfigPath = resolve(indexPackageDir, 'examples', 'jobforge-index.json');
+  const indexProjectRoot = resolve(indexPackageDir, 'examples', 'jobforge-project');
+  const indexOutPath = resolve(isoIndexDir, '.iso-index.json');
+  const indexBuild = run(
+    'npx',
+    ['--no-install', 'iso-index', 'build', '--config', indexConfigPath, '--root', indexProjectRoot, '--out', indexOutPath],
+    isoIndexDir,
+    { capture: true },
+  );
+  if (!indexBuild.stdout.includes('iso-index: BUILT')) {
+    throw new Error('packaged iso-index build did not report BUILT');
+  }
+  run(
+    'npx',
+    ['--no-install', 'iso-index', 'has', '--index', indexOutPath, '--key', 'company-role:example-labs:staff-agent-engineer'],
+    isoIndexDir,
+  );
+  const indexVerify = run('npx', ['--no-install', 'iso-index', 'verify', '--index', indexOutPath], isoIndexDir, { capture: true });
+  if (!indexVerify.stdout.includes('iso-index: PASS')) {
+    throw new Error('packaged iso-index verify did not report PASS');
+  }
+
   // Smoke the packaged iso-contract CLI against the bundled JobForge-style contract.
   const isoContractDir = resolve(tmpRoot, 'iso-contract');
   mkdirSync(isoContractDir, { recursive: true });
@@ -442,7 +476,7 @@ try {
   run('npx', ['--no-install', 'iso-route', 'plan', modelsPath], isoRouteDir);
 
   console.log(
-    `\npack smoke ok — verified packaged iso-harness, iso, iso-eval, iso-trace, iso-guard, iso-ledger, iso-context, iso-cache, iso-contract, iso-capabilities, and iso-route from ${tmpRoot}`,
+    `\npack smoke ok — verified packaged iso-harness, iso, iso-eval, iso-trace, iso-guard, iso-ledger, iso-context, iso-cache, iso-index, iso-contract, iso-capabilities, and iso-route from ${tmpRoot}`,
   );
 } catch (err) {
   failed = true;

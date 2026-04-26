@@ -1,6 +1,6 @@
 # Integrations
 
-This repo ships fourteen packages that **work on their own** but are **designed
+This repo ships fifteen packages that **work on their own** but are **designed
 to compose**. The planned cross-package compositions listed here are already
 shipped, so this file now serves as:
 
@@ -177,6 +177,19 @@ without asking the model to refetch or rederive safe artifacts.
 
 ---
 
+## 12. `iso-index` ← deterministic artifact lookup for domain packages — **DONE**
+
+Introduced as a standalone package. `iso-index` does not import JobForge,
+`iso-cache`, `iso-ledger`, `iso-contract`, or any other domain package; it
+provides the on-disk JSON index format and extractor rules that domain
+tools can share. JobForge-style examples cover report URLs/scores,
+tracker markdown tables, scan-history TSVs, and ledger JSONL records, but
+the package remains generic: build compact lookup records from configured
+text, TSV, markdown-table, and JSONL sources, then query/has/verify them
+without asking the model to grep or load entire artifact trees.
+
+---
+
 ## Design questions that are *not* open integrations
 
 The following look like integrations but are deliberately decoupled —
@@ -222,3 +235,7 @@ don't "fix" them without a conversation first.
   integrity. Domain packages still own which artifacts are safe to cache,
   how long they stay fresh, and which side-effectful operations must never
   be replayed from cache.
+- **`iso-index` does not decide source precedence for a domain.**
+  It builds and verifies lookup records from configured sources. Domain
+  packages still own which source wins when report, tracker, scan, cache,
+  and ledger facts disagree, and when an index should be rebuilt.
