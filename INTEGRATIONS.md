@@ -1,6 +1,6 @@
 # Integrations
 
-This repo ships fifteen packages that **work on their own** but are **designed
+This repo ships sixteen packages that **work on their own** but are **designed
 to compose**. The planned cross-package compositions listed here are already
 shipped, so this file now serves as:
 
@@ -190,6 +190,19 @@ without asking the model to grep or load entire artifact trees.
 
 ---
 
+## 13. `iso-migrate` ← deterministic consumer-project upgrades for domain packages — **DONE**
+
+Introduced as a standalone package. `iso-migrate` does not import JobForge,
+`iso-harness`, or any other domain package; it provides the on-disk JSON
+migration catalog format and file operation runner that domain packages can
+share. JobForge-style examples cover npm script additions, dependency range
+updates, and generated-state `.gitignore` entries, but the package remains
+generic: plan/apply/check/explain idempotent JSON pointer edits, object
+merges, line insertion, exact replacement, and guarded file writes without
+asking the model to hand-edit consumer-owned files.
+
+---
+
 ## Design questions that are *not* open integrations
 
 The following look like integrations but are deliberately decoupled —
@@ -239,3 +252,7 @@ don't "fix" them without a conversation first.
   It builds and verifies lookup records from configured sources. Domain
   packages still own which source wins when report, tracker, scan, cache,
   and ledger facts disagree, and when an index should be rebuilt.
+- **`iso-migrate` does not decide release policy for a domain.** It plans
+  and applies idempotent file edits. Domain packages still own when
+  migrations run, how versions map to migration catalogs, and which
+  domain-specific verification commands should run afterward.

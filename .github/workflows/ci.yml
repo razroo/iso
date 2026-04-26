@@ -65,6 +65,9 @@ jobs:
           - workspace: "@razroo/iso-index"
             node: "20.6.0"
             extra: ""
+          - workspace: "@razroo/iso-migrate"
+            node: "20.6.0"
+            extra: ""
           - workspace: "@razroo/iso-contract"
             node: "20.6.0"
             extra: ""
@@ -204,6 +207,29 @@ jobs:
           node packages/iso-index/dist/cli.js has --index /tmp/jobforge.iso-index.json --key "company-role:example-labs:staff-agent-engineer"
           node packages/iso-index/dist/cli.js query --index /tmp/jobforge.iso-index.json --kind jobforge.report.url --key "url:https://example.test/jobs/123"
           node packages/iso-index/dist/cli.js verify --index /tmp/jobforge.iso-index.json
+
+      - name: iso-migrate example plan/apply/check
+        run: |
+          mkdir -p /tmp/iso-migrate-smoke
+          cat > /tmp/iso-migrate-smoke/package.json <<'JSON'
+          {
+            "private": true,
+            "scripts": {
+              "verify": "job-forge verify"
+            },
+            "dependencies": {
+              "job-forge": "^2.14.22"
+            }
+          }
+          JSON
+          cat > /tmp/iso-migrate-smoke/.gitignore <<'EOF'
+          # Generated
+          .resolved-prompt-*
+          node_modules/
+          EOF
+          node packages/iso-migrate/dist/cli.js plan --config packages/iso-migrate/examples/jobforge-consumer-migrations.json --root /tmp/iso-migrate-smoke
+          node packages/iso-migrate/dist/cli.js apply --config packages/iso-migrate/examples/jobforge-consumer-migrations.json --root /tmp/iso-migrate-smoke
+          node packages/iso-migrate/dist/cli.js check --config packages/iso-migrate/examples/jobforge-consumer-migrations.json --root /tmp/iso-migrate-smoke
 
       - name: iso-contract example validate/render
         run: |

@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "migrations": [
+    {
+      "id": "jobforge-iso-index",
+      "description": "Add JobForge artifact-index commands and generated-state ignores to an existing consumer project.",
+      "operations": [
+        {
+          "type": "json-merge",
+          "path": "package.json",
+          "pointer": "/scripts",
+          "value": {
+            "index:build": "job-forge index:build",
+            "index:status": "job-forge index:status",
+            "index:verify": "job-forge index:verify",
+            "index:has": "job-forge index:has",
+            "index:query": "job-forge index:query",
+            "index:explain": "job-forge index:explain"
+          }
+        },
+        {
+          "type": "json-set",
+          "path": "package.json",
+          "pointer": "/dependencies/job-forge",
+          "value": "^2.14.25"
+        },
+        {
+          "type": "ensure-lines",
+          "path": ".gitignore",
+          "after": ".resolved-prompt-*",
+          "lines": [
+            ".jobforge-runs/",
+            ".jobforge-ledger/",
+            ".jobforge-cache/",
+            ".jobforge-index.json"
+          ]
+        }
+      ]
+    }
+  ]
+}

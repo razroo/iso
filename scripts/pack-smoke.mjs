@@ -76,6 +76,7 @@ try {
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-context']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-cache']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-index']);
+  run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-migrate']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-contract']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-capabilities']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-route']);
@@ -94,6 +95,7 @@ try {
   const isoContextTgz = packWorkspace('@razroo/iso-context', packsDir);
   const isoCacheTgz = packWorkspace('@razroo/iso-cache', packsDir);
   const isoIndexTgz = packWorkspace('@razroo/iso-index', packsDir);
+  const isoMigrateTgz = packWorkspace('@razroo/iso-migrate', packsDir);
   const isoContractTgz = packWorkspace('@razroo/iso-contract', packsDir);
   const isoCapabilitiesTgz = packWorkspace('@razroo/iso-capabilities', packsDir);
   const isoRouteTgz = packWorkspace('@razroo/iso-route', packsDir);
@@ -368,6 +370,61 @@ try {
     throw new Error('packaged iso-index verify did not report PASS');
   }
 
+  // Smoke the packaged iso-migrate CLI against a JobForge-style consumer upgrade.
+  const isoMigrateDir = resolve(tmpRoot, 'iso-migrate');
+  mkdirSync(isoMigrateDir, { recursive: true });
+  writeFileSync(
+    resolve(isoMigrateDir, 'package.json'),
+    JSON.stringify({
+      private: true,
+      name: 'iso-migrate-pack-smoke',
+      type: 'module',
+      scripts: { verify: 'job-forge verify' },
+      dependencies: { 'job-forge': '^2.14.22' },
+    }, null, 2) + '\n',
+  );
+  writeFileSync(resolve(isoMigrateDir, '.gitignore'), '# Generated\n.resolved-prompt-*\nnode_modules/\n');
+  run('npm', ['install', isoMigrateTgz], isoMigrateDir);
+  const isoMigrateVersion = run('npx', ['--no-install', 'iso-migrate', '--version'], isoMigrateDir, { capture: true });
+  if (!isoMigrateVersion.stdout.trim()) {
+    throw new Error('packaged iso-migrate --version produced no output');
+  }
+  const migrateConfigPath = resolve(
+    isoMigrateDir,
+    'node_modules',
+    '@razroo',
+    'iso-migrate',
+    'examples',
+    'jobforge-consumer-migrations.json',
+  );
+  const migratePlan = run(
+    'npx',
+    ['--no-install', 'iso-migrate', 'plan', '--config', migrateConfigPath, '--root', isoMigrateDir],
+    isoMigrateDir,
+    { capture: true },
+  );
+  if (!migratePlan.stdout.includes('iso-migrate: PLAN')) {
+    throw new Error('packaged iso-migrate plan did not report PLAN');
+  }
+  const migrateApply = run(
+    'npx',
+    ['--no-install', 'iso-migrate', 'apply', '--config', migrateConfigPath, '--root', isoMigrateDir],
+    isoMigrateDir,
+    { capture: true },
+  );
+  if (!migrateApply.stdout.includes('iso-migrate: APPLIED')) {
+    throw new Error('packaged iso-migrate apply did not report APPLIED');
+  }
+  const migrateCheck = run(
+    'npx',
+    ['--no-install', 'iso-migrate', 'check', '--config', migrateConfigPath, '--root', isoMigrateDir],
+    isoMigrateDir,
+    { capture: true },
+  );
+  if (!migrateCheck.stdout.includes('iso-migrate: PASS')) {
+    throw new Error('packaged iso-migrate check did not report PASS');
+  }
+
   // Smoke the packaged iso-contract CLI against the bundled JobForge-style contract.
   const isoContractDir = resolve(tmpRoot, 'iso-contract');
   mkdirSync(isoContractDir, { recursive: true });
@@ -476,7 +533,7 @@ try {
   run('npx', ['--no-install', 'iso-route', 'plan', modelsPath], isoRouteDir);
 
   console.log(
-    `\npack smoke ok — verified packaged iso-harness, iso, iso-eval, iso-trace, iso-guard, iso-ledger, iso-context, iso-cache, iso-index, iso-contract, iso-capabilities, and iso-route from ${tmpRoot}`,
+    `\npack smoke ok — verified packaged iso-harness, iso, iso-eval, iso-trace, iso-guard, iso-ledger, iso-context, iso-cache, iso-index, iso-migrate, iso-contract, iso-capabilities, and iso-route from ${tmpRoot}`,
   );
 } catch (err) {
   failed = true;
