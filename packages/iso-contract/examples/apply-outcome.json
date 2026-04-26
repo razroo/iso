@@ -1,0 +1,8 @@
+{
+  "status": "APPLIED",
+  "company": "Example Labs",
+  "role": "Staff Agent Engineer",
+  "url": "https://example.test/jobs/812",
+  "trackerTsv": "batch/tracker-additions/812-example-labs.tsv",
+  "reason": "Submitted successfully"
+}

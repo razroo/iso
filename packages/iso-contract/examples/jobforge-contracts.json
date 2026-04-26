@@ -1,0 +1,49 @@
+{
+  "contracts": [
+    {
+      "name": "jobforge.tracker-row",
+      "version": "1.0.0",
+      "description": "Canonical JobForge tracker addition row before merge-tracker writes the day file.",
+      "fields": [
+        { "name": "num", "type": "integer", "required": true, "min": 1 },
+        { "name": "date", "type": "date", "required": true },
+        { "name": "company", "type": "string", "required": true },
+        { "name": "role", "type": "string", "required": true },
+        {
+          "name": "status",
+          "type": "enum",
+          "required": true,
+          "values": ["Evaluated", "Applied", "Contacted", "Responded", "Interview", "Offer", "Rejected", "Discarded", "SKIP", "Failed"]
+        },
+        { "name": "score", "type": "score", "required": true },
+        { "name": "pdf", "type": "string", "required": true },
+        { "name": "report", "type": "markdown-link", "required": true },
+        { "name": "notes", "type": "string" }
+      ],
+      "formats": {
+        "tsv": {
+          "style": "delimited",
+          "delimiter": "tab",
+          "fields": ["num", "date", "company", "role", "status", "score", "pdf", "report", "notes"]
+        },
+        "markdown": {
+          "style": "markdown-table-row",
+          "fields": ["num", "date", "company", "role", "score", "status", "pdf", "report", "notes"]
+        }
+      }
+    },
+    {
+      "name": "jobforge.apply-outcome",
+      "version": "1.0.0",
+      "description": "Structured final outcome emitted by an application subagent.",
+      "fields": [
+        { "name": "status", "type": "enum", "required": true, "values": ["APPLIED", "APPLY FAILED", "SKIP", "Discarded"] },
+        { "name": "company", "type": "string", "required": true },
+        { "name": "role", "type": "string", "required": true },
+        { "name": "url", "type": "url", "required": true },
+        { "name": "trackerTsv", "type": "string" },
+        { "name": "reason", "type": "string" }
+      ]
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 # Integrations
 
-This repo ships ten packages that **work on their own** but are **designed
+This repo ships eleven packages that **work on their own** but are **designed
 to compose**. The planned cross-package compositions listed here are already
 shipped, so this file now serves as:
 
@@ -124,6 +124,18 @@ query/has preflight checks, verification, and materialized entity views.
 JobForge can layer a domain adapter over this later without making the
 core ledger package know about trackers, markdown day files, or TSV
 merge rules.
+
+---
+
+## 8. `iso-contract` ← deterministic artifact shape for domain packages — **DONE**
+
+Introduced as a standalone package. `iso-contract` does not import
+JobForge or any other domain package; it provides the on-disk JSON
+contract catalog format and parser/renderer that domain packages can
+share. JobForge-style examples cover tracker rows and apply outcomes,
+but the package remains generic: validate records, parse delimited or
+markdown-table rows, and render contract-conformant artifacts without
+asking the model to remember exact column order.
 
 ---
 

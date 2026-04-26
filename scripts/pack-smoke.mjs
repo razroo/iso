@@ -73,6 +73,7 @@ try {
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-trace']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-guard']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-ledger']);
+  run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-contract']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-route']);
 
   const packsDir = resolve(tmpRoot, 'packs');
@@ -86,6 +87,7 @@ try {
   const isoTraceTgz = packWorkspace('@razroo/iso-trace', packsDir);
   const isoGuardTgz = packWorkspace('@razroo/iso-guard', packsDir);
   const isoLedgerTgz = packWorkspace('@razroo/iso-ledger', packsDir);
+  const isoContractTgz = packWorkspace('@razroo/iso-contract', packsDir);
   const isoRouteTgz = packWorkspace('@razroo/iso-route', packsDir);
 
   // Smoke the packaged iso-harness CLI directly.
@@ -250,6 +252,42 @@ try {
     isoLedgerDir,
   );
 
+  // Smoke the packaged iso-contract CLI against the bundled JobForge-style contract.
+  const isoContractDir = resolve(tmpRoot, 'iso-contract');
+  mkdirSync(isoContractDir, { recursive: true });
+  writePackageJson(isoContractDir);
+  run('npm', ['install', isoContractTgz], isoContractDir);
+  const isoContractVersion = run('npx', ['--no-install', 'iso-contract', '--version'], isoContractDir, { capture: true });
+  if (!isoContractVersion.stdout.trim()) {
+    throw new Error('packaged iso-contract --version produced no output');
+  }
+  const contractsPath = resolve(
+    isoContractDir,
+    'node_modules',
+    '@razroo',
+    'iso-contract',
+    'examples',
+    'jobforge-contracts.json',
+  );
+  const trackerRowPath = resolve(
+    isoContractDir,
+    'node_modules',
+    '@razroo',
+    'iso-contract',
+    'examples',
+    'tracker-row.json',
+  );
+  run(
+    'npx',
+    ['--no-install', 'iso-contract', 'validate', 'jobforge.tracker-row', '--contracts', contractsPath, '--input', `@${trackerRowPath}`],
+    isoContractDir,
+  );
+  run(
+    'npx',
+    ['--no-install', 'iso-contract', 'render', 'jobforge.tracker-row', '--contracts', contractsPath, '--input', `@${trackerRowPath}`, '--format', 'tsv'],
+    isoContractDir,
+  );
+
   // Smoke the packaged iso-route CLI against the bundled example policy.
   const isoRouteDir = resolve(tmpRoot, 'iso-route');
   mkdirSync(isoRouteDir, { recursive: true });
@@ -272,7 +310,7 @@ try {
   run('npx', ['--no-install', 'iso-route', 'plan', modelsPath], isoRouteDir);
 
   console.log(
-    `\npack smoke ok — verified packaged iso-harness, iso, iso-eval, iso-trace, iso-guard, iso-ledger, and iso-route from ${tmpRoot}`,
+    `\npack smoke ok — verified packaged iso-harness, iso, iso-eval, iso-trace, iso-guard, iso-ledger, iso-contract, and iso-route from ${tmpRoot}`,
   );
 } catch (err) {
   failed = true;
