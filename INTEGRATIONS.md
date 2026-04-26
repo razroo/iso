@@ -1,6 +1,6 @@
 # Integrations
 
-This repo ships seven packages that **work on their own** but are **designed
+This repo ships eight packages that **work on their own** but are **designed
 to compose**. The planned cross-package compositions listed here are already
 shipped, so this file now serves as:
 
@@ -86,7 +86,7 @@ missing user messages, redaction, and directory layout stability.
 
 ---
 
-## 5. `examples/pipeline/` ← exercise all seven packages — **DONE**
+## 5. `examples/pipeline/` ← exercise the shipped build/feedback toolchain end-to-end — **DONE**
 
 Shipped and expanded. `examples/pipeline/build.mjs` now drives the full
 chain (`agentmd lint + render → isolint lint → iso-route build

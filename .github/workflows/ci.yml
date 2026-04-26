@@ -50,6 +50,9 @@ jobs:
           - workspace: "@razroo/iso-route"
             node: "20.6.0"
             extra: ""
+          - workspace: "@razroo/iso-orchestrator"
+            node: "20.6.0"
+            extra: ""
           - workspace: "@razroo/iso-trace"
             node: "20.6.0"
             extra: ""
@@ -133,7 +136,7 @@ jobs:
         working-directory: packages/isolint
         run: node dist/cli/index.js lint . --fail-on error
 
-      - name: Pipeline integration (all seven packages)
+      - name: Pipeline integration (build/feedback toolchain)
         run: node examples/pipeline/build.mjs
 
       - name: iso wrapper dogfood integration

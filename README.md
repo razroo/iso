@@ -25,7 +25,7 @@ Today, writing agent instructions is fragmented on two axes:
    unstructured rationale all drop silently at 7B. You don't find out
    until the agent misbehaves in production.
 
-Seven packages solve that in one pipeline with a feedback loop:
+Eight packages solve that in one pipeline with a control layer and feedback loop:
 
 - **Four build-time tools** turn your authored source into every harness's file layout:
   [`@razroo/agentmd`](./packages/agentmd) validates *structure*,
@@ -34,6 +34,9 @@ Seven packages solve that in one pipeline with a feedback loop:
   [`@razroo/iso-route`](./packages/iso-route) compiles *one model policy* into each harness's config.
 - **One wrapper** runs the whole build chain:
   [`@razroo/iso`](./packages/iso) chains the above into a single `iso build`.
+- **One orchestration library** handles durable runtime control:
+  [`@razroo/iso-orchestrator`](./packages/iso-orchestrator) provides resumable
+  steps, keyed mutexes, and bounded fan-out for side-effectful agent workflows.
 - **Two feedback tools** close the loop after deploy:
   [`@razroo/iso-eval`](./packages/iso-eval) scores *did the agent complete the task?* and
   [`@razroo/iso-trace`](./packages/iso-trace) parses production transcripts to show *what the agent actually did*.
@@ -155,6 +158,14 @@ the repo now supports a tighter loop:
   transcripts do not yet expose stable model metadata. Zero upload —
   everything is local reads and user-controlled output.
 
+- **[`packages/iso-orchestrator`](./packages/iso-orchestrator)** — `@razroo/iso-orchestrator`
+  Durable orchestration primitives for the runtime layer above a single
+  agent session. Persists workflow state to local disk, memoizes
+  load-bearing `step()` results, provides keyed mutexes for "same
+  entity" exclusion, and offers bounded `forEach()` fan-out so domain
+  packages can move invariants out of prompt prose and shell scripts.
+  Library-first today: no CLI, no harness-specific task-dispatch adapter.
+
 Each package is independently published on npm and works on its own.
 They're in one repo because they're designed to compose.
 
@@ -262,6 +273,7 @@ iso/
     ├── iso-harness/      # one source, every harness
     ├── iso/              # one command for the whole pipeline
     ├── iso-route/        # one model policy → per-harness config
+    ├── iso-orchestrator/ # durable runtime control above one agent session
     ├── iso-eval/         # behavioral eval on the produced harness
     └── iso-trace/        # parse + query real agent transcripts (observability)
 ```
@@ -313,7 +325,7 @@ build, and `npm publish --provenance`.
 ## End-to-end example
 
 [`examples/pipeline/`](./examples/pipeline) is an executable demonstration
-that exercises **all seven packages end-to-end** in one `npm run
+that exercises **seven of the eight packages end-to-end** in one `npm run
 test:pipeline` invocation: `agentmd lint` + `render` → `isolint lint` →
 `iso-route build` (from a bundled `models.yaml` that extends the
 `standard` preset) → `iso-harness build` (which consumes iso-route's

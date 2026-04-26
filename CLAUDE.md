@@ -1,6 +1,6 @@
 # iso — monorepo
 
-Workspaces monorepo (npm) housing seven Razroo tools that together make
+Workspaces monorepo (npm) housing eight Razroo tools that together make
 AI-agent harnesses *isomorphic* — the same authored source producing the
 same behavior across every coding harness (Cursor, Claude Code, Codex,
 OpenCode) and every model tier (frontier → 7B local).
@@ -43,6 +43,14 @@ cross-package compositions and the decouplings that are deliberate.
 - `packages/iso-trace` — `@razroo/iso-trace`. Parses Claude Code JSONL
   sessions into a normalized event model for local observability. Zero
   upload. TypeScript.
+
+**Runtime control:**
+
+- `packages/iso-orchestrator` — `@razroo/iso-orchestrator`. Durable
+  workflow primitives for agent harnesses: resumable steps, keyed
+  mutexes, bounded parallel fan-out, and file-backed run state.
+  TypeScript, `tsc` → `dist/`. Tests via
+  `node --test --import tsx tests/*.test.ts`.
 
 ## Conventions
 
