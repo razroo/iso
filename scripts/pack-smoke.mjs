@@ -74,6 +74,7 @@ try {
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-guard']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-ledger']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-contract']);
+  run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-capabilities']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-route']);
 
   const packsDir = resolve(tmpRoot, 'packs');
@@ -88,6 +89,7 @@ try {
   const isoGuardTgz = packWorkspace('@razroo/iso-guard', packsDir);
   const isoLedgerTgz = packWorkspace('@razroo/iso-ledger', packsDir);
   const isoContractTgz = packWorkspace('@razroo/iso-contract', packsDir);
+  const isoCapabilitiesTgz = packWorkspace('@razroo/iso-capabilities', packsDir);
   const isoRouteTgz = packWorkspace('@razroo/iso-route', packsDir);
 
   // Smoke the packaged iso-harness CLI directly.
@@ -288,6 +290,56 @@ try {
     isoContractDir,
   );
 
+  // Smoke the packaged iso-capabilities CLI against the bundled JobForge-style policy.
+  const isoCapabilitiesDir = resolve(tmpRoot, 'iso-capabilities');
+  mkdirSync(isoCapabilitiesDir, { recursive: true });
+  writePackageJson(isoCapabilitiesDir);
+  run('npm', ['install', isoCapabilitiesTgz], isoCapabilitiesDir);
+  const isoCapabilitiesVersion = run('npx', ['--no-install', 'iso-capabilities', '--version'], isoCapabilitiesDir, { capture: true });
+  if (!isoCapabilitiesVersion.stdout.trim()) {
+    throw new Error('packaged iso-capabilities --version produced no output');
+  }
+  const capabilitiesPath = resolve(
+    isoCapabilitiesDir,
+    'node_modules',
+    '@razroo',
+    'iso-capabilities',
+    'examples',
+    'jobforge-capabilities.json',
+  );
+  run('npx', ['--no-install', 'iso-capabilities', 'list', '--policy', capabilitiesPath], isoCapabilitiesDir);
+  const capabilityCheck = run(
+    'npx',
+    [
+      '--no-install',
+      'iso-capabilities',
+      'check',
+      'applicant',
+      '--policy',
+      capabilitiesPath,
+      '--tool',
+      'browser',
+      '--mcp',
+      'geometra',
+      '--command',
+      'npx job-forge merge',
+      '--filesystem',
+      'write',
+      '--network',
+      'restricted',
+    ],
+    isoCapabilitiesDir,
+    { capture: true },
+  );
+  if (!capabilityCheck.stdout.includes('iso-capabilities: PASS')) {
+    throw new Error('packaged iso-capabilities check did not report PASS');
+  }
+  run(
+    'npx',
+    ['--no-install', 'iso-capabilities', 'render', 'applicant', '--policy', capabilitiesPath, '--target', 'opencode'],
+    isoCapabilitiesDir,
+  );
+
   // Smoke the packaged iso-route CLI against the bundled example policy.
   const isoRouteDir = resolve(tmpRoot, 'iso-route');
   mkdirSync(isoRouteDir, { recursive: true });
@@ -310,7 +362,7 @@ try {
   run('npx', ['--no-install', 'iso-route', 'plan', modelsPath], isoRouteDir);
 
   console.log(
-    `\npack smoke ok — verified packaged iso-harness, iso, iso-eval, iso-trace, iso-guard, iso-ledger, iso-contract, and iso-route from ${tmpRoot}`,
+    `\npack smoke ok — verified packaged iso-harness, iso, iso-eval, iso-trace, iso-guard, iso-ledger, iso-contract, iso-capabilities, and iso-route from ${tmpRoot}`,
   );
 } catch (err) {
   failed = true;

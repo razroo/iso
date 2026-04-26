@@ -59,6 +59,9 @@ jobs:
           - workspace: "@razroo/iso-contract"
             node: "20.6.0"
             extra: ""
+          - workspace: "@razroo/iso-capabilities"
+            node: "20.6.0"
+            extra: ""
           - workspace: "@razroo/iso-trace"
             node: "20.6.0"
             extra: ""
@@ -178,6 +181,12 @@ jobs:
         run: |
           node packages/iso-contract/dist/cli.js validate jobforge.tracker-row --contracts packages/iso-contract/examples/jobforge-contracts.json --input @packages/iso-contract/examples/tracker-row.json
           node packages/iso-contract/dist/cli.js render jobforge.tracker-row --contracts packages/iso-contract/examples/jobforge-contracts.json --input @packages/iso-contract/examples/tracker-row.json --format tsv
+
+      - name: iso-capabilities example check/render
+        run: |
+          node packages/iso-capabilities/dist/cli.js list --policy packages/iso-capabilities/examples/jobforge-capabilities.json
+          node packages/iso-capabilities/dist/cli.js check applicant --policy packages/iso-capabilities/examples/jobforge-capabilities.json --tool browser --mcp geometra --command "npx job-forge merge" --filesystem write --network restricted
+          node packages/iso-capabilities/dist/cli.js render applicant --policy packages/iso-capabilities/examples/jobforge-capabilities.json --target opencode
 
       - name: iso-route example build (dry-run + verify)
         run: node packages/iso-route/dist/cli.js build packages/iso-route/examples/models.yaml --out /tmp/iso-route-smoke --dry-run --verify-models

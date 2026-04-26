@@ -1,0 +1,79 @@
+{
+  "roles": [
+    {
+      "name": "jobforge-base",
+      "description": "Shared local read and verification capabilities for JobForge roles.",
+      "tools": ["read", "search", "shell"],
+      "mcp": [],
+      "commands": {
+        "allow": [
+          "npx job-forge verify",
+          "rg *"
+        ],
+        "deny": [
+          "geometra_*",
+          "rm -rf *"
+        ]
+      },
+      "filesystem": "read-only",
+      "network": "off",
+      "notes": [
+        "Keep proxy credentials in files; do not paste them into task prompts."
+      ]
+    },
+    {
+      "name": "orchestrator",
+      "description": "Keeps planning, dedupe, and tracker verification inline without browser automation.",
+      "extends": "jobforge-base",
+      "tools": ["task"],
+      "commands": {
+        "allow": [
+          "npx job-forge ledger:*",
+          "npx job-forge merge"
+        ]
+      },
+      "filesystem": "read-only",
+      "network": "off",
+      "notes": [
+        "Delegate browser-heavy application work to a scoped applicant role."
+      ]
+    },
+    {
+      "name": "applicant",
+      "description": "Runs one delegated application attempt with browser and tracker-write permission.",
+      "extends": "jobforge-base",
+      "tools": ["browser", "write"],
+      "mcp": ["geometra", "gmail"],
+      "commands": {
+        "allow": [
+          "npx job-forge tracker-line *",
+          "npx job-forge merge",
+          "npx job-forge verify"
+        ],
+        "deny": [
+          "task *"
+        ]
+      },
+      "filesystem": "project-write",
+      "network": "restricted",
+      "notes": [
+        "Use at most one job URL per role invocation.",
+        "Write outcomes through batch/tracker-additions TSV before merge."
+      ]
+    },
+    {
+      "name": "verifier",
+      "description": "Checks merged tracker state and package health after side-effectful work.",
+      "extends": "jobforge-base",
+      "commands": {
+        "allow": [
+          "npm test",
+          "npm run verify",
+          "npx job-forge verify"
+        ]
+      },
+      "filesystem": "read-only",
+      "network": "off"
+    }
+  ]
+}

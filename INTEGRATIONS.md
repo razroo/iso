@@ -1,6 +1,6 @@
 # Integrations
 
-This repo ships eleven packages that **work on their own** but are **designed
+This repo ships twelve packages that **work on their own** but are **designed
 to compose**. The planned cross-package compositions listed here are already
 shipped, so this file now serves as:
 
@@ -139,6 +139,18 @@ asking the model to remember exact column order.
 
 ---
 
+## 9. `iso-capabilities` ← deterministic role capability policy for domain packages — **DONE**
+
+Introduced as a standalone package. `iso-capabilities` does not import
+JobForge, `iso-harness`, or any other domain package; it provides the
+on-disk JSON role catalog format and checker that domain packages can
+share. JobForge-style examples cover orchestrator, applicant, and
+verifier roles, but the package remains generic: resolve inheritance,
+check tool/MCP/command/filesystem/network requests, and render compact
+target guidance without asking the model to remember a permission matrix.
+
+---
+
 ## Design questions that are *not* open integrations
 
 The following look like integrations but are deliberately decoupled —
@@ -170,3 +182,8 @@ don't "fix" them without a conversation first.
   wants in-loop preflight, it should call the CLI and feed only the
   concise result back to the agent, not load the whole policy into the
   prompt prefix.
+- **`iso-capabilities` does not mutate harness permissions directly.**
+  It emits an executable policy/checker plus compact target guidance.
+  Native enforcement should stay additive and harness-specific; where a
+  harness cannot enforce a field, pair the policy with `iso-trace` /
+  `iso-guard` audits instead of implying a stronger guarantee.

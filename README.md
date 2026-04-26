@@ -10,9 +10,9 @@
 authored source fans out to every coding harness (Cursor, Claude Code,
 Codex, OpenCode) and stays legible across model tiers (frontier models down
 to 7B local models). The repo now covers the full loop: build portable
-harness files, route models, replay evals, parse production traces, audit
-runtime policy, validate artifact contracts, and persist local workflow
-truth. The only narrower surface is `iso-trace model-score`, which still
+harness files, route models, replay evals, parse production traces, scope
+role capabilities, audit runtime policy, validate artifact contracts, and
+persist local workflow truth. The only narrower surface is `iso-trace model-score`, which still
 depends on transcripts exposing stable model metadata.
 
 Today, agent workflow reliability is fragmented on three axes:
@@ -27,11 +27,11 @@ Today, agent workflow reliability is fragmented on three axes:
    unstructured rationale all drop silently at 7B. You don't find out
    until the agent misbehaves in production.
 3. **Runtime fragmentation.** Workflows rely on fragile prompt prose for
-   fan-out limits, output shape, duplicate checks, and "what already
-   happened." Those invariants belong in deterministic local packages,
+   fan-out limits, role permissions, output shape, duplicate checks, and
+   "what already happened." Those invariants belong in deterministic local packages,
    not in repeatedly re-tokenized instructions.
 
-Eleven packages solve that in one pipeline with runtime control and a
+Twelve packages solve that in one pipeline with runtime control and a
 feedback loop:
 
 - **Four build-time tools** turn your authored source into every harness's file layout:
@@ -41,9 +41,11 @@ feedback loop:
   [`@razroo/iso-route`](./packages/iso-route) compiles *one model policy* into each harness's config.
 - **One wrapper** runs the whole build chain:
   [`@razroo/iso`](./packages/iso) chains the above into a single `iso build`.
-- **Three runtime-control libraries** handle durable execution, artifact shape, and operational truth:
+- **Four runtime-control libraries** handle durable execution, role capabilities, artifact shape, and operational truth:
   [`@razroo/iso-orchestrator`](./packages/iso-orchestrator) provides resumable
   steps, keyed mutexes, and bounded fan-out for side-effectful agent workflows,
+  [`@razroo/iso-capabilities`](./packages/iso-capabilities) resolves,
+  checks, and renders role-level tool/MCP/command/filesystem/network policy,
   [`@razroo/iso-contract`](./packages/iso-contract) validates, parses, and
   renders structured workflow artifacts, and [`@razroo/iso-ledger`](./packages/iso-ledger)
   records append-only domain events with idempotency keys, queries,
@@ -62,6 +64,7 @@ feedback loop:
   └────────────────────┘           └───────────────────┘           └─────────────────┘               │ .opencode/agents/*    │                    which rules ever fired,
                                                                                                      │ settings.json         │                    regression-fixture mining
                                                                                                      │                      │    iso-guard ─▶  policy pass / fail
+                                                                                                     │                      │    iso-capabilities ─▶ role permission policy
   ┌────────────────────┐                                                                             │ .codex/config.toml    │
   │ models.yaml        │ ───────────────────── iso-route build ─────────────────────────────────────▶│ opencode.json         │
   │ (roles + fallback) │                                                                             │ .mcp.json             │
@@ -108,6 +111,8 @@ the repo now supports a tighter loop:
 
 - `isolint` rewrites authored prose into smaller-model-safe instructions.
 - `iso-route` lets you pin cheaper or local roles without forking prompts.
+- `iso-capabilities check/render` keeps role permission matrices local
+  instead of repeating tool/MCP/filesystem boundaries in prompts.
 - `iso-trace model-score` catches tool-schema failures that weaker routes
   tend to surface first on Claude Code, Codex, and OpenCode.
 - `iso-trace export-fixture --runner <name>` turns a real failure into an
@@ -127,6 +132,10 @@ of the prompt:
 
 - `iso-orchestrator` persists resumable `step()` results, mutexes work by
   entity key, and bounds fan-out for side-effectful workflows.
+- `iso-capabilities` makes role boundaries executable: resolve inherited
+  tool/MCP/command/filesystem/network policy, check proposed actions, and
+  render compact harness guidance without asking a model to remember a
+  permission matrix.
 - `iso-contract` makes artifact shape executable: validate records, parse
   existing TSV/markdown/JSON, and render canonical output without asking a
   model to remember delimiters.
@@ -212,6 +221,12 @@ of the prompt:
   contract catalogs, validates records, and parses/renders JSON, TSV,
   and markdown table rows so domain packages can keep artifact formats
   out of prompt prose.
+
+- **[`packages/iso-capabilities`](./packages/iso-capabilities)** — [`@razroo/iso-capabilities`](https://www.npmjs.com/package/@razroo/iso-capabilities)
+  Deterministic role capability policies for agent workflows. Loads JSON
+  role catalogs, resolves inheritance, checks proposed tool/MCP/command/
+  filesystem/network access, and renders compact target guidance so
+  domain packages can keep permission matrices out of prompt prose.
 
 - **[`packages/iso-orchestrator`](./packages/iso-orchestrator)** — [`@razroo/iso-orchestrator`](https://www.npmjs.com/package/@razroo/iso-orchestrator)
   Durable orchestration primitives for the runtime layer above a single
@@ -346,6 +361,15 @@ iso-contract render jobforge.tracker-row --contracts contracts.json --input @row
 iso-contract parse jobforge.tracker-row --contracts contracts.json --format tsv --input "812	2026-04-26	Example Labs	Staff Agent Engineer	Applied	4.2/5	yes	[812](reports/812-example-labs-2026-04-26.md)	Submitted"
 ```
 
+### `@razroo/iso-capabilities` — what may this role do?
+
+```bash
+iso-capabilities list --policy capabilities.json
+iso-capabilities explain applicant --policy capabilities.json
+iso-capabilities check applicant --policy capabilities.json --tool browser --mcp geometra --command "npx job-forge merge" --filesystem write --network restricted
+iso-capabilities render applicant --policy capabilities.json --target opencode
+```
+
 ## Layout
 
 ```
@@ -363,7 +387,8 @@ iso/
     ├── iso-trace/        # parse + query real agent transcripts (observability)
     ├── iso-guard/        # deterministic runtime policy checks over events
     ├── iso-ledger/       # append-only operational event/state ledger
-    └── iso-contract/     # deterministic artifact contracts
+    ├── iso-contract/     # deterministic artifact contracts
+    └── iso-capabilities/ # deterministic role capability policy
 ```
 
 ## Build & test
@@ -381,6 +406,7 @@ npm --workspace @razroo/iso-trace run example   # iso-trace stats on the bundled
 npm --workspace @razroo/iso-guard run test      # iso-guard policy engine tests
 npm --workspace @razroo/iso-ledger run test     # iso-ledger event/state tests
 npm --workspace @razroo/iso-contract run test   # iso-contract artifact contract tests
+npm --workspace @razroo/iso-capabilities run test # iso-capabilities policy tests
 
 # Target a single package
 npm run build --workspace @razroo/isolint
@@ -416,7 +442,7 @@ build, and `npm publish --provenance`.
 ## End-to-end example
 
 [`examples/pipeline/`](./examples/pipeline) is an executable demonstration
-that exercises **seven of the eleven packages end-to-end** in one `npm run
+that exercises **seven of the twelve packages end-to-end** in one `npm run
 test:pipeline` invocation: `agentmd lint` + `render` → `isolint lint` →
 `iso-route build` (from a bundled `models.yaml` that extends the
 `standard` preset) → `iso-harness build` (which consumes iso-route's
@@ -435,7 +461,7 @@ downstream repo would use.
 
 `npm run test:pack` goes one level further: it packs the local workspaces into
 tarballs, installs them into fresh temp projects, and smoke-tests the packaged
-`iso-harness`, `iso`, `iso-eval`, `iso-trace`, `iso-route`, `iso-guard`, `iso-ledger`, and `iso-contract`
+`iso-harness`, `iso`, `iso-eval`, `iso-trace`, `iso-route`, `iso-guard`, `iso-ledger`, `iso-contract`, and `iso-capabilities`
 CLIs. This guards against packaging regressions that workspace-only tests can
 miss.
 

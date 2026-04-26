@@ -1,6 +1,6 @@
 # iso — monorepo
 
-Workspaces monorepo (npm) housing eleven Razroo tools that together make
+Workspaces monorepo (npm) housing twelve Razroo tools that together make
 AI-agent harnesses *isomorphic* — the same authored source producing the
 same behavior across every coding harness (Cursor, Claude Code, Codex,
 OpenCode) and every model tier (frontier → 7B local).
@@ -61,6 +61,11 @@ cross-package compositions and the decouplings that are deliberate.
   artifact contracts for agent workflows: validate, parse, and render
   JSON/TSV/markdown records without model calls. TypeScript, `tsc` →
   `dist/`. Tests via `node --test --import tsx tests/*.test.ts`.
+- `packages/iso-capabilities` — `@razroo/iso-capabilities`.
+  Deterministic role capability policies for agent workflows: resolve,
+  check, and render tool/MCP/command/filesystem/network permissions
+  without model calls. TypeScript, `tsc` → `dist/`. Tests via
+  `node --test --import tsx tests/*.test.ts`.
 
 ## Conventions
 
