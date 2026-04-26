@@ -56,6 +56,9 @@ jobs:
           - workspace: "@razroo/iso-ledger"
             node: "20.6.0"
             extra: ""
+          - workspace: "@razroo/iso-context"
+            node: "20.6.0"
+            extra: ""
           - workspace: "@razroo/iso-contract"
             node: "20.6.0"
             extra: ""
@@ -176,6 +179,12 @@ jobs:
         run: |
           node packages/iso-ledger/dist/cli.js verify --ledger packages/iso-ledger/examples/jobforge-events.jsonl
           node packages/iso-ledger/dist/cli.js has --ledger packages/iso-ledger/examples/jobforge-events.jsonl --key "url:https://example.test/jobs/123"
+
+      - name: iso-context example plan/render
+        run: |
+          node packages/iso-context/dist/cli.js list --policy packages/iso-context/examples/jobforge-context.json
+          node packages/iso-context/dist/cli.js check apply --policy packages/iso-context/examples/jobforge-context.json --root packages/iso-context/examples/jobforge-project --budget 20000
+          node packages/iso-context/dist/cli.js render apply --policy packages/iso-context/examples/jobforge-context.json --root packages/iso-context/examples/jobforge-project --target markdown
 
       - name: iso-contract example validate/render
         run: |

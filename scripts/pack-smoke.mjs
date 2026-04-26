@@ -73,6 +73,7 @@ try {
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-trace']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-guard']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-ledger']);
+  run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-context']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-contract']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-capabilities']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-route']);
@@ -88,6 +89,7 @@ try {
   const isoTraceTgz = packWorkspace('@razroo/iso-trace', packsDir);
   const isoGuardTgz = packWorkspace('@razroo/iso-guard', packsDir);
   const isoLedgerTgz = packWorkspace('@razroo/iso-ledger', packsDir);
+  const isoContextTgz = packWorkspace('@razroo/iso-context', packsDir);
   const isoContractTgz = packWorkspace('@razroo/iso-contract', packsDir);
   const isoCapabilitiesTgz = packWorkspace('@razroo/iso-capabilities', packsDir);
   const isoRouteTgz = packWorkspace('@razroo/iso-route', packsDir);
@@ -254,6 +256,42 @@ try {
     isoLedgerDir,
   );
 
+  // Smoke the packaged iso-context CLI against a small local project bundle.
+  const isoContextDir = resolve(tmpRoot, 'iso-context');
+  mkdirSync(isoContextDir, { recursive: true });
+  writePackageJson(isoContextDir);
+  mkdirSync(resolve(isoContextDir, 'iso'), { recursive: true });
+  mkdirSync(resolve(isoContextDir, 'modes'), { recursive: true });
+  writeFileSync(resolve(isoContextDir, 'iso', 'instructions.md'), '# Agent\n\nBase context.\n');
+  writeFileSync(resolve(isoContextDir, 'modes', 'apply.md'), '# Apply\n\nApply context.\n');
+  writeFileSync(resolve(isoContextDir, 'context.json'), JSON.stringify({
+    defaults: { tokenBudget: 1000, charsPerToken: 4 },
+    bundles: [
+      { name: 'base', files: ['iso/instructions.md'] },
+      {
+        name: 'apply',
+        extends: 'base',
+        files: ['modes/apply.md', { path: 'modes/reference-geometra.md', required: false }],
+      },
+    ],
+  }, null, 2));
+  run('npm', ['install', isoContextTgz], isoContextDir);
+  const isoContextVersion = run('npx', ['--no-install', 'iso-context', '--version'], isoContextDir, { capture: true });
+  if (!isoContextVersion.stdout.trim()) {
+    throw new Error('packaged iso-context --version produced no output');
+  }
+  run('npx', ['--no-install', 'iso-context', 'list', '--policy', 'context.json'], isoContextDir);
+  const contextCheck = run(
+    'npx',
+    ['--no-install', 'iso-context', 'check', 'apply', '--policy', 'context.json', '--root', isoContextDir],
+    isoContextDir,
+    { capture: true },
+  );
+  if (!contextCheck.stdout.includes('iso-context: PASS')) {
+    throw new Error('packaged iso-context check did not report PASS');
+  }
+  run('npx', ['--no-install', 'iso-context', 'render', 'apply', '--policy', 'context.json', '--root', isoContextDir], isoContextDir);
+
   // Smoke the packaged iso-contract CLI against the bundled JobForge-style contract.
   const isoContractDir = resolve(tmpRoot, 'iso-contract');
   mkdirSync(isoContractDir, { recursive: true });
@@ -362,7 +400,7 @@ try {
   run('npx', ['--no-install', 'iso-route', 'plan', modelsPath], isoRouteDir);
 
   console.log(
-    `\npack smoke ok — verified packaged iso-harness, iso, iso-eval, iso-trace, iso-guard, iso-ledger, iso-contract, iso-capabilities, and iso-route from ${tmpRoot}`,
+    `\npack smoke ok — verified packaged iso-harness, iso, iso-eval, iso-trace, iso-guard, iso-ledger, iso-context, iso-contract, iso-capabilities, and iso-route from ${tmpRoot}`,
   );
 } catch (err) {
   failed = true;

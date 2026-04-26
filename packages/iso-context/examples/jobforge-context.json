@@ -1,0 +1,44 @@
+{
+  "defaults": {
+    "tokenBudget": 9000,
+    "charsPerToken": 4
+  },
+  "bundles": [
+    {
+      "name": "base",
+      "description": "Shared JobForge orchestration contract.",
+      "files": [
+        {
+          "path": "iso/instructions.md",
+          "maxTokens": 3500,
+          "notes": ["Shared prefix should stay small and point to mode-specific references."]
+        }
+      ]
+    },
+    {
+      "name": "apply",
+      "extends": "base",
+      "description": "Application form-fill context with Geometra recovery rules.",
+      "tokenBudget": 12000,
+      "files": [
+        "modes/apply.md",
+        "modes/reference-geometra.md",
+        {
+          "path": "modes/reference-portals.md",
+          "required": false,
+          "notes": ["Load only when portal setup or OTP routing is the blocker."]
+        }
+      ]
+    },
+    {
+      "name": "tracker",
+      "extends": "base",
+      "description": "Tracker/status context with setup reference.",
+      "tokenBudget": 7000,
+      "files": [
+        "modes/tracker.md",
+        "modes/reference-setup.md"
+      ]
+    }
+  ]
+}

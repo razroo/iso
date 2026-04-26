@@ -1,6 +1,6 @@
 # Integrations
 
-This repo ships twelve packages that **work on their own** but are **designed
+This repo ships thirteen packages that **work on their own** but are **designed
 to compose**. The planned cross-package compositions listed here are already
 shipped, so this file now serves as:
 
@@ -151,6 +151,19 @@ target guidance without asking the model to remember a permission matrix.
 
 ---
 
+## 10. `iso-context` ← deterministic context selection for domain packages — **DONE**
+
+Introduced as a standalone package. `iso-context` does not import
+JobForge, `iso-harness`, or any other domain package; it provides the
+on-disk JSON context bundle format and budget checker that domain
+packages can share. JobForge-style examples cover base/apply/tracker
+mode bundles, but the package remains generic: resolve inheritance,
+read declared files, estimate tokens, check per-file and per-bundle
+budgets, and render markdown/json context packs without asking the model
+to remember which reference files to load.
+
+---
+
 ## Design questions that are *not* open integrations
 
 The following look like integrations but are deliberately decoupled —
@@ -187,3 +200,7 @@ don't "fix" them without a conversation first.
   Native enforcement should stay additive and harness-specific; where a
   harness cannot enforce a field, pair the policy with `iso-trace` /
   `iso-guard` audits instead of implying a stronger guarantee.
+- **`iso-context` does not load files into a harness automatically.**
+  It emits a deterministic plan/check/render surface. Harness-native
+  context injection should stay explicit because every harness has
+  different context-loading semantics and prompt-cache behavior.
