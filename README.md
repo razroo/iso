@@ -25,7 +25,7 @@ Today, writing agent instructions is fragmented on two axes:
    unstructured rationale all drop silently at 7B. You don't find out
    until the agent misbehaves in production.
 
-Nine packages solve that in one pipeline with a control layer and feedback loop:
+Ten packages solve that in one pipeline with a control layer and feedback loop:
 
 - **Four build-time tools** turn your authored source into every harness's file layout:
   [`@razroo/agentmd`](./packages/agentmd) validates *structure*,
@@ -34,9 +34,11 @@ Nine packages solve that in one pipeline with a control layer and feedback loop:
   [`@razroo/iso-route`](./packages/iso-route) compiles *one model policy* into each harness's config.
 - **One wrapper** runs the whole build chain:
   [`@razroo/iso`](./packages/iso) chains the above into a single `iso build`.
-- **One orchestration library** handles durable runtime control:
+- **Two runtime-control libraries** handle durable execution and operational truth:
   [`@razroo/iso-orchestrator`](./packages/iso-orchestrator) provides resumable
-  steps, keyed mutexes, and bounded fan-out for side-effectful agent workflows.
+  steps, keyed mutexes, and bounded fan-out for side-effectful agent workflows,
+  while [`@razroo/iso-ledger`](./packages/iso-ledger) records append-only
+  domain events with idempotency keys, queries, verification, and materialized views.
 - **Three feedback tools** close the loop after deploy:
   [`@razroo/iso-eval`](./packages/iso-eval) scores *did the agent complete the task?* and
   [`@razroo/iso-trace`](./packages/iso-trace) parses production transcripts to show *what the agent actually did*,
@@ -101,6 +103,8 @@ the repo now supports a tighter loop:
   tend to surface first on Claude Code, Codex, and OpenCode.
 - `iso-trace export-fixture --runner <name>` turns a real failure into an
   `iso-eval` suite you can replay across shipped runners.
+- `iso-ledger append/query/has` gives workflows a deterministic source of
+  operational truth instead of repeated markdown/TSV scraping.
 - `iso-guard audit` checks whether a real run obeyed operational policy
   without turning those rules into more prompt tokens.
 
@@ -168,6 +172,12 @@ the repo now supports a tighter loop:
   such as bounded fan-out, cleanup-before-dispatch, required follow-up
   commands, no overlapping same-key work, and prompt secret redaction.
   No model calls, no MCP server, and no injected prompt overhead.
+
+- **[`packages/iso-ledger`](./packages/iso-ledger)** — `@razroo/iso-ledger`
+  Append-only operational state for agent workflows. Stores local JSONL
+  events with deterministic ids and idempotency keys, supports
+  `append/query/has/verify/materialize`, and gives domain packages a
+  canonical state source without loading tracker files into the prompt.
 
 - **[`packages/iso-orchestrator`](./packages/iso-orchestrator)** — `@razroo/iso-orchestrator`
   Durable orchestration primitives for the runtime layer above a single
@@ -281,6 +291,17 @@ iso-guard verify guard.yaml --events session.json --fail-on warn
 iso-guard explain guard.yaml
 ```
 
+### `@razroo/iso-ledger` — what is canonically true?
+
+```bash
+iso-ledger init
+iso-ledger append application.submitted --key "url:https://example.test/jobs/123" --idempotency-key "apply:https://example.test/jobs/123" --data '{"status":"applied"}'
+iso-ledger has --key "url:https://example.test/jobs/123"
+iso-ledger query --type application.submitted --where status=applied
+iso-ledger verify
+iso-ledger materialize --out state.json
+```
+
 ## Layout
 
 ```
@@ -296,7 +317,8 @@ iso/
     ├── iso-orchestrator/ # durable runtime control above one agent session
     ├── iso-eval/         # behavioral eval on the produced harness
     ├── iso-trace/        # parse + query real agent transcripts (observability)
-    └── iso-guard/        # deterministic runtime policy checks over events
+    ├── iso-guard/        # deterministic runtime policy checks over events
+    └── iso-ledger/       # append-only operational event/state ledger
 ```
 
 ## Build & test
@@ -312,6 +334,7 @@ npm run test:pipeline       # end-to-end demo (agentmd → isolint → iso-harne
 npm --workspace @razroo/iso-eval  run example   # iso-eval against the bundled example suite
 npm --workspace @razroo/iso-trace run example   # iso-trace stats on the bundled sample transcript
 npm --workspace @razroo/iso-guard run test      # iso-guard policy engine tests
+npm --workspace @razroo/iso-ledger run test     # iso-ledger event/state tests
 
 # Target a single package
 npm run build --workspace @razroo/isolint
@@ -347,7 +370,7 @@ build, and `npm publish --provenance`.
 ## End-to-end example
 
 [`examples/pipeline/`](./examples/pipeline) is an executable demonstration
-that exercises **seven of the nine packages end-to-end** in one `npm run
+that exercises **seven of the ten packages end-to-end** in one `npm run
 test:pipeline` invocation: `agentmd lint` + `render` → `isolint lint` →
 `iso-route build` (from a bundled `models.yaml` that extends the
 `standard` preset) → `iso-harness build` (which consumes iso-route's
@@ -366,7 +389,7 @@ downstream repo would use.
 
 `npm run test:pack` goes one level further: it packs the local workspaces into
 tarballs, installs them into fresh temp projects, and smoke-tests the packaged
-`iso-harness`, `iso`, `iso-eval`, `iso-trace`, `iso-route`, and `iso-guard`
+`iso-harness`, `iso`, `iso-eval`, `iso-trace`, `iso-route`, `iso-guard`, and `iso-ledger`
 CLIs. This guards against packaging regressions that workspace-only tests can
 miss.
 

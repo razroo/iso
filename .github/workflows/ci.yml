@@ -53,6 +53,9 @@ jobs:
           - workspace: "@razroo/iso-orchestrator"
             node: "20.6.0"
             extra: ""
+          - workspace: "@razroo/iso-ledger"
+            node: "20.6.0"
+            extra: ""
           - workspace: "@razroo/iso-trace"
             node: "20.6.0"
             extra: ""
@@ -162,6 +165,11 @@ jobs:
           ]
           JSON
           node packages/iso-guard/dist/cli.js audit packages/iso-guard/examples/jobforge-apply.yaml --events /tmp/iso-guard-events.json
+
+      - name: iso-ledger example verify/query
+        run: |
+          node packages/iso-ledger/dist/cli.js verify --ledger packages/iso-ledger/examples/jobforge-events.jsonl
+          node packages/iso-ledger/dist/cli.js has --ledger packages/iso-ledger/examples/jobforge-events.jsonl --key "url:https://example.test/jobs/123"
 
       - name: iso-route example build (dry-run + verify)
         run: node packages/iso-route/dist/cli.js build packages/iso-route/examples/models.yaml --out /tmp/iso-route-smoke --dry-run --verify-models

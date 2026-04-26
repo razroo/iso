@@ -72,6 +72,7 @@ try {
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-eval']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-trace']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-guard']);
+  run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-ledger']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-route']);
 
   const packsDir = resolve(tmpRoot, 'packs');
@@ -84,6 +85,7 @@ try {
   const isoEvalTgz = packWorkspace('@razroo/iso-eval', packsDir);
   const isoTraceTgz = packWorkspace('@razroo/iso-trace', packsDir);
   const isoGuardTgz = packWorkspace('@razroo/iso-guard', packsDir);
+  const isoLedgerTgz = packWorkspace('@razroo/iso-ledger', packsDir);
   const isoRouteTgz = packWorkspace('@razroo/iso-route', packsDir);
 
   // Smoke the packaged iso-harness CLI directly.
@@ -227,6 +229,27 @@ try {
     throw new Error('packaged iso-guard audit did not report PASS');
   }
 
+  // Smoke the packaged iso-ledger CLI against the bundled example ledger.
+  const isoLedgerDir = resolve(tmpRoot, 'iso-ledger');
+  mkdirSync(isoLedgerDir, { recursive: true });
+  writePackageJson(isoLedgerDir);
+  run('npm', ['install', isoLedgerTgz], isoLedgerDir);
+  run('npx', ['--no-install', 'iso-ledger', '--version'], isoLedgerDir);
+  const ledgerPath = resolve(
+    isoLedgerDir,
+    'node_modules',
+    '@razroo',
+    'iso-ledger',
+    'examples',
+    'jobforge-events.jsonl',
+  );
+  run('npx', ['--no-install', 'iso-ledger', 'verify', '--ledger', ledgerPath], isoLedgerDir);
+  run(
+    'npx',
+    ['--no-install', 'iso-ledger', 'has', '--ledger', ledgerPath, '--key', 'url:https://example.test/jobs/123'],
+    isoLedgerDir,
+  );
+
   // Smoke the packaged iso-route CLI against the bundled example policy.
   const isoRouteDir = resolve(tmpRoot, 'iso-route');
   mkdirSync(isoRouteDir, { recursive: true });
@@ -249,7 +272,7 @@ try {
   run('npx', ['--no-install', 'iso-route', 'plan', modelsPath], isoRouteDir);
 
   console.log(
-    `\npack smoke ok — verified packaged iso-harness, iso, iso-eval, iso-trace, iso-guard, and iso-route from ${tmpRoot}`,
+    `\npack smoke ok — verified packaged iso-harness, iso, iso-eval, iso-trace, iso-guard, iso-ledger, and iso-route from ${tmpRoot}`,
   );
 } catch (err) {
   failed = true;

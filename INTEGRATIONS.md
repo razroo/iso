@@ -1,6 +1,6 @@
 # Integrations
 
-This repo ships nine packages that **work on their own** but are **designed
+This repo ships ten packages that **work on their own** but are **designed
 to compose**. The planned cross-package compositions listed here are already
 shipped, so this file now serves as:
 
@@ -111,6 +111,19 @@ evaluates deterministic runtime policy rules (`max-per-group`,
 `require-before`, `require-after`, `forbid-text`, `no-overlap`). This
 keeps enforcement outside the prompt/MCP surface while still letting a
 project audit real agent behavior after a run.
+
+---
+
+## 7. `iso-ledger` ← durable domain event source for runtime packages — **DONE**
+
+Introduced as a standalone package. `iso-ledger` does not import
+`iso-orchestrator`, `iso-trace`, or `iso-guard`; it provides the small
+on-disk contract those packages and domain tools can share:
+append-only JSONL events with deterministic ids, idempotency keys,
+query/has preflight checks, verification, and materialized entity views.
+JobForge can layer a domain adapter over this later without making the
+core ledger package know about trackers, markdown day files, or TSV
+merge rules.
 
 ---
 
