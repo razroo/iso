@@ -80,6 +80,7 @@ try {
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-preflight']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-postflight']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-redact']);
+  run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-facts']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-migrate']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-contract']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-capabilities']);
@@ -103,6 +104,7 @@ try {
   const isoPreflightTgz = packWorkspace('@razroo/iso-preflight', packsDir);
   const isoPostflightTgz = packWorkspace('@razroo/iso-postflight', packsDir);
   const isoRedactTgz = packWorkspace('@razroo/iso-redact', packsDir);
+  const isoFactsTgz = packWorkspace('@razroo/iso-facts', packsDir);
   const isoMigrateTgz = packWorkspace('@razroo/iso-migrate', packsDir);
   const isoContractTgz = packWorkspace('@razroo/iso-contract', packsDir);
   const isoCapabilitiesTgz = packWorkspace('@razroo/iso-capabilities', packsDir);
@@ -529,6 +531,71 @@ try {
   }
   run('npx', ['--no-install', 'iso-redact', 'explain', '--config', redactConfigPath], isoRedactDir);
 
+  // Smoke the packaged iso-facts CLI against the bundled JobForge-style fact policy.
+  const isoFactsDir = resolve(tmpRoot, 'iso-facts');
+  mkdirSync(isoFactsDir, { recursive: true });
+  writePackageJson(isoFactsDir);
+  run('npm', ['install', isoFactsTgz], isoFactsDir);
+  const isoFactsVersion = run('npx', ['--no-install', 'iso-facts', '--version'], isoFactsDir, { capture: true });
+  if (!isoFactsVersion.stdout.trim()) {
+    throw new Error('packaged iso-facts --version produced no output');
+  }
+  const factsPackageDir = resolve(isoFactsDir, 'node_modules', '@razroo', 'iso-facts');
+  mkdirSync(resolve(isoFactsDir, 'reports'), { recursive: true });
+  mkdirSync(resolve(isoFactsDir, 'data'), { recursive: true });
+  mkdirSync(resolve(isoFactsDir, 'batch'), { recursive: true });
+  cpSync(resolve(factsPackageDir, 'examples', 'report.md'), resolve(isoFactsDir, 'reports', '001-example.md'));
+  cpSync(resolve(factsPackageDir, 'examples', 'scan-history.tsv'), resolve(isoFactsDir, 'data', 'scan-history.tsv'));
+  cpSync(resolve(factsPackageDir, 'examples', 'preflight-candidates.json'), resolve(isoFactsDir, 'batch', 'preflight-candidates.json'));
+  const factsConfigPath = resolve(factsPackageDir, 'examples', 'jobforge-facts.json');
+  const factsOutPath = resolve(isoFactsDir, '.iso-facts.json');
+  const factsBuild = run(
+    'npx',
+    ['--no-install', 'iso-facts', 'build', '--config', factsConfigPath, '--root', isoFactsDir, '--out', factsOutPath],
+    isoFactsDir,
+    { capture: true },
+  );
+  if (!factsBuild.stdout.includes('iso-facts: BUILT')) {
+    throw new Error('packaged iso-facts build did not report BUILT');
+  }
+  const factsQuery = run(
+    'npx',
+    ['--no-install', 'iso-facts', 'query', '--facts', factsOutPath, '--fact', 'job.url'],
+    isoFactsDir,
+    { capture: true },
+  );
+  if (!factsQuery.stdout.includes('job.url')) {
+    throw new Error('packaged iso-facts query did not return job.url');
+  }
+  const factsHas = run(
+    'npx',
+    ['--no-install', 'iso-facts', 'has', '--facts', factsOutPath, '--fact', 'job.score'],
+    isoFactsDir,
+    { capture: true },
+  );
+  if (!factsHas.stdout.includes('iso-facts: MATCH')) {
+    throw new Error('packaged iso-facts has did not report MATCH');
+  }
+  const factsVerify = run(
+    'npx',
+    ['--no-install', 'iso-facts', 'verify', '--facts', factsOutPath],
+    isoFactsDir,
+    { capture: true },
+  );
+  if (!factsVerify.stdout.includes('iso-facts: PASS')) {
+    throw new Error('packaged iso-facts verify did not report PASS');
+  }
+  const factsCheck = run(
+    'npx',
+    ['--no-install', 'iso-facts', 'check', '--facts', factsOutPath, '--config', factsConfigPath],
+    isoFactsDir,
+    { capture: true },
+  );
+  if (!factsCheck.stdout.includes('iso-facts: PASS')) {
+    throw new Error('packaged iso-facts check did not report PASS');
+  }
+  run('npx', ['--no-install', 'iso-facts', 'explain', '--config', factsConfigPath], isoFactsDir);
+
   // Smoke the packaged iso-migrate CLI against a JobForge-style consumer upgrade.
   const isoMigrateDir = resolve(tmpRoot, 'iso-migrate');
   mkdirSync(isoMigrateDir, { recursive: true });
@@ -692,7 +759,7 @@ try {
   run('npx', ['--no-install', 'iso-route', 'plan', modelsPath], isoRouteDir);
 
   console.log(
-    `\npack smoke ok — verified packaged iso-harness, iso, iso-eval, iso-trace, iso-guard, iso-ledger, iso-context, iso-cache, iso-index, iso-canon, iso-preflight, iso-postflight, iso-redact, iso-migrate, iso-contract, iso-capabilities, and iso-route from ${tmpRoot}`,
+    `\npack smoke ok — verified packaged iso-harness, iso, iso-eval, iso-trace, iso-guard, iso-ledger, iso-context, iso-cache, iso-index, iso-canon, iso-preflight, iso-postflight, iso-redact, iso-facts, iso-migrate, iso-contract, iso-capabilities, and iso-route from ${tmpRoot}`,
   );
 } catch (err) {
   failed = true;

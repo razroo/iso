@@ -1,0 +1,13 @@
+{
+  "candidates": [
+    {
+      "company": "Example Co",
+      "role": "Staff AI Engineer",
+      "url": "https://jobs.example.com/staff-ai-engineer",
+      "score": "4.2/5",
+      "location": {
+        "status": "compatible"
+      }
+    }
+  ]
+}

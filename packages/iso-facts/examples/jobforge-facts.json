@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "sources": [
+    {
+      "name": "reports",
+      "include": ["reports/*.md"],
+      "format": "text",
+      "rules": [
+        {
+          "fact": "job.url",
+          "pattern": "^\\*\\*URL:\\*\\*\\s*(?<url>https?://\\S+)",
+          "flags": "i",
+          "key": "{url}",
+          "value": "{url}",
+          "fields": {
+            "url": "{url}",
+            "report": "{source}"
+          },
+          "tags": ["report", "url"]
+        },
+        {
+          "fact": "job.score",
+          "pattern": "^\\*\\*Score:\\*\\*\\s*(?<score>[0-9.]+/5)",
+          "flags": "i",
+          "key": "{source}",
+          "value": "{score}",
+          "fields": {
+            "score": "{score}",
+            "report": "{source}"
+          },
+          "tags": ["report", "score"]
+        }
+      ]
+    },
+    {
+      "name": "scan-history",
+      "include": ["data/scan-history.tsv"],
+      "format": "tsv",
+      "records": [
+        {
+          "fact": "job.scan",
+          "key": "{company|slug}:{role|slug}",
+          "value": "{url}",
+          "fields": ["date", "company", "role", "url", "ats"],
+          "tags": ["scan", "url"]
+        }
+      ]
+    },
+    {
+      "name": "preflight-candidates",
+      "include": ["batch/preflight-candidates.json"],
+      "format": "json",
+      "records": [
+        {
+          "fact": "job.candidate",
+          "path": "$.candidates[]",
+          "key": "{company|slug}:{role|slug}",
+          "value": "{url}",
+          "fields": ["company", "role", "url", "score", "location.status"],
+          "tags": ["candidate", "preflight"]
+        }
+      ]
+    }
+  ],
+  "requirements": [
+    {
+      "fact": "job.url",
+      "min": 1
+    },
+    {
+      "fact": "job.score",
+      "min": 1
+    }
+  ]
+}

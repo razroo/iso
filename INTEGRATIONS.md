@@ -1,6 +1,6 @@
 # Integrations
 
-This repo ships nineteen packages that **work on their own** but are **designed
+This repo ships twenty packages that **work on their own** but are **designed
 to compose**. The planned cross-package compositions listed here are already
 shipped, so this file now serves as:
 
@@ -243,6 +243,19 @@ remember sensitive-data handling rules.
 
 ---
 
+## 17. `iso-facts` ← deterministic fact materialization for domain packages — **DONE**
+
+Introduced as a standalone package. `iso-facts` does not import JobForge,
+`iso-index`, `iso-contract`, `iso-canon`, `iso-preflight`, or any other
+domain package; it provides the on-disk JSON fact policy and fact set formats
+that domain tools can share. JobForge-style examples cover report URLs/scores,
+scan-history TSV rows, tracker tables, JSONL outcomes, and preflight candidate
+JSON, but the package remains generic: extract/query/has/verify/check
+provenance-rich fact records from local artifacts without asking a model to
+reread broad source trees.
+
+---
+
 ## Design questions that are *not* open integrations
 
 The following look like integrations but are deliberately decoupled —
@@ -292,6 +305,10 @@ don't "fix" them without a conversation first.
   It builds and verifies lookup records from configured sources. Domain
   packages still own which source wins when report, tracker, scan, cache,
   and ledger facts disagree, and when an index should be rebuilt.
+- **`iso-facts` does not decide domain truth or stale-fact policy.**
+  It materializes configured facts with provenance. Domain packages still own
+  source precedence, staleness rules, conflict handling, and how facts feed
+  contracts, preflight gates, ledgers, or downstream prompts.
 - **`iso-canon` does not decide duplicate policy for a domain.** It emits
   stable keys and explainable comparisons. Domain packages still own whether
   a `possible` match blocks work, warns, or routes to review, and which
