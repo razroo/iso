@@ -1,6 +1,6 @@
 # Integrations
 
-This repo ships twenty-three packages that **work on their own** but are **designed
+This repo ships twenty-five packages that **work on their own** but are **designed
 to compose**. The planned cross-package compositions listed here are already
 shipped, so this file now serves as:
 
@@ -282,6 +282,31 @@ tracker files.
 
 ---
 
+## 20. `iso-prioritize` ← deterministic priority queue selection for domain packages — **DONE**
+
+Introduced as a standalone package. `iso-prioritize` does not import JobForge,
+`iso-score`, `iso-timeline`, `iso-preflight`, or any other domain package; it
+provides the on-disk JSON prioritization config, item, and result formats that
+domain tools can share. JobForge-style examples cover follow-up, pipeline, and
+apply queues with weighted criteria, skip gates, adjustments, and one-per-company
+quotas, but the package remains generic: rank, gate, quota, select, check, and
+verify local work queues without asking a model to re-sort growing worklists.
+
+---
+
+## 21. `iso-lineage` ← deterministic artifact freshness for domain packages — **DONE**
+
+Introduced as a standalone package. `iso-lineage` does not import JobForge,
+`iso-cache`, `iso-index`, `iso-facts`, `iso-preflight`, or any other domain
+package; it provides the on-disk JSON lineage graph format that domain tools
+can share. JobForge-style examples cover reports and generated PDFs derived
+from CV/profile/JD inputs, but the package remains generic: record artifact
+inputs, verify content-derived graph/record ids, check freshness, list stale
+outputs, and propagate stale upstream state without asking a model to inspect
+project history.
+
+---
+
 ## Design questions that are *not* open integrations
 
 The following look like integrations but are deliberately decoupled —
@@ -349,6 +374,15 @@ don't "fix" them without a conversation first.
   extraction, source precedence, business calendars, stale-action retention,
   and whether due actions route to prompts, ledgers, notifications, or
   workflow dispatch.
+- **`iso-prioritize` does not decide what a domain values most.** It evaluates
+  configured queue policy. Domain packages still own item extraction, source
+  precedence, priority dimensions, quota policy, and whether selected items
+  route to preflight, timelines, ledgers, notifications, or workflow dispatch.
+- **`iso-lineage` does not decide when a stale artifact should be rebuilt.** It
+  detects changed source inputs and stale upstream artifacts. Domain packages
+  still own rebuild policy, which generated files are disposable, how lineage
+  records are created, and whether stale output blocks dispatch, triggers
+  regeneration, or only warns.
 - **`iso-postflight` does not decide how a domain collects observations.**
   It settles explicit plan/outcome/artifact/step records. Domain packages
   still own whether those observations come from TSV files, ledger events,

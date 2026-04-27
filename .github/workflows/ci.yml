@@ -71,6 +71,12 @@ jobs:
           - workspace: "@razroo/iso-timeline"
             node: "20.6.0"
             extra: ""
+          - workspace: "@razroo/iso-prioritize"
+            node: "20.6.0"
+            extra: ""
+          - workspace: "@razroo/iso-lineage"
+            node: "20.6.0"
+            extra: ""
           - workspace: "@razroo/iso-preflight"
             node: "20.6.0"
             extra: ""
@@ -232,6 +238,23 @@ jobs:
           node packages/iso-timeline/dist/cli.js due --config packages/iso-timeline/examples/jobforge-timeline.json --events packages/iso-timeline/examples/jobforge-events.jsonl --now 2026-04-27T00:00:00.000Z
           node packages/iso-timeline/dist/cli.js verify --timeline /tmp/jobforge.iso-timeline.json
           node packages/iso-timeline/dist/cli.js check --config packages/iso-timeline/examples/jobforge-timeline.json --events packages/iso-timeline/examples/jobforge-events.jsonl --now 2026-04-27T00:00:00.000Z --fail-on none
+
+      - name: iso-prioritize example rank/check
+        run: |
+          node packages/iso-prioritize/dist/cli.js rank --config packages/iso-prioritize/examples/jobforge-prioritize.json --items packages/iso-prioritize/examples/jobforge-items.json --out /tmp/jobforge.iso-prioritize.json
+          node packages/iso-prioritize/dist/cli.js select --config packages/iso-prioritize/examples/jobforge-prioritize.json --items packages/iso-prioritize/examples/jobforge-items.json --limit 3
+          node packages/iso-prioritize/dist/cli.js verify --result /tmp/jobforge.iso-prioritize.json
+          node packages/iso-prioritize/dist/cli.js check --config packages/iso-prioritize/examples/jobforge-prioritize.json --items packages/iso-prioritize/examples/jobforge-items.json --min-selected 3
+          node packages/iso-prioritize/dist/cli.js explain --config packages/iso-prioritize/examples/jobforge-prioritize.json
+
+      - name: iso-lineage example record/check
+        run: |
+          node packages/iso-lineage/dist/cli.js record --root packages/iso-lineage/examples/jobforge-project --graph /tmp/jobforge.iso-lineage.json --artifact reports/812-example-labs.md --input cv.md --input profile.yml --input jobs/example-labs.md --command "job-forge evaluate jobs/example-labs.md"
+          node packages/iso-lineage/dist/cli.js record --root packages/iso-lineage/examples/jobforge-project --graph /tmp/jobforge.iso-lineage.json --artifact generated/812-example-labs.pdf --input reports/812-example-labs.md --command "job-forge pdf reports/812-example-labs.md"
+          node packages/iso-lineage/dist/cli.js verify --graph /tmp/jobforge.iso-lineage.json
+          node packages/iso-lineage/dist/cli.js check --root packages/iso-lineage/examples/jobforge-project --graph /tmp/jobforge.iso-lineage.json
+          node packages/iso-lineage/dist/cli.js stale --root packages/iso-lineage/examples/jobforge-project --graph /tmp/jobforge.iso-lineage.json
+          node packages/iso-lineage/dist/cli.js explain --root packages/iso-lineage/examples/jobforge-project --graph /tmp/jobforge.iso-lineage.json --artifact reports/812-example-labs.md
 
       - name: iso-preflight example plan/check
         run: |

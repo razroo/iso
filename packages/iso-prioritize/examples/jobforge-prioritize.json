@@ -1,0 +1,118 @@
+{
+  "version": 1,
+  "defaults": {
+    "profile": "jobforge-next-action",
+    "limit": 3
+  },
+  "profiles": [
+    {
+      "name": "jobforge-next-action",
+      "description": "Rank JobForge follow-up, pipeline, and apply work by fit, urgency, age, and source quality.",
+      "criteria": [
+        {
+          "id": "fit-score",
+          "label": "Fit score",
+          "field": "score",
+          "weight": 45,
+          "direction": "desc",
+          "min": 0,
+          "max": 5,
+          "required": true
+        },
+        {
+          "id": "urgency",
+          "label": "Urgency",
+          "field": "urgency",
+          "weight": 30,
+          "direction": "desc",
+          "min": 0,
+          "max": 10,
+          "default": 0
+        },
+        {
+          "id": "age",
+          "label": "Age in days",
+          "field": "ageDays",
+          "weight": 15,
+          "direction": "desc",
+          "min": 0,
+          "max": 30,
+          "default": 0
+        },
+        {
+          "id": "source-quality",
+          "label": "Source quality",
+          "field": "sourceQuality",
+          "weight": 10,
+          "direction": "desc",
+          "min": 0,
+          "max": 1,
+          "default": 0.5
+        }
+      ],
+      "gates": [
+        {
+          "id": "already-rejected",
+          "action": "skip",
+          "reason": "terminal tracker state",
+          "when": {
+            "where": {
+              "status": ["Rejected", "Discarded", "SKIP"]
+            }
+          }
+        },
+        {
+          "id": "duplicate",
+          "action": "skip",
+          "reason": "duplicate candidate",
+          "when": {
+            "where": {
+              "duplicate": true
+            }
+          }
+        }
+      ],
+      "adjustments": [
+        {
+          "id": "due-follow-up",
+          "value": 6,
+          "reason": "follow-up is due now",
+          "when": {
+            "type": "followup",
+            "where": {
+              "timelineState": ["due", "overdue"]
+            }
+          }
+        },
+        {
+          "id": "dream-company",
+          "value": 8,
+          "reason": "company is on the priority list",
+          "when": {
+            "where": {
+              "priorityCompany": true
+            }
+          }
+        },
+        {
+          "id": "weak-source",
+          "value": -12,
+          "reason": "source lacks a report or score provenance",
+          "when": {
+            "where": {
+              "sourceQuality": 0
+            }
+          }
+        }
+      ],
+      "quotas": [
+        {
+          "id": "one-per-company",
+          "field": "company",
+          "max": 1,
+          "reason": "keep the selected queue diverse"
+        }
+      ]
+    }
+  ]
+}

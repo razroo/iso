@@ -86,6 +86,8 @@ try {
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-capabilities']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-score']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-timeline']);
+  run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-prioritize']);
+  run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-lineage']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-route']);
 
   const packsDir = resolve(tmpRoot, 'packs');
@@ -112,6 +114,8 @@ try {
   const isoCapabilitiesTgz = packWorkspace('@razroo/iso-capabilities', packsDir);
   const isoScoreTgz = packWorkspace('@razroo/iso-score', packsDir);
   const isoTimelineTgz = packWorkspace('@razroo/iso-timeline', packsDir);
+  const isoPrioritizeTgz = packWorkspace('@razroo/iso-prioritize', packsDir);
+  const isoLineageTgz = packWorkspace('@razroo/iso-lineage', packsDir);
   const isoRouteTgz = packWorkspace('@razroo/iso-route', packsDir);
 
   // Smoke the packaged iso-harness CLI directly.
@@ -545,6 +549,125 @@ try {
   }
   run('npx', ['--no-install', 'iso-timeline', 'explain', '--config', timelineConfigPath], isoTimelineDir);
 
+  // Smoke the packaged iso-prioritize CLI against the bundled JobForge-style queue policy.
+  const isoPrioritizeDir = resolve(tmpRoot, 'iso-prioritize');
+  mkdirSync(isoPrioritizeDir, { recursive: true });
+  writePackageJson(isoPrioritizeDir);
+  run('npm', ['install', isoPrioritizeTgz], isoPrioritizeDir);
+  const isoPrioritizeVersion = run('npx', ['--no-install', 'iso-prioritize', '--version'], isoPrioritizeDir, { capture: true });
+  if (!isoPrioritizeVersion.stdout.trim()) {
+    throw new Error('packaged iso-prioritize --version produced no output');
+  }
+  const prioritizePackageDir = resolve(isoPrioritizeDir, 'node_modules', '@razroo', 'iso-prioritize');
+  const prioritizeConfigPath = resolve(prioritizePackageDir, 'examples', 'jobforge-prioritize.json');
+  const prioritizeItemsPath = resolve(prioritizePackageDir, 'examples', 'jobforge-items.json');
+  const prioritizeOutPath = resolve(isoPrioritizeDir, 'jobforge.iso-prioritize.json');
+  const prioritizeRank = run(
+    'npx',
+    ['--no-install', 'iso-prioritize', 'rank', '--config', prioritizeConfigPath, '--items', prioritizeItemsPath, '--out', prioritizeOutPath],
+    isoPrioritizeDir,
+    { capture: true },
+  );
+  if (!prioritizeRank.stdout.includes('iso-prioritize: RANK')) {
+    throw new Error('packaged iso-prioritize rank did not report RANK');
+  }
+  run(
+    'npx',
+    ['--no-install', 'iso-prioritize', 'select', '--config', prioritizeConfigPath, '--items', prioritizeItemsPath, '--limit', '3'],
+    isoPrioritizeDir,
+  );
+  const prioritizeVerify = run(
+    'npx',
+    ['--no-install', 'iso-prioritize', 'verify', '--result', prioritizeOutPath],
+    isoPrioritizeDir,
+    { capture: true },
+  );
+  if (!prioritizeVerify.stdout.includes('iso-prioritize: PASS')) {
+    throw new Error('packaged iso-prioritize verify did not report PASS');
+  }
+  const prioritizeCheck = run(
+    'npx',
+    ['--no-install', 'iso-prioritize', 'check', '--config', prioritizeConfigPath, '--items', prioritizeItemsPath, '--min-selected', '3'],
+    isoPrioritizeDir,
+    { capture: true },
+  );
+  if (!prioritizeCheck.stdout.includes('iso-prioritize: PASS')) {
+    throw new Error('packaged iso-prioritize check did not report PASS');
+  }
+  run('npx', ['--no-install', 'iso-prioritize', 'explain', '--config', prioritizeConfigPath], isoPrioritizeDir);
+
+  // Smoke the packaged iso-lineage CLI against bundled JobForge-style artifacts.
+  const isoLineageDir = resolve(tmpRoot, 'iso-lineage');
+  mkdirSync(isoLineageDir, { recursive: true });
+  writePackageJson(isoLineageDir);
+  run('npm', ['install', isoLineageTgz], isoLineageDir);
+  const isoLineageVersion = run('npx', ['--no-install', 'iso-lineage', '--version'], isoLineageDir, { capture: true });
+  if (!isoLineageVersion.stdout.trim()) {
+    throw new Error('packaged iso-lineage --version produced no output');
+  }
+  const lineagePackageDir = resolve(isoLineageDir, 'node_modules', '@razroo', 'iso-lineage');
+  const lineageRoot = resolve(lineagePackageDir, 'examples', 'jobforge-project');
+  const lineageGraphPath = resolve(isoLineageDir, 'jobforge.iso-lineage.json');
+  const lineageRecordReport = run(
+    'npx',
+    [
+      '--no-install',
+      'iso-lineage',
+      'record',
+      '--root',
+      lineageRoot,
+      '--graph',
+      lineageGraphPath,
+      '--artifact',
+      'reports/812-example-labs.md',
+      '--input',
+      'cv.md',
+      '--input',
+      'profile.yml',
+      '--input',
+      'jobs/example-labs.md',
+      '--command',
+      'job-forge evaluate jobs/example-labs.md',
+    ],
+    isoLineageDir,
+    { capture: true },
+  );
+  if (!lineageRecordReport.stdout.includes('iso-lineage: RECORDED')) {
+    throw new Error('packaged iso-lineage record did not report RECORDED');
+  }
+  run(
+    'npx',
+    [
+      '--no-install',
+      'iso-lineage',
+      'record',
+      '--root',
+      lineageRoot,
+      '--graph',
+      lineageGraphPath,
+      '--artifact',
+      'generated/812-example-labs.pdf',
+      '--input',
+      'reports/812-example-labs.md',
+      '--command',
+      'job-forge pdf reports/812-example-labs.md',
+    ],
+    isoLineageDir,
+  );
+  const lineageVerify = run('npx', ['--no-install', 'iso-lineage', 'verify', '--graph', lineageGraphPath], isoLineageDir, { capture: true });
+  if (!lineageVerify.stdout.includes('iso-lineage: PASS')) {
+    throw new Error('packaged iso-lineage verify did not report PASS');
+  }
+  const lineageCheck = run('npx', ['--no-install', 'iso-lineage', 'check', '--root', lineageRoot, '--graph', lineageGraphPath], isoLineageDir, { capture: true });
+  if (!lineageCheck.stdout.includes('iso-lineage: PASS')) {
+    throw new Error('packaged iso-lineage check did not report PASS');
+  }
+  const lineageStale = run('npx', ['--no-install', 'iso-lineage', 'stale', '--root', lineageRoot, '--graph', lineageGraphPath], isoLineageDir, { capture: true });
+  if (!lineageStale.stdout.includes('iso-lineage: CLEAN')) {
+    throw new Error('packaged iso-lineage stale did not report CLEAN');
+  }
+  run('npx', ['--no-install', 'iso-lineage', 'explain', '--root', lineageRoot, '--graph', lineageGraphPath, '--artifact', 'reports/812-example-labs.md'], isoLineageDir);
+
   // Smoke the packaged iso-preflight CLI against the bundled JobForge-style preflight plan.
   const isoPreflightDir = resolve(tmpRoot, 'iso-preflight');
   mkdirSync(isoPreflightDir, { recursive: true });
@@ -875,7 +998,7 @@ try {
   run('npx', ['--no-install', 'iso-route', 'plan', modelsPath], isoRouteDir);
 
   console.log(
-    `\npack smoke ok — verified packaged iso-harness, iso, iso-eval, iso-trace, iso-guard, iso-ledger, iso-context, iso-cache, iso-index, iso-canon, iso-score, iso-timeline, iso-preflight, iso-postflight, iso-redact, iso-facts, iso-migrate, iso-contract, iso-capabilities, and iso-route from ${tmpRoot}`,
+    `\npack smoke ok — verified packaged iso-harness, iso, iso-eval, iso-trace, iso-guard, iso-ledger, iso-context, iso-cache, iso-index, iso-canon, iso-score, iso-timeline, iso-prioritize, iso-lineage, iso-preflight, iso-postflight, iso-redact, iso-facts, iso-migrate, iso-contract, iso-capabilities, and iso-route from ${tmpRoot}`,
   );
 } catch (err) {
   failed = true;

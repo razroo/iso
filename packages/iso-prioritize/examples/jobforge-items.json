@@ -1,0 +1,107 @@
+{
+  "items": [
+    {
+      "id": "apply-anthropic",
+      "key": "company-role:anthropic:applied-ai-engineer",
+      "type": "apply",
+      "title": "Anthropic - Applied AI Engineer",
+      "tags": ["apply", "top-company"],
+      "data": {
+        "company": "Anthropic",
+        "score": 4.6,
+        "urgency": 8,
+        "ageDays": 2,
+        "sourceQuality": 1,
+        "status": "Evaluated",
+        "priorityCompany": true
+      },
+      "source": {
+        "path": "reports/812-anthropic-2026-04-27.md",
+        "line": 1
+      }
+    },
+    {
+      "id": "followup-datadog",
+      "key": "company-role:datadog:staff-ai-engineer",
+      "type": "followup",
+      "title": "Datadog - Staff AI Engineer follow-up",
+      "tags": ["followup"],
+      "data": {
+        "company": "Datadog",
+        "score": 4.1,
+        "urgency": 9,
+        "ageDays": 10,
+        "sourceQuality": 1,
+        "status": "Applied",
+        "timelineState": "due"
+      },
+      "source": {
+        "path": "data/applications/2026-04-17.md",
+        "line": 8
+      }
+    },
+    {
+      "id": "pipeline-acme",
+      "key": "url:https://example.test/jobs/acme",
+      "type": "pipeline",
+      "title": "Acme - AI Platform Engineer",
+      "tags": ["pipeline"],
+      "data": {
+        "company": "Acme",
+        "score": 3.8,
+        "urgency": 4,
+        "ageDays": 5,
+        "sourceQuality": 0.8,
+        "status": "Pending"
+      },
+      "source": {
+        "path": "data/pipeline.md",
+        "line": 12
+      }
+    },
+    {
+      "id": "apply-anthropic-duplicate",
+      "key": "company-role:anthropic:solutions-architect",
+      "type": "apply",
+      "title": "Anthropic - Solutions Architect",
+      "tags": ["apply"],
+      "data": {
+        "company": "Anthropic",
+        "score": 4.2,
+        "urgency": 7,
+        "ageDays": 1,
+        "sourceQuality": 1,
+        "status": "Evaluated"
+      }
+    },
+    {
+      "id": "rejected-oldco",
+      "key": "company-role:oldco:platform-engineer",
+      "type": "followup",
+      "title": "OldCo - Platform Engineer",
+      "data": {
+        "company": "OldCo",
+        "score": 4.5,
+        "urgency": 10,
+        "ageDays": 20,
+        "sourceQuality": 1,
+        "status": "Rejected"
+      }
+    },
+    {
+      "id": "duplicate-orbit",
+      "key": "company-role:orbit:agent-engineer",
+      "type": "apply",
+      "title": "Orbit - Agent Engineer",
+      "data": {
+        "company": "Orbit",
+        "score": 4.0,
+        "urgency": 6,
+        "ageDays": 3,
+        "sourceQuality": 1,
+        "status": "Evaluated",
+        "duplicate": true
+      }
+    }
+  ]
+}
