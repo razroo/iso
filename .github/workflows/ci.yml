@@ -68,6 +68,9 @@ jobs:
           - workspace: "@razroo/iso-canon"
             node: "20.6.0"
             extra: ""
+          - workspace: "@razroo/iso-preflight"
+            node: "20.6.0"
+            extra: ""
           - workspace: "@razroo/iso-migrate"
             node: "20.6.0"
             extra: ""
@@ -216,6 +219,11 @@ jobs:
           node packages/iso-canon/dist/cli.js normalize company "OpenAI, Inc." --config packages/iso-canon/examples/jobforge-canon.json --profile jobforge
           node packages/iso-canon/dist/cli.js key company-role --company "Anthropic, PBC" --role "Senior SWE, AI Platform - Remote US" --config packages/iso-canon/examples/jobforge-canon.json --profile jobforge
           node packages/iso-canon/dist/cli.js compare company "OpenAI, Inc." "Open AI" --config packages/iso-canon/examples/jobforge-canon.json --profile jobforge
+
+      - name: iso-preflight example plan/check
+        run: |
+          node packages/iso-preflight/dist/cli.js plan --config packages/iso-preflight/examples/jobforge-preflight.json --candidates packages/iso-preflight/examples/jobforge-candidates.json
+          node packages/iso-preflight/dist/cli.js check --config packages/iso-preflight/examples/jobforge-preflight.json --candidates packages/iso-preflight/examples/jobforge-candidates.json
 
       - name: iso-migrate example plan/apply/check
         run: |

@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "workflows": [
+    {
+      "name": "jobforge.apply",
+      "description": "Plan safe JobForge application dispatch rounds before browser/MCP work starts.",
+      "roundSize": 2,
+      "idFact": "id",
+      "conflictFact": "companyKey",
+      "requiredFacts": ["id", "company", "role", "companyRoleKey", "url"],
+      "sourceRequiredFacts": ["company", "role", "companyRoleKey", "url", "score"],
+      "requireGateSources": true,
+      "gatePolicy": {
+        "skipStatuses": ["skip", "skipped"],
+        "blockStatuses": ["block", "blocked", "fail", "failed"]
+      },
+      "preSteps": [
+        {
+          "id": "geometra-cleanup",
+          "label": "Disconnect stale browser sessions before dispatch",
+          "command": "geometra_list_sessions && geometra_disconnect({ closeBrowser: true })"
+        }
+      ],
+      "postSteps": [
+        {
+          "id": "merge",
+          "label": "Merge tracker TSV outcomes",
+          "command": "npx job-forge merge"
+        },
+        {
+          "id": "verify",
+          "label": "Verify tracker integrity",
+          "command": "npx job-forge verify"
+        }
+      ]
+    }
+  ]
+}

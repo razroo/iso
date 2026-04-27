@@ -1,0 +1,68 @@
+{
+  "candidates": [
+    {
+      "facts": {
+        "id": { "value": "job-1", "source": "reports/001-anthropic.md:3" },
+        "company": { "value": "Anthropic", "source": "reports/001-anthropic.md:6" },
+        "role": { "value": "Forward Deployed Engineer", "source": "reports/001-anthropic.md:7" },
+        "companyKey": { "value": "company:anthropic", "source": "templates/canon.json" },
+        "companyRoleKey": { "value": "company-role:anthropic:forward-deployed-engineer", "source": "templates/canon.json" },
+        "url": { "value": "https://example.test/anthropic/fde", "source": "data/pipeline.md:12" },
+        "score": { "value": "4.2/5", "source": "reports/001-anthropic.md:4" }
+      },
+      "gates": [
+        { "id": "location", "status": "pass", "source": "config/profile.yml" },
+        { "id": "duplicate", "status": "pass", "source": ".jobforge-index.json" }
+      ]
+    },
+    {
+      "facts": {
+        "id": { "value": "job-2", "source": "reports/002-openai.md:3" },
+        "company": { "value": "OpenAI", "source": "reports/002-openai.md:6" },
+        "role": { "value": "Solutions Engineer", "source": "reports/002-openai.md:7" },
+        "companyKey": { "value": "company:openai", "source": "templates/canon.json" },
+        "companyRoleKey": { "value": "company-role:openai:solutions-engineer", "source": "templates/canon.json" },
+        "url": { "value": "https://example.test/openai/se", "source": "data/pipeline.md:13" },
+        "score": { "value": "3.8/5", "source": "reports/002-openai.md:4" }
+      },
+      "gates": [
+        { "id": "location", "status": "pass", "source": "config/profile.yml" },
+        { "id": "duplicate", "status": "pass", "source": ".jobforge-index.json" }
+      ]
+    },
+    {
+      "facts": {
+        "id": { "value": "job-3", "source": "reports/003-anthropic.md:3" },
+        "company": { "value": "Anthropic", "source": "reports/003-anthropic.md:6" },
+        "role": { "value": "Solutions Architect", "source": "reports/003-anthropic.md:7" },
+        "companyKey": { "value": "company:anthropic", "source": "templates/canon.json" },
+        "companyRoleKey": { "value": "company-role:anthropic:solutions-architect", "source": "templates/canon.json" },
+        "url": { "value": "https://example.test/anthropic/sa", "source": "data/pipeline.md:14" },
+        "score": { "value": "3.6/5", "source": "reports/003-anthropic.md:4" }
+      },
+      "gates": [
+        { "id": "location", "status": "pass", "source": "config/profile.yml" },
+        { "id": "duplicate", "status": "pass", "source": ".jobforge-index.json" }
+      ]
+    },
+    {
+      "facts": {
+        "id": { "value": "job-4", "source": "reports/004-duplicate.md:3" },
+        "company": { "value": "Example Labs", "source": "reports/004-duplicate.md:6" },
+        "role": { "value": "Staff Agent Engineer", "source": "reports/004-duplicate.md:7" },
+        "companyKey": { "value": "company:example-labs", "source": "templates/canon.json" },
+        "companyRoleKey": { "value": "company-role:example-labs:staff-agent-engineer", "source": "templates/canon.json" },
+        "url": { "value": "https://example.test/example-labs/staff-agent-engineer", "source": "data/pipeline.md:15" },
+        "score": { "value": "4.0/5", "source": "reports/004-duplicate.md:4" }
+      },
+      "gates": [
+        {
+          "id": "duplicate",
+          "status": "skip",
+          "reason": "already applied according to artifact index",
+          "source": ".jobforge-index.json"
+        }
+      ]
+    }
+  ]
+}

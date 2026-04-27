@@ -77,6 +77,7 @@ try {
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-cache']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-index']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-canon']);
+  run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-preflight']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-migrate']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-contract']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-capabilities']);
@@ -97,6 +98,7 @@ try {
   const isoCacheTgz = packWorkspace('@razroo/iso-cache', packsDir);
   const isoIndexTgz = packWorkspace('@razroo/iso-index', packsDir);
   const isoCanonTgz = packWorkspace('@razroo/iso-canon', packsDir);
+  const isoPreflightTgz = packWorkspace('@razroo/iso-preflight', packsDir);
   const isoMigrateTgz = packWorkspace('@razroo/iso-migrate', packsDir);
   const isoContractTgz = packWorkspace('@razroo/iso-contract', packsDir);
   const isoCapabilitiesTgz = packWorkspace('@razroo/iso-capabilities', packsDir);
@@ -421,6 +423,37 @@ try {
     throw new Error('packaged iso-canon compare did not report SAME');
   }
 
+  // Smoke the packaged iso-preflight CLI against the bundled JobForge-style preflight plan.
+  const isoPreflightDir = resolve(tmpRoot, 'iso-preflight');
+  mkdirSync(isoPreflightDir, { recursive: true });
+  writePackageJson(isoPreflightDir);
+  run('npm', ['install', isoPreflightTgz], isoPreflightDir);
+  const isoPreflightVersion = run('npx', ['--no-install', 'iso-preflight', '--version'], isoPreflightDir, { capture: true });
+  if (!isoPreflightVersion.stdout.trim()) {
+    throw new Error('packaged iso-preflight --version produced no output');
+  }
+  const preflightPackageDir = resolve(isoPreflightDir, 'node_modules', '@razroo', 'iso-preflight');
+  const preflightConfigPath = resolve(preflightPackageDir, 'examples', 'jobforge-preflight.json');
+  const preflightCandidatesPath = resolve(preflightPackageDir, 'examples', 'jobforge-candidates.json');
+  const preflightPlan = run(
+    'npx',
+    ['--no-install', 'iso-preflight', 'plan', '--config', preflightConfigPath, '--candidates', preflightCandidatesPath],
+    isoPreflightDir,
+    { capture: true },
+  );
+  if (!preflightPlan.stdout.includes('iso-preflight: PLAN')) {
+    throw new Error('packaged iso-preflight plan did not report PLAN');
+  }
+  const preflightCheck = run(
+    'npx',
+    ['--no-install', 'iso-preflight', 'check', '--config', preflightConfigPath, '--candidates', preflightCandidatesPath],
+    isoPreflightDir,
+    { capture: true },
+  );
+  if (!preflightCheck.stdout.includes('iso-preflight: PASS')) {
+    throw new Error('packaged iso-preflight check did not report PASS');
+  }
+
   // Smoke the packaged iso-migrate CLI against a JobForge-style consumer upgrade.
   const isoMigrateDir = resolve(tmpRoot, 'iso-migrate');
   mkdirSync(isoMigrateDir, { recursive: true });
@@ -584,7 +617,7 @@ try {
   run('npx', ['--no-install', 'iso-route', 'plan', modelsPath], isoRouteDir);
 
   console.log(
-    `\npack smoke ok — verified packaged iso-harness, iso, iso-eval, iso-trace, iso-guard, iso-ledger, iso-context, iso-cache, iso-index, iso-canon, iso-migrate, iso-contract, iso-capabilities, and iso-route from ${tmpRoot}`,
+    `\npack smoke ok — verified packaged iso-harness, iso, iso-eval, iso-trace, iso-guard, iso-ledger, iso-context, iso-cache, iso-index, iso-canon, iso-preflight, iso-migrate, iso-contract, iso-capabilities, and iso-route from ${tmpRoot}`,
   );
 } catch (err) {
   failed = true;

@@ -41,7 +41,7 @@ feedback loop:
   [`@razroo/iso-route`](./packages/iso-route) compiles *one model policy* into each harness's config.
 - **One wrapper** runs the whole build chain:
   [`@razroo/iso`](./packages/iso) chains the above into a single `iso build`.
-- **Nine runtime-control libraries** handle durable execution, context selection, artifact caching, artifact lookup, identity canonicalization, project migration, role capabilities, artifact shape, and operational truth:
+- **Ten runtime-control libraries** handle durable execution, context selection, artifact caching, artifact lookup, identity canonicalization, preflight dispatch planning, project migration, role capabilities, artifact shape, and operational truth:
   [`@razroo/iso-orchestrator`](./packages/iso-orchestrator) provides resumable
   steps, keyed mutexes, and bounded fan-out for side-effectful agent workflows,
   [`@razroo/iso-context`](./packages/iso-context) resolves context bundles,
@@ -52,6 +52,9 @@ feedback loop:
   local indexes that point to authoritative facts across artifacts,
   [`@razroo/iso-canon`](./packages/iso-canon) produces stable URL,
   company, role, and company-role keys for duplicate checks,
+  [`@razroo/iso-preflight`](./packages/iso-preflight) validates
+  source-backed candidate facts, applies gates, and produces bounded
+  dispatch rounds before tool-heavy work starts,
   [`@razroo/iso-migrate`](./packages/iso-migrate) plans and applies
   idempotent consumer-project file migrations,
   [`@razroo/iso-capabilities`](./packages/iso-capabilities) resolves,
@@ -78,6 +81,7 @@ feedback loop:
                                                                                                      │                      │    iso-cache ─▶ artifact reuse
                                                                                                      │                      │    iso-index ─▶ artifact lookup
                                                                                                      │                      │    iso-canon ─▶ identity keys
+                                                                                                     │                      │    iso-preflight ─▶ dispatch plan
                                                                                                      │                      │    iso-migrate ─▶ project upgrades
                                                                                                      │                      │    iso-capabilities ─▶ role permission policy
   ┌────────────────────┐                                                                             │ .codex/config.toml    │
@@ -134,6 +138,8 @@ the repo now supports a tighter loop:
   grepping and loading growing state/report trees into prompts.
 - `iso-canon normalize/key/compare` keeps duplicate/entity keys local
   instead of repeatedly restating URL, company, and role matching rules.
+- `iso-preflight plan/check` keeps dispatch eligibility and batching local
+  instead of relying on prompt prose for source-backed facts and fan-out rules.
 - `iso-migrate plan/apply/check` keeps consumer project upgrades local
   instead of hand-editing package scripts, dependency ranges, and ignores.
 - `iso-capabilities check/render` keeps role permission matrices local
@@ -169,6 +175,9 @@ of the prompt:
 - `iso-canon` makes identity canonicalization executable: URLs, companies,
   roles, and company-role pairs compile to stable keys with explainable
   `same` / `possible` / `different` comparisons.
+- `iso-preflight` makes dispatch planning executable: validate required
+  file-backed facts, apply skip/block gates, avoid same-key overlap inside
+  rounds, and emit pre/post steps before tool-heavy work starts.
 - `iso-migrate` makes project upgrades executable: JSON pointer edits, line
   insertion, exact replacement, and guarded file writes run as idempotent
   migrations instead of one-off shell patches.
@@ -281,6 +290,12 @@ of the prompt:
   Normalizes URLs, companies, roles, and company-role pairs into stable
   keys, then compares them with an explainable score so domain packages
   can keep duplicate checks out of prompt prose.
+
+- **[`packages/iso-preflight`](./packages/iso-preflight)** — [`@razroo/iso-preflight`](https://www.npmjs.com/package/@razroo/iso-preflight)
+  Deterministic preflight planning for agent workflows. Validates
+  source-backed candidate facts, applies precomputed skip/block gates,
+  avoids same-key overlap inside bounded rounds, and emits pre/post steps
+  so domain packages can fail closed before browser or MCP work starts.
 
 - **[`packages/iso-migrate`](./packages/iso-migrate)** — [`@razroo/iso-migrate`](https://www.npmjs.com/package/@razroo/iso-migrate)
   Deterministic project migrations for agent workflow packages. Plans,
@@ -463,6 +478,14 @@ iso-canon compare company "OpenAI, Inc." "Open AI" --config canon.json --profile
 iso-canon explain --config canon.json --profile jobforge
 ```
 
+### `@razroo/iso-preflight` — is this workflow safe to dispatch?
+
+```bash
+iso-preflight plan --config preflight.json --candidates candidates.json
+iso-preflight check --config preflight.json --candidates candidates.json
+iso-preflight explain --config preflight.json
+```
+
 ### `@razroo/iso-migrate` — what project-owned files need upgrading?
 
 ```bash
@@ -512,6 +535,7 @@ iso/
     ├── iso-cache/        # deterministic content-addressed artifact cache
     ├── iso-index/        # deterministic local artifact lookup index
     ├── iso-canon/        # deterministic identity canonicalization
+    ├── iso-preflight/    # deterministic preflight dispatch planning
     ├── iso-migrate/      # deterministic consumer project migrations
     ├── iso-contract/     # deterministic artifact contracts
     └── iso-capabilities/ # deterministic role capability policy
@@ -535,6 +559,7 @@ npm --workspace @razroo/iso-context run test    # iso-context bundle/budget test
 npm --workspace @razroo/iso-cache run test      # iso-cache artifact cache tests
 npm --workspace @razroo/iso-index run test      # iso-index artifact lookup tests
 npm --workspace @razroo/iso-canon run test      # iso-canon identity key tests
+npm --workspace @razroo/iso-preflight run test  # iso-preflight dispatch planning tests
 npm --workspace @razroo/iso-migrate run test    # iso-migrate project migration tests
 npm --workspace @razroo/iso-contract run test   # iso-contract artifact contract tests
 npm --workspace @razroo/iso-capabilities run test # iso-capabilities policy tests
@@ -592,7 +617,7 @@ downstream repo would use.
 
 `npm run test:pack` goes one level further: it packs the local workspaces into
 tarballs, installs them into fresh temp projects, and smoke-tests the packaged
-`iso-harness`, `iso`, `iso-eval`, `iso-trace`, `iso-route`, `iso-guard`, `iso-ledger`, `iso-context`, `iso-cache`, `iso-index`, `iso-canon`, `iso-migrate`, `iso-contract`, and `iso-capabilities`
+`iso-harness`, `iso`, `iso-eval`, `iso-trace`, `iso-route`, `iso-guard`, `iso-ledger`, `iso-context`, `iso-cache`, `iso-index`, `iso-canon`, `iso-preflight`, `iso-migrate`, `iso-contract`, and `iso-capabilities`
 CLIs. This guards against packaging regressions that workspace-only tests can
 miss.
 
