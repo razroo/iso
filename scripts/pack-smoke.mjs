@@ -85,6 +85,7 @@ try {
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-contract']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-capabilities']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-score']);
+  run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-timeline']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-route']);
 
   const packsDir = resolve(tmpRoot, 'packs');
@@ -110,6 +111,7 @@ try {
   const isoContractTgz = packWorkspace('@razroo/iso-contract', packsDir);
   const isoCapabilitiesTgz = packWorkspace('@razroo/iso-capabilities', packsDir);
   const isoScoreTgz = packWorkspace('@razroo/iso-score', packsDir);
+  const isoTimelineTgz = packWorkspace('@razroo/iso-timeline', packsDir);
   const isoRouteTgz = packWorkspace('@razroo/iso-route', packsDir);
 
   // Smoke the packaged iso-harness CLI directly.
@@ -492,6 +494,57 @@ try {
   }
   run('npx', ['--no-install', 'iso-score', 'explain', '--config', scoreConfigPath], isoScoreDir);
 
+  // Smoke the packaged iso-timeline CLI against the bundled JobForge-style next-action policy.
+  const isoTimelineDir = resolve(tmpRoot, 'iso-timeline');
+  mkdirSync(isoTimelineDir, { recursive: true });
+  writePackageJson(isoTimelineDir);
+  run('npm', ['install', isoTimelineTgz], isoTimelineDir);
+  const isoTimelineVersion = run('npx', ['--no-install', 'iso-timeline', '--version'], isoTimelineDir, { capture: true });
+  if (!isoTimelineVersion.stdout.trim()) {
+    throw new Error('packaged iso-timeline --version produced no output');
+  }
+  const timelinePackageDir = resolve(isoTimelineDir, 'node_modules', '@razroo', 'iso-timeline');
+  const timelineConfigPath = resolve(timelinePackageDir, 'examples', 'jobforge-timeline.json');
+  const timelineEventsPath = resolve(timelinePackageDir, 'examples', 'jobforge-events.jsonl');
+  const timelineOutPath = resolve(isoTimelineDir, 'timeline-result.json');
+  const timelinePlan = run(
+    'npx',
+    ['--no-install', 'iso-timeline', 'plan', '--config', timelineConfigPath, '--events', timelineEventsPath, '--now', '2026-04-27T00:00:00.000Z', '--out', timelineOutPath],
+    isoTimelineDir,
+    { capture: true },
+  );
+  if (!timelinePlan.stdout.includes('iso-timeline: PLAN')) {
+    throw new Error('packaged iso-timeline plan did not report PLAN');
+  }
+  const timelineDue = run(
+    'npx',
+    ['--no-install', 'iso-timeline', 'due', '--config', timelineConfigPath, '--events', timelineEventsPath, '--now', '2026-04-27T00:00:00.000Z'],
+    isoTimelineDir,
+    { capture: true },
+  );
+  if (!timelineDue.stdout.includes('iso-timeline: PLAN')) {
+    throw new Error('packaged iso-timeline due did not report PLAN');
+  }
+  const timelineVerify = run(
+    'npx',
+    ['--no-install', 'iso-timeline', 'verify', '--timeline', timelineOutPath],
+    isoTimelineDir,
+    { capture: true },
+  );
+  if (!timelineVerify.stdout.includes('iso-timeline: PASS')) {
+    throw new Error('packaged iso-timeline verify did not report PASS');
+  }
+  const timelineCheck = run(
+    'npx',
+    ['--no-install', 'iso-timeline', 'check', '--config', timelineConfigPath, '--events', timelineEventsPath, '--now', '2026-04-27T00:00:00.000Z', '--fail-on', 'none'],
+    isoTimelineDir,
+    { capture: true },
+  );
+  if (!timelineCheck.stdout.includes('iso-timeline: PASS')) {
+    throw new Error('packaged iso-timeline check did not report PASS');
+  }
+  run('npx', ['--no-install', 'iso-timeline', 'explain', '--config', timelineConfigPath], isoTimelineDir);
+
   // Smoke the packaged iso-preflight CLI against the bundled JobForge-style preflight plan.
   const isoPreflightDir = resolve(tmpRoot, 'iso-preflight');
   mkdirSync(isoPreflightDir, { recursive: true });
@@ -822,7 +875,7 @@ try {
   run('npx', ['--no-install', 'iso-route', 'plan', modelsPath], isoRouteDir);
 
   console.log(
-    `\npack smoke ok — verified packaged iso-harness, iso, iso-eval, iso-trace, iso-guard, iso-ledger, iso-context, iso-cache, iso-index, iso-canon, iso-score, iso-preflight, iso-postflight, iso-redact, iso-facts, iso-migrate, iso-contract, iso-capabilities, and iso-route from ${tmpRoot}`,
+    `\npack smoke ok — verified packaged iso-harness, iso, iso-eval, iso-trace, iso-guard, iso-ledger, iso-context, iso-cache, iso-index, iso-canon, iso-score, iso-timeline, iso-preflight, iso-postflight, iso-redact, iso-facts, iso-migrate, iso-contract, iso-capabilities, and iso-route from ${tmpRoot}`,
   );
 } catch (err) {
   failed = true;

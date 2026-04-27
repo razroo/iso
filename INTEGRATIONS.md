@@ -1,6 +1,6 @@
 # Integrations
 
-This repo ships twenty-two packages that **work on their own** but are **designed
+This repo ships twenty-three packages that **work on their own** but are **designed
 to compose**. The planned cross-package compositions listed here are already
 shipped, so this file now serves as:
 
@@ -269,6 +269,19 @@ or threshold checks.
 
 ---
 
+## 19. `iso-timeline` ← deterministic time-based next-action policy for domain packages — **DONE**
+
+Introduced as a standalone package. `iso-timeline` does not import JobForge,
+`iso-ledger`, `iso-facts`, `iso-index`, or any other domain package; it
+provides the on-disk JSON timeline policy and dated event formats that domain
+tools can share. JobForge-style examples cover application follow-ups,
+interview thank-yous, and stale pipeline items, but the package remains
+generic: compute upcoming, due, overdue, suppressed, and blocked actions from
+dated events without asking a model to reason over date math or growing
+tracker files.
+
+---
+
 ## Design questions that are *not* open integrations
 
 The following look like integrations but are deliberately decoupled —
@@ -331,6 +344,11 @@ don't "fix" them without a conversation first.
   rubric dimensions, evidence policy, score freshness, source precedence, and
   whether a gate routes to preflight, ledger recording, human review, or
   another workflow step.
+- **`iso-timeline` does not decide what a domain should follow up on.** It
+  evaluates configured dated-event policy. Domain packages still own event
+  extraction, source precedence, business calendars, stale-action retention,
+  and whether due actions route to prompts, ledgers, notifications, or
+  workflow dispatch.
 - **`iso-postflight` does not decide how a domain collects observations.**
   It settles explicit plan/outcome/artifact/step records. Domain packages
   still own whether those observations come from TSV files, ledger events,

@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "defaults": {
+    "overdueAfter": "7d",
+    "latestOnly": true
+  },
+  "rules": [
+    {
+      "id": "applied-follow-up",
+      "label": "Applied follow-up",
+      "action": "send_follow_up",
+      "match": {
+        "type": "application.status",
+        "where": {
+          "data.status": "Applied"
+        }
+      },
+      "after": "7d",
+      "suppressWhen": [
+        {
+          "type": [
+            "application.follow_up",
+            "application.rejected",
+            "interview.scheduled"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "interview-thank-you",
+      "label": "Interview thank-you",
+      "action": "send_thank_you",
+      "match": {
+        "type": "interview.completed"
+      },
+      "after": "1d",
+      "overdueAfter": "2d",
+      "suppressWhen": [
+        {
+          "type": "interview.thank_you"
+        }
+      ]
+    },
+    {
+      "id": "stale-pipeline-item",
+      "label": "Stale pending pipeline item",
+      "action": "process_or_discard_pipeline_item",
+      "match": {
+        "type": "pipeline.item",
+        "where": {
+          "data.status": "pending"
+        }
+      },
+      "after": "3d",
+      "overdueAfter": "4d",
+      "suppressWhen": [
+        {
+          "type": [
+            "pipeline.processed",
+            "application.status"
+          ]
+        }
+      ]
+    }
+  ]
+}

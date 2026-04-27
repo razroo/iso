@@ -30,11 +30,11 @@ Today, agent workflow reliability is fragmented on three axes:
    unstructured rationale all drop silently at 7B. You don't find out
    until the agent misbehaves in production.
 3. **Runtime fragmentation.** Workflows rely on fragile prompt prose for
-  fan-out limits, context loading, artifact reuse, fact extraction, identity keys, rubric scoring, project upgrades, role permissions, output shape, duplicate checks, post-dispatch settlement, redaction, and
+  fan-out limits, context loading, artifact reuse, fact extraction, identity keys, rubric scoring, time-based next actions, project upgrades, role permissions, output shape, duplicate checks, post-dispatch settlement, redaction, and
   "what already happened." Those invariants belong in deterministic local packages,
   not in repeatedly re-tokenized instructions.
 
-Twenty-two packages solve that in one pipeline with runtime control and a
+Twenty-three packages solve that in one pipeline with runtime control and a
 feedback loop:
 
 - **Four build-time tools** turn your authored source into every harness's file layout:
@@ -44,7 +44,7 @@ feedback loop:
   [`@razroo/iso-route`](./packages/iso-route) compiles *one model policy* into each harness's config.
 - **One wrapper** runs the whole build chain:
   [`@razroo/iso`](./packages/iso) chains the above into a single `iso build`.
-- **Fourteen runtime-control libraries** handle durable execution, context selection, artifact caching, artifact lookup, fact materialization, identity canonicalization, deterministic scoring, preflight dispatch planning, postflight settlement, redaction, project migration, role capabilities, artifact shape, and operational truth:
+- **Fifteen runtime-control libraries** handle durable execution, context selection, artifact caching, artifact lookup, fact materialization, identity canonicalization, deterministic scoring, time-based next-action planning, preflight dispatch planning, postflight settlement, redaction, project migration, role capabilities, artifact shape, and operational truth:
   [`@razroo/iso-orchestrator`](./packages/iso-orchestrator) provides resumable
   steps, keyed mutexes, and bounded fan-out for side-effectful agent workflows,
   [`@razroo/iso-context`](./packages/iso-context) resolves context bundles,
@@ -59,6 +59,9 @@ feedback loop:
   company, role, and company-role keys for duplicate checks,
   [`@razroo/iso-score`](./packages/iso-score) computes weighted rubric
   scores, bands, comparisons, and gate decisions from structured evidence,
+  [`@razroo/iso-timeline`](./packages/iso-timeline) computes due,
+  overdue, suppressed, and blocked next actions from dated events and
+  cadence policy,
   [`@razroo/iso-preflight`](./packages/iso-preflight) validates
   source-backed candidate facts, applies gates, and produces bounded
   dispatch rounds before tool-heavy work starts,
@@ -95,6 +98,7 @@ feedback loop:
                                                                                                      │                      │    iso-facts ─▶ fact materialization
                                                                                                      │                      │    iso-canon ─▶ identity keys
                                                                                                      │                      │    iso-score ─▶ rubric gates
+                                                                                                     │                      │    iso-timeline ─▶ due next actions
                                                                                                      │                      │    iso-preflight ─▶ dispatch plan
                                                                                                      │                      │    iso-postflight ─▶ settlement gate
                                                                                                      │                      │    iso-redact ─▶ safe exports
@@ -158,6 +162,9 @@ the repo now supports a tighter loop:
   instead of repeatedly restating URL, company, and role matching rules.
 - `iso-score compute/check/gate` keeps weighted rubric scoring local
   instead of asking a model to redo arithmetic, bands, and threshold checks.
+- `iso-timeline plan/due/check` keeps follow-up, stale-item, retry, and
+  other dated next-action policy local instead of asking a model to reason
+  over dates from growing tracker files.
 - `iso-preflight plan/check` keeps dispatch eligibility and batching local
   instead of relying on prompt prose for source-backed facts and fan-out rules.
 - `iso-postflight status/check` keeps dispatch settlement local instead of
@@ -206,6 +213,9 @@ of the prompt:
 - `iso-score` makes rubric scoring executable: structured dimension scores
   compile into weighted totals, bands, comparisons, and gate decisions with
   deterministic ids and local verification.
+- `iso-timeline` makes time-based next-action policy executable: dated
+  events compile into upcoming, due, overdue, suppressed, and blocked
+  actions with deterministic ids and local verification.
 - `iso-preflight` makes dispatch planning executable: validate required
   file-backed facts, apply skip/block gates, avoid same-key overlap inside
   rounds, and emit pre/post steps before tool-heavy work starts.
@@ -340,6 +350,12 @@ of the prompt:
   profile-specific scores, bands, gate decisions, comparisons, and
   content-derived result ids from structured dimension inputs so domain
   packages can keep arithmetic and threshold checks out of prompt prose.
+
+- **[`packages/iso-timeline`](./packages/iso-timeline)** — [`@razroo/iso-timeline`](https://www.npmjs.com/package/@razroo/iso-timeline)
+  Deterministic time-based next-action planning for agent workflows.
+  Computes upcoming, due, overdue, suppressed, and blocked actions from
+  dated events plus local cadence policy so domain packages can keep
+  follow-up, retry, and stale-item date math out of prompt prose.
 
 - **[`packages/iso-preflight`](./packages/iso-preflight)** — [`@razroo/iso-preflight`](https://www.npmjs.com/package/@razroo/iso-preflight)
   Deterministic preflight planning for agent workflows. Validates
@@ -564,6 +580,16 @@ iso-score compare --config score.json --left evaluation.json --right evaluation-
 iso-score explain --config score.json
 ```
 
+### `@razroo/iso-timeline` — what is due now?
+
+```bash
+iso-timeline plan --config timeline.json --events events.jsonl --now 2026-04-27T00:00:00Z
+iso-timeline due --config timeline.json --events events.jsonl --now 2026-04-27T00:00:00Z
+iso-timeline check --config timeline.json --events events.jsonl --fail-on overdue
+iso-timeline verify --timeline timeline-result.json
+iso-timeline explain --config timeline.json
+```
+
 ### `@razroo/iso-preflight` — is this workflow safe to dispatch?
 
 ```bash
@@ -640,6 +666,7 @@ iso/
     ├── iso-facts/        # deterministic source-backed fact materialization
     ├── iso-canon/        # deterministic identity canonicalization
     ├── iso-score/        # deterministic weighted rubric scoring
+    ├── iso-timeline/     # deterministic time-based next-action planning
     ├── iso-preflight/    # deterministic preflight dispatch planning
     ├── iso-postflight/   # deterministic postflight settlement
     ├── iso-redact/       # deterministic sensitive-data redaction
@@ -668,6 +695,7 @@ npm --workspace @razroo/iso-index run test      # iso-index artifact lookup test
 npm --workspace @razroo/iso-facts run test      # iso-facts materialization tests
 npm --workspace @razroo/iso-canon run test      # iso-canon identity key tests
 npm --workspace @razroo/iso-score run test      # iso-score rubric scoring tests
+npm --workspace @razroo/iso-timeline run test   # iso-timeline next-action tests
 npm --workspace @razroo/iso-preflight run test  # iso-preflight dispatch planning tests
 npm --workspace @razroo/iso-postflight run test # iso-postflight settlement tests
 npm --workspace @razroo/iso-redact run test     # iso-redact policy/redaction tests
@@ -709,7 +737,7 @@ build, and `npm publish --provenance`.
 ## End-to-end example
 
 [`examples/pipeline/`](./examples/pipeline) is an executable demonstration
-that exercises **seven of the twenty-two packages end-to-end** in one `npm run
+that exercises **seven of the twenty-three packages end-to-end** in one `npm run
 test:pipeline` invocation: `agentmd lint` + `render` → `isolint lint` →
 `iso-route build` (from a bundled `models.yaml` that extends the
 `standard` preset) → `iso-harness build` (which consumes iso-route's
@@ -728,7 +756,7 @@ downstream repo would use.
 
 `npm run test:pack` goes one level further: it packs the local workspaces into
 tarballs, installs them into fresh temp projects, and smoke-tests the packaged
-`iso-harness`, `iso`, `iso-eval`, `iso-trace`, `iso-route`, `iso-guard`, `iso-ledger`, `iso-context`, `iso-cache`, `iso-index`, `iso-facts`, `iso-canon`, `iso-score`, `iso-preflight`, `iso-postflight`, `iso-redact`, `iso-migrate`, `iso-contract`, and `iso-capabilities`
+`iso-harness`, `iso`, `iso-eval`, `iso-trace`, `iso-route`, `iso-guard`, `iso-ledger`, `iso-context`, `iso-cache`, `iso-index`, `iso-facts`, `iso-canon`, `iso-score`, `iso-timeline`, `iso-preflight`, `iso-postflight`, `iso-redact`, `iso-migrate`, `iso-contract`, and `iso-capabilities`
 CLIs. This guards against packaging regressions that workspace-only tests can
 miss.
 
