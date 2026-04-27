@@ -259,177 +259,177 @@ of the prompt:
 
 ## Packages
 
-- **[`packages/iso`](./packages/iso)** — [`@razroo/iso`](https://www.npmjs.com/package/@razroo/iso) · *recommended entry point*
-  The wrapper CLI for the whole flow. If `agent.md` is your authored
-  source, `iso build` runs `agentmd lint`, `agentmd render`, `isolint
-  lint`, then `iso-harness build` in one command. Use this unless you
-  have a reason to reach for a sub-package directly.
+1. **[`packages/iso`](./packages/iso)** — [`@razroo/iso`](https://www.npmjs.com/package/@razroo/iso) · *recommended entry point*
+   The wrapper CLI for the whole flow. If `agent.md` is your authored
+   source, `iso build` runs `agentmd lint`, `agentmd render`, `isolint
+   lint`, then `iso-harness build` in one command. Use this unless you
+   have a reason to reach for a sub-package directly.
 
-- **[`packages/agentmd`](./packages/agentmd)** — [`@razroo/agentmd`](https://www.npmjs.com/package/@razroo/agentmd)
-  A structured-markdown dialect for agent prompts. Rules are scoped
-  (`[H1]` hard limit, `[D1]` default) with load-bearing `why:` rationale.
-  Ships a linter for structure (missing rationale, dangling refs, no
-  fallback row) and a fixture-driven harness that measures per-rule
-  adherence against the target model.
+2. **[`packages/agentmd`](./packages/agentmd)** — [`@razroo/agentmd`](https://www.npmjs.com/package/@razroo/agentmd)
+   A structured-markdown dialect for agent prompts. Rules are scoped
+   (`[H1]` hard limit, `[D1]` default) with load-bearing `why:` rationale.
+   Ships a linter for structure (missing rationale, dangling refs, no
+   fallback row) and a fixture-driven harness that measures per-rule
+   adherence against the target model.
 
-- **[`packages/isolint`](./packages/isolint)** — [`@razroo/isolint`](https://www.npmjs.com/package/@razroo/isolint)
-  Lints the compiled prose for phrases weak small models can't parse —
-  `should`, `when relevant`, `one of the usual categories`, taste words,
-  long sentences, unclosed `etc.` lists. `--fix --llm` rewrites offenders
-  and re-lints the rewrite before accepting. Also ships an Isomorphic
-  Plan engine for fully-deterministic large-model-plans → small-model-run
-  pipelines.
+3. **[`packages/isolint`](./packages/isolint)** — [`@razroo/isolint`](https://www.npmjs.com/package/@razroo/isolint)
+   Lints the compiled prose for phrases weak small models can't parse —
+   `should`, `when relevant`, `one of the usual categories`, taste words,
+   long sentences, unclosed `etc.` lists. `--fix --llm` rewrites offenders
+   and re-lints the rewrite before accepting. Also ships an Isomorphic
+   Plan engine for fully-deterministic large-model-plans → small-model-run
+   pipelines.
 
-- **[`packages/iso-harness`](./packages/iso-harness)** — [`@razroo/iso-harness`](https://www.npmjs.com/package/@razroo/iso-harness)
-  One `iso/` source directory → the file layout each coding agent
-  actually reads. Transpiles instructions, subagents, slash commands, and
-  MCP servers into `CLAUDE.md`, `AGENTS.md`, `.cursor/rules/*.mdc`,
-  `.opencode/agents/*.md`, etc., so all four harnesses stay in lockstep.
+4. **[`packages/iso-harness`](./packages/iso-harness)** — [`@razroo/iso-harness`](https://www.npmjs.com/package/@razroo/iso-harness)
+   One `iso/` source directory → the file layout each coding agent
+   actually reads. Transpiles instructions, subagents, slash commands, and
+   MCP servers into `CLAUDE.md`, `AGENTS.md`, `.cursor/rules/*.mdc`,
+   `.opencode/agents/*.md`, etc., so all four harnesses stay in lockstep.
 
-- **[`packages/iso-route`](./packages/iso-route)** — [`@razroo/iso-route`](https://www.npmjs.com/package/@razroo/iso-route)
-  One model policy, every harness. Declare a default model plus named
-  roles (`planner`, `fast-edit`, `reviewer`, …) in a single
-  `models.yaml`; iso-route compiles that into `.claude/settings.json`,
-  `.codex/config.toml`, `opencode.json`, and a resolved role map that
-  `iso-harness` consumes when stamping per-subagent frontmatter. Honest
-  about ceilings — warns loudly where a harness (e.g. Cursor) can't bind
-  models programmatically.
+5. **[`packages/iso-route`](./packages/iso-route)** — [`@razroo/iso-route`](https://www.npmjs.com/package/@razroo/iso-route)
+   One model policy, every harness. Declare a default model plus named
+   roles (`planner`, `fast-edit`, `reviewer`, …) in a single
+   `models.yaml`; iso-route compiles that into `.claude/settings.json`,
+   `.codex/config.toml`, `opencode.json`, and a resolved role map that
+   `iso-harness` consumes when stamping per-subagent frontmatter. Honest
+   about ceilings — warns loudly where a harness (e.g. Cursor) can't bind
+   models programmatically.
 
-- **[`packages/iso-eval`](./packages/iso-eval)** — [`@razroo/iso-eval`](https://www.npmjs.com/package/@razroo/iso-eval)
-  Behavioral eval runner for the produced harness. Snapshots a workspace
-  per task, hands it to a runner with the task prompt, then scores the
-  resulting filesystem / command state — answering "did the agent
-  actually do it?" that structural and prose lints can't. Ships a
-  deterministic `fake` runner for CI smoke plus packaged real runners for
-  Cursor, Codex, Claude Code, and OpenCode. The library still accepts
-  custom `RunnerFn`s for teams that need a different invocation surface.
+6. **[`packages/iso-eval`](./packages/iso-eval)** — [`@razroo/iso-eval`](https://www.npmjs.com/package/@razroo/iso-eval)
+   Behavioral eval runner for the produced harness. Snapshots a workspace
+   per task, hands it to a runner with the task prompt, then scores the
+   resulting filesystem / command state — answering "did the agent
+   actually do it?" that structural and prose lints can't. Ships a
+   deterministic `fake` runner for CI smoke plus packaged real runners for
+   Cursor, Codex, Claude Code, and OpenCode. The library still accepts
+   custom `RunnerFn`s for teams that need a different invocation surface.
 
-- **[`packages/iso-trace`](./packages/iso-trace)** — [`@razroo/iso-trace`](https://www.npmjs.com/package/@razroo/iso-trace)
-  Local observability for real agent transcripts. Parses Claude Code,
-  Cursor, Codex, and OpenCode sessions into a harness-agnostic event model so
-  you can ask "which rules ever actually fired?", "which
-  tools does my agent reach for most?", and "which captured sessions
-  would make good regression fixtures?" Ships redacted export / fixture
-  helpers so that feedback loop is easier to reuse safely. `model-score`
-  currently stays on Claude Code, Codex, and OpenCode because Cursor
-  transcripts do not yet expose stable model metadata. Zero upload —
-  everything is local reads and user-controlled output.
+7. **[`packages/iso-trace`](./packages/iso-trace)** — [`@razroo/iso-trace`](https://www.npmjs.com/package/@razroo/iso-trace)
+   Local observability for real agent transcripts. Parses Claude Code,
+   Cursor, Codex, and OpenCode sessions into a harness-agnostic event model so
+   you can ask "which rules ever actually fired?", "which
+   tools does my agent reach for most?", and "which captured sessions
+   would make good regression fixtures?" Ships redacted export / fixture
+   helpers so that feedback loop is easier to reuse safely. `model-score`
+   currently stays on Claude Code, Codex, and OpenCode because Cursor
+   transcripts do not yet expose stable model metadata. Zero upload —
+   everything is local reads and user-controlled output.
 
-- **[`packages/iso-guard`](./packages/iso-guard)** — [`@razroo/iso-guard`](https://www.npmjs.com/package/@razroo/iso-guard)
-  Deterministic runtime policy checks for agent workflows. Reads normalized
-  event streams or `iso-trace export` JSON/JSONL and verifies invariants
-  such as bounded fan-out, cleanup-before-dispatch, required follow-up
-  commands, no overlapping same-key work, and prompt secret redaction.
-  No model calls, no MCP server, and no injected prompt overhead.
+8. **[`packages/iso-guard`](./packages/iso-guard)** — [`@razroo/iso-guard`](https://www.npmjs.com/package/@razroo/iso-guard)
+   Deterministic runtime policy checks for agent workflows. Reads normalized
+   event streams or `iso-trace export` JSON/JSONL and verifies invariants
+   such as bounded fan-out, cleanup-before-dispatch, required follow-up
+   commands, no overlapping same-key work, and prompt secret redaction.
+   No model calls, no MCP server, and no injected prompt overhead.
 
-- **[`packages/iso-ledger`](./packages/iso-ledger)** — [`@razroo/iso-ledger`](https://www.npmjs.com/package/@razroo/iso-ledger)
-  Append-only operational state for agent workflows. Stores local JSONL
-  events with deterministic ids and idempotency keys, supports
-  `append/query/has/verify/materialize`, and gives domain packages a
-  canonical state source without loading tracker files into the prompt.
+9. **[`packages/iso-ledger`](./packages/iso-ledger)** — [`@razroo/iso-ledger`](https://www.npmjs.com/package/@razroo/iso-ledger)
+   Append-only operational state for agent workflows. Stores local JSONL
+   events with deterministic ids and idempotency keys, supports
+   `append/query/has/verify/materialize`, and gives domain packages a
+   canonical state source without loading tracker files into the prompt.
 
-- **[`packages/iso-context`](./packages/iso-context)** — [`@razroo/iso-context`](https://www.npmjs.com/package/@razroo/iso-context)
-  Deterministic context bundles for agent workflows. Loads JSON bundle
-  policies, resolves inheritance, estimates file tokens, checks file and
-  bundle budgets, and renders markdown/json context packs so domain
-  packages can keep context-loading rules out of prompt prose.
+10. **[`packages/iso-context`](./packages/iso-context)** — [`@razroo/iso-context`](https://www.npmjs.com/package/@razroo/iso-context)
+   Deterministic context bundles for agent workflows. Loads JSON bundle
+   policies, resolves inheritance, estimates file tokens, checks file and
+   bundle budgets, and renders markdown/json context packs so domain
+   packages can keep context-loading rules out of prompt prose.
 
-- **[`packages/iso-cache`](./packages/iso-cache)** — [`@razroo/iso-cache`](https://www.npmjs.com/package/@razroo/iso-cache)
-  Deterministic content-addressed artifact cache for agent workflows.
-  Generates stable keys, stores UTF-8 blobs with metadata and optional
-  TTLs, retrieves/list entries, verifies object hashes, and prunes
-  expired/orphaned artifacts so domain packages can reuse safe inputs
-  without model calls or MCP overhead.
+11. **[`packages/iso-cache`](./packages/iso-cache)** — [`@razroo/iso-cache`](https://www.npmjs.com/package/@razroo/iso-cache)
+   Deterministic content-addressed artifact cache for agent workflows.
+   Generates stable keys, stores UTF-8 blobs with metadata and optional
+   TTLs, retrieves/list entries, verifies object hashes, and prunes
+   expired/orphaned artifacts so domain packages can reuse safe inputs
+   without model calls or MCP overhead.
 
-- **[`packages/iso-index`](./packages/iso-index)** — [`@razroo/iso-index`](https://www.npmjs.com/package/@razroo/iso-index)
-  Deterministic local artifact index for agent workflows. Builds compact
-  lookup indexes from configured text, TSV, markdown-table, and JSONL
-  sources, then supports `query/has/verify` so domain packages can find
-  authoritative facts without loading whole artifact trees into prompt
-  context.
+12. **[`packages/iso-index`](./packages/iso-index)** — [`@razroo/iso-index`](https://www.npmjs.com/package/@razroo/iso-index)
+   Deterministic local artifact index for agent workflows. Builds compact
+   lookup indexes from configured text, TSV, markdown-table, and JSONL
+   sources, then supports `query/has/verify` so domain packages can find
+   authoritative facts without loading whole artifact trees into prompt
+   context.
 
-- **[`packages/iso-facts`](./packages/iso-facts)** — [`@razroo/iso-facts`](https://www.npmjs.com/package/@razroo/iso-facts)
-  Deterministic fact materialization for agent workflows. Extracts
-  provenance-rich facts from configured text, TSV, markdown-table, JSONL,
-  and JSON sources, then supports `query/has/verify/check` so domain
-  packages can feed source-backed facts into contracts and dispatch gates
-  without model calls.
+13. **[`packages/iso-facts`](./packages/iso-facts)** — [`@razroo/iso-facts`](https://www.npmjs.com/package/@razroo/iso-facts)
+   Deterministic fact materialization for agent workflows. Extracts
+   provenance-rich facts from configured text, TSV, markdown-table, JSONL,
+   and JSON sources, then supports `query/has/verify/check` so domain
+   packages can feed source-backed facts into contracts and dispatch gates
+   without model calls.
 
-- **[`packages/iso-canon`](./packages/iso-canon)** — [`@razroo/iso-canon`](https://www.npmjs.com/package/@razroo/iso-canon)
-  Deterministic canonicalization and entity matching for agent workflows.
-  Normalizes URLs, companies, roles, and company-role pairs into stable
-  keys, then compares them with an explainable score so domain packages
-  can keep duplicate checks out of prompt prose.
+14. **[`packages/iso-canon`](./packages/iso-canon)** — [`@razroo/iso-canon`](https://www.npmjs.com/package/@razroo/iso-canon)
+   Deterministic canonicalization and entity matching for agent workflows.
+   Normalizes URLs, companies, roles, and company-role pairs into stable
+   keys, then compares them with an explainable score so domain packages
+   can keep duplicate checks out of prompt prose.
 
-- **[`packages/iso-score`](./packages/iso-score)** — [`@razroo/iso-score`](https://www.npmjs.com/package/@razroo/iso-score)
-  Deterministic weighted rubric scoring for agent workflows. Computes
-  profile-specific scores, bands, gate decisions, comparisons, and
-  content-derived result ids from structured dimension inputs so domain
-  packages can keep arithmetic and threshold checks out of prompt prose.
+15. **[`packages/iso-score`](./packages/iso-score)** — [`@razroo/iso-score`](https://www.npmjs.com/package/@razroo/iso-score)
+   Deterministic weighted rubric scoring for agent workflows. Computes
+   profile-specific scores, bands, gate decisions, comparisons, and
+   content-derived result ids from structured dimension inputs so domain
+   packages can keep arithmetic and threshold checks out of prompt prose.
 
-- **[`packages/iso-timeline`](./packages/iso-timeline)** — [`@razroo/iso-timeline`](https://www.npmjs.com/package/@razroo/iso-timeline)
-  Deterministic time-based next-action planning for agent workflows.
-  Computes upcoming, due, overdue, suppressed, and blocked actions from
-  dated events plus local cadence policy so domain packages can keep
-  follow-up, retry, and stale-item date math out of prompt prose.
+16. **[`packages/iso-timeline`](./packages/iso-timeline)** — [`@razroo/iso-timeline`](https://www.npmjs.com/package/@razroo/iso-timeline)
+   Deterministic time-based next-action planning for agent workflows.
+   Computes upcoming, due, overdue, suppressed, and blocked actions from
+   dated events plus local cadence policy so domain packages can keep
+   follow-up, retry, and stale-item date math out of prompt prose.
 
-- **[`packages/iso-prioritize`](./packages/iso-prioritize)** — [`@razroo/iso-prioritize`](https://www.npmjs.com/package/@razroo/iso-prioritize)
-  Deterministic priority queue selection for agent workflows. Scores
-  structured work items against weighted criteria, applies skip/block gates,
-  enforces quotas, and emits ranked selections so domain packages can keep
-  queue ordering out of prompt prose.
+17. **[`packages/iso-prioritize`](./packages/iso-prioritize)** — [`@razroo/iso-prioritize`](https://www.npmjs.com/package/@razroo/iso-prioritize)
+   Deterministic priority queue selection for agent workflows. Scores
+   structured work items against weighted criteria, applies skip/block gates,
+   enforces quotas, and emits ranked selections so domain packages can keep
+   queue ordering out of prompt prose.
 
-- **[`packages/iso-lineage`](./packages/iso-lineage)** — [`@razroo/iso-lineage`](https://www.npmjs.com/package/@razroo/iso-lineage)
-  Deterministic artifact lineage for agent workflows. Records source input
-  hashes for generated artifacts, verifies graph integrity, and detects stale
-  downstream outputs so domain packages can avoid trusting old reports, PDFs,
-  plans, or derived indexes after inputs change.
+18. **[`packages/iso-lineage`](./packages/iso-lineage)** — [`@razroo/iso-lineage`](https://www.npmjs.com/package/@razroo/iso-lineage)
+   Deterministic artifact lineage for agent workflows. Records source input
+   hashes for generated artifacts, verifies graph integrity, and detects stale
+   downstream outputs so domain packages can avoid trusting old reports, PDFs,
+   plans, or derived indexes after inputs change.
 
-- **[`packages/iso-preflight`](./packages/iso-preflight)** — [`@razroo/iso-preflight`](https://www.npmjs.com/package/@razroo/iso-preflight)
-  Deterministic preflight planning for agent workflows. Validates
-  source-backed candidate facts, applies precomputed skip/block gates,
-  avoids same-key overlap inside bounded rounds, and emits pre/post steps
-  so domain packages can fail closed before browser or MCP work starts.
+19. **[`packages/iso-preflight`](./packages/iso-preflight)** — [`@razroo/iso-preflight`](https://www.npmjs.com/package/@razroo/iso-preflight)
+   Deterministic preflight planning for agent workflows. Validates
+   source-backed candidate facts, applies precomputed skip/block gates,
+   avoids same-key overlap inside bounded rounds, and emits pre/post steps
+   so domain packages can fail closed before browser or MCP work starts.
 
-- **[`packages/iso-postflight`](./packages/iso-postflight)** — [`@razroo/iso-postflight`](https://www.npmjs.com/package/@razroo/iso-postflight)
-  Deterministic postflight settlement for agent workflows. Reconciles
-  bounded dispatch plans with observed outcomes, required artifacts, and
-  post-run steps, then emits the next safe action: dispatch the next round,
-  wait, collect missing output, replace failed candidates, run post-steps,
-  stop, or close.
+20. **[`packages/iso-postflight`](./packages/iso-postflight)** — [`@razroo/iso-postflight`](https://www.npmjs.com/package/@razroo/iso-postflight)
+   Deterministic postflight settlement for agent workflows. Reconciles
+   bounded dispatch plans with observed outcomes, required artifacts, and
+   post-run steps, then emits the next safe action: dispatch the next round,
+   wait, collect missing output, replace failed candidates, run post-steps,
+   stop, or close.
 
-- **[`packages/iso-redact`](./packages/iso-redact)** — [`@razroo/iso-redact`](https://www.npmjs.com/package/@razroo/iso-redact)
-  Deterministic sensitive-data redaction for agent workflows. Loads local
-  redaction policies, scans text for builtin/pattern/field matches, applies
-  replacements without leaking matched values in findings, and verifies
-  exported traces, fixtures, telemetry, logs, or domain artifacts before
-  they are shared.
+21. **[`packages/iso-redact`](./packages/iso-redact)** — [`@razroo/iso-redact`](https://www.npmjs.com/package/@razroo/iso-redact)
+   Deterministic sensitive-data redaction for agent workflows. Loads local
+   redaction policies, scans text for builtin/pattern/field matches, applies
+   replacements without leaking matched values in findings, and verifies
+   exported traces, fixtures, telemetry, logs, or domain artifacts before
+   they are shared.
 
-- **[`packages/iso-migrate`](./packages/iso-migrate)** — [`@razroo/iso-migrate`](https://www.npmjs.com/package/@razroo/iso-migrate)
-  Deterministic project migrations for agent workflow packages. Plans,
-  applies, checks, and explains idempotent JSON/text file upgrades so
-  domain packages can update consumer-owned files without prompt prose,
-  ad hoc shell scripts, or mandatory migration history state.
+22. **[`packages/iso-migrate`](./packages/iso-migrate)** — [`@razroo/iso-migrate`](https://www.npmjs.com/package/@razroo/iso-migrate)
+   Deterministic project migrations for agent workflow packages. Plans,
+   applies, checks, and explains idempotent JSON/text file upgrades so
+   domain packages can update consumer-owned files without prompt prose,
+   ad hoc shell scripts, or mandatory migration history state.
 
-- **[`packages/iso-contract`](./packages/iso-contract)** — [`@razroo/iso-contract`](https://www.npmjs.com/package/@razroo/iso-contract)
-  Deterministic artifact contracts for agent workflows. Loads JSON
-  contract catalogs, validates records, and parses/renders JSON, TSV,
-  and markdown table rows so domain packages can keep artifact formats
-  out of prompt prose.
+23. **[`packages/iso-contract`](./packages/iso-contract)** — [`@razroo/iso-contract`](https://www.npmjs.com/package/@razroo/iso-contract)
+   Deterministic artifact contracts for agent workflows. Loads JSON
+   contract catalogs, validates records, and parses/renders JSON, TSV,
+   and markdown table rows so domain packages can keep artifact formats
+   out of prompt prose.
 
-- **[`packages/iso-capabilities`](./packages/iso-capabilities)** — [`@razroo/iso-capabilities`](https://www.npmjs.com/package/@razroo/iso-capabilities)
-  Deterministic role capability policies for agent workflows. Loads JSON
-  role catalogs, resolves inheritance, checks proposed tool/MCP/command/
-  filesystem/network access, and renders compact target guidance so
-  domain packages can keep permission matrices out of prompt prose.
+24. **[`packages/iso-capabilities`](./packages/iso-capabilities)** — [`@razroo/iso-capabilities`](https://www.npmjs.com/package/@razroo/iso-capabilities)
+   Deterministic role capability policies for agent workflows. Loads JSON
+   role catalogs, resolves inheritance, checks proposed tool/MCP/command/
+   filesystem/network access, and renders compact target guidance so
+   domain packages can keep permission matrices out of prompt prose.
 
-- **[`packages/iso-orchestrator`](./packages/iso-orchestrator)** — [`@razroo/iso-orchestrator`](https://www.npmjs.com/package/@razroo/iso-orchestrator)
-  Durable orchestration primitives for the runtime layer above a single
-  agent session. Persists workflow state to local disk, memoizes
-  load-bearing `step()` results, provides keyed mutexes for "same
-  entity" exclusion, and offers bounded `forEach()` fan-out so domain
-  packages can move invariants out of prompt prose and shell scripts.
-  Library-first today: no CLI, no harness-specific task-dispatch adapter.
+25. **[`packages/iso-orchestrator`](./packages/iso-orchestrator)** — [`@razroo/iso-orchestrator`](https://www.npmjs.com/package/@razroo/iso-orchestrator)
+   Durable orchestration primitives for the runtime layer above a single
+   agent session. Persists workflow state to local disk, memoizes
+   load-bearing `step()` results, provides keyed mutexes for "same
+   entity" exclusion, and offers bounded `forEach()` fan-out so domain
+   packages can move invariants out of prompt prose and shell scripts.
+   Library-first today: no CLI, no harness-specific task-dispatch adapter.
 
 Each package is independently published on npm and works on its own.
 They're in one repo because they're designed to compose.
