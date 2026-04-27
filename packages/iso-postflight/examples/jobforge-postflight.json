@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "workflows": [
+    {
+      "name": "jobforge.apply",
+      "description": "Reconcile JobForge application rounds after task dispatches return.",
+      "successStatuses": [
+        "APPLIED"
+      ],
+      "failureStatuses": [
+        "APPLY FAILED"
+      ],
+      "skipStatuses": [
+        "SKIP",
+        "Discarded"
+      ],
+      "inFlightStatuses": [
+        "running",
+        "in-flight",
+        "started"
+      ],
+      "replacementStatuses": [
+        "APPLY FAILED"
+      ],
+      "requiredArtifacts": [
+        {
+          "id": "tracker-tsv",
+          "label": "Tracker TSV outcome",
+          "statuses": [
+            "APPLIED",
+            "APPLY FAILED",
+            "SKIP",
+            "Discarded"
+          ]
+        }
+      ],
+      "postSteps": [
+        {
+          "id": "merge",
+          "label": "Merge tracker TSV outcomes",
+          "command": "npx job-forge merge"
+        },
+        {
+          "id": "verify",
+          "label": "Verify tracker integrity",
+          "command": "npx job-forge verify"
+        }
+      ]
+    }
+  ]
+}

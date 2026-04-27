@@ -71,6 +71,9 @@ jobs:
           - workspace: "@razroo/iso-preflight"
             node: "20.6.0"
             extra: ""
+          - workspace: "@razroo/iso-postflight"
+            node: "20.6.0"
+            extra: ""
           - workspace: "@razroo/iso-migrate"
             node: "20.6.0"
             extra: ""
@@ -224,6 +227,11 @@ jobs:
         run: |
           node packages/iso-preflight/dist/cli.js plan --config packages/iso-preflight/examples/jobforge-preflight.json --candidates packages/iso-preflight/examples/jobforge-candidates.json
           node packages/iso-preflight/dist/cli.js check --config packages/iso-preflight/examples/jobforge-preflight.json --candidates packages/iso-preflight/examples/jobforge-candidates.json
+
+      - name: iso-postflight example status/check
+        run: |
+          node packages/iso-postflight/dist/cli.js status --config packages/iso-postflight/examples/jobforge-postflight.json --plan packages/iso-postflight/examples/jobforge-plan.json --outcomes packages/iso-postflight/examples/jobforge-outcomes-partial.json
+          node packages/iso-postflight/dist/cli.js check --config packages/iso-postflight/examples/jobforge-postflight.json --plan packages/iso-postflight/examples/jobforge-plan.json --outcomes packages/iso-postflight/examples/jobforge-outcomes-complete.json
 
       - name: iso-migrate example plan/apply/check
         run: |

@@ -1,6 +1,6 @@
 # Integrations
 
-This repo ships seventeen packages that **work on their own** but are **designed
+This repo ships eighteen packages that **work on their own** but are **designed
 to compose**. The planned cross-package compositions listed here are already
 shipped, so this file now serves as:
 
@@ -216,6 +216,20 @@ remember duplicate-matching rules.
 
 ---
 
+## 15. `iso-postflight` ← deterministic settlement for domain packages — **DONE**
+
+Introduced as a standalone package. `iso-postflight` does not import
+JobForge, `iso-preflight`, `iso-orchestrator`, `iso-ledger`, or any other
+domain package; it provides the on-disk JSON config/plan/observation
+contract that domain tools can share. JobForge-style examples cover
+multi-round apply workflows with tracker artifacts and merge/verify
+post-steps, but the package remains generic: reconcile planned candidates
+with observed outcomes, required artifacts, and post-run steps, then return
+the next safe action without asking the model to infer workflow state from
+subagent prose.
+
+---
+
 ## Design questions that are *not* open integrations
 
 The following look like integrations but are deliberately decoupled —
@@ -269,6 +283,10 @@ don't "fix" them without a conversation first.
   stable keys and explainable comparisons. Domain packages still own whether
   a `possible` match blocks work, warns, or routes to review, and which
   artifact source wins when canonical keys disagree with raw records.
+- **`iso-postflight` does not decide how a domain collects observations.**
+  It settles explicit plan/outcome/artifact/step records. Domain packages
+  still own whether those observations come from TSV files, ledger events,
+  trace exports, orchestrator state, or another authoritative source.
 - **`iso-migrate` does not decide release policy for a domain.** It plans
   and applies idempotent file edits. Domain packages still own when
   migrations run, how versions map to migration catalogs, and which

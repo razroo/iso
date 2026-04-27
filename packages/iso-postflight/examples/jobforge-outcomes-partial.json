@@ -1,0 +1,39 @@
+{
+  "dispatches": [
+    {
+      "candidateId": "job-1",
+      "source": "trace:root"
+    },
+    {
+      "candidateId": "job-2",
+      "source": "trace:root"
+    }
+  ],
+  "outcomes": [
+    {
+      "candidateId": "job-1",
+      "status": "APPLIED",
+      "source": "batch/tracker-additions/001-example.tsv",
+      "artifacts": [
+        {
+          "id": "tracker-tsv",
+          "status": "present",
+          "source": "batch/tracker-additions/001-example.tsv"
+        }
+      ]
+    },
+    {
+      "candidateId": "job-2",
+      "status": "APPLIED",
+      "source": "batch/tracker-additions/002-example.tsv",
+      "artifacts": [
+        {
+          "id": "tracker-tsv",
+          "status": "present",
+          "source": "batch/tracker-additions/002-example.tsv"
+        }
+      ]
+    }
+  ],
+  "steps": []
+}

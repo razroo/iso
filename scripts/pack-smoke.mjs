@@ -78,6 +78,7 @@ try {
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-index']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-canon']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-preflight']);
+  run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-postflight']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-migrate']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-contract']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-capabilities']);
@@ -99,6 +100,7 @@ try {
   const isoIndexTgz = packWorkspace('@razroo/iso-index', packsDir);
   const isoCanonTgz = packWorkspace('@razroo/iso-canon', packsDir);
   const isoPreflightTgz = packWorkspace('@razroo/iso-preflight', packsDir);
+  const isoPostflightTgz = packWorkspace('@razroo/iso-postflight', packsDir);
   const isoMigrateTgz = packWorkspace('@razroo/iso-migrate', packsDir);
   const isoContractTgz = packWorkspace('@razroo/iso-contract', packsDir);
   const isoCapabilitiesTgz = packWorkspace('@razroo/iso-capabilities', packsDir);
@@ -454,6 +456,39 @@ try {
     throw new Error('packaged iso-preflight check did not report PASS');
   }
 
+  // Smoke the packaged iso-postflight CLI against the bundled JobForge-style settlement plan.
+  const isoPostflightDir = resolve(tmpRoot, 'iso-postflight');
+  mkdirSync(isoPostflightDir, { recursive: true });
+  writePackageJson(isoPostflightDir);
+  run('npm', ['install', isoPostflightTgz], isoPostflightDir);
+  const isoPostflightVersion = run('npx', ['--no-install', 'iso-postflight', '--version'], isoPostflightDir, { capture: true });
+  if (!isoPostflightVersion.stdout.trim()) {
+    throw new Error('packaged iso-postflight --version produced no output');
+  }
+  const postflightPackageDir = resolve(isoPostflightDir, 'node_modules', '@razroo', 'iso-postflight');
+  const postflightConfigPath = resolve(postflightPackageDir, 'examples', 'jobforge-postflight.json');
+  const postflightPlanPath = resolve(postflightPackageDir, 'examples', 'jobforge-plan.json');
+  const postflightPartialPath = resolve(postflightPackageDir, 'examples', 'jobforge-outcomes-partial.json');
+  const postflightCompletePath = resolve(postflightPackageDir, 'examples', 'jobforge-outcomes-complete.json');
+  const postflightStatus = run(
+    'npx',
+    ['--no-install', 'iso-postflight', 'status', '--config', postflightConfigPath, '--plan', postflightPlanPath, '--outcomes', postflightPartialPath],
+    isoPostflightDir,
+    { capture: true },
+  );
+  if (!postflightStatus.stdout.includes('iso-postflight: STATUS')) {
+    throw new Error('packaged iso-postflight status did not report STATUS');
+  }
+  const postflightCheck = run(
+    'npx',
+    ['--no-install', 'iso-postflight', 'check', '--config', postflightConfigPath, '--plan', postflightPlanPath, '--outcomes', postflightCompletePath],
+    isoPostflightDir,
+    { capture: true },
+  );
+  if (!postflightCheck.stdout.includes('iso-postflight: PASS')) {
+    throw new Error('packaged iso-postflight check did not report PASS');
+  }
+
   // Smoke the packaged iso-migrate CLI against a JobForge-style consumer upgrade.
   const isoMigrateDir = resolve(tmpRoot, 'iso-migrate');
   mkdirSync(isoMigrateDir, { recursive: true });
@@ -617,7 +652,7 @@ try {
   run('npx', ['--no-install', 'iso-route', 'plan', modelsPath], isoRouteDir);
 
   console.log(
-    `\npack smoke ok — verified packaged iso-harness, iso, iso-eval, iso-trace, iso-guard, iso-ledger, iso-context, iso-cache, iso-index, iso-canon, iso-preflight, iso-migrate, iso-contract, iso-capabilities, and iso-route from ${tmpRoot}`,
+    `\npack smoke ok — verified packaged iso-harness, iso, iso-eval, iso-trace, iso-guard, iso-ledger, iso-context, iso-cache, iso-index, iso-canon, iso-preflight, iso-postflight, iso-migrate, iso-contract, iso-capabilities, and iso-route from ${tmpRoot}`,
   );
 } catch (err) {
   failed = true;

@@ -1,0 +1,38 @@
+{
+  "workflow": {
+    "name": "jobforge.apply"
+  },
+  "rounds": [
+    {
+      "index": 1,
+      "candidates": [
+        {
+          "id": "job-1"
+        },
+        {
+          "id": "job-2"
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "candidates": [
+        {
+          "id": "job-3"
+        }
+      ]
+    }
+  ],
+  "postSteps": [
+    {
+      "id": "merge",
+      "label": "Merge tracker TSV outcomes",
+      "command": "npx job-forge merge"
+    },
+    {
+      "id": "verify",
+      "label": "Verify tracker integrity",
+      "command": "npx job-forge verify"
+    }
+  ]
+}
