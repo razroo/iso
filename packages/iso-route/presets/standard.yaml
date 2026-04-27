@@ -1,11 +1,12 @@
 # @razroo/iso-route — standard preset
 #
-# Opinionated cost-tiered routing across Claude Code, Cursor, Codex, and
-# OpenCode. Verified against 2026-04 harness/provider docs:
+# Opinionated cost-tiered routing across Claude Code, Cursor, Codex,
+# OpenCode, and Pi. Verified against 2026-04 harness/provider docs:
 #   - Claude Code model config (aliases + pinned model IDs)
 #   - Cursor models docs (manual picker; no file-based role binding)
 #   - Codex models docs (gpt-5.4 default recommendation)
 #   - OpenCode models docs + Models.dev (provider/model ID format + variants)
+#   - Pi settings docs (defaultProvider/defaultModel + enabledModels)
 #
 # Three roles, each with per-harness overrides:
 #   - fast     — cheap + quick, for procedural work

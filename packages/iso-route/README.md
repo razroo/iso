@@ -6,14 +6,14 @@
 agent. `@razroo/iso-route` does the same thing for your *model choices*:
 you declare a default model plus named roles once, and iso-route compiles
 that policy into the config file each harness actually reads —
-`.claude/settings.json`, `.codex/config.toml`, `opencode.json` — plus a
-README note for Cursor (which has no file-based model binding).
+`.claude/settings.json`, `.codex/config.toml`, `opencode.json`, and
+`.pi/settings.json` — plus notes for harnesses with advisory role binding.
 
 Use it to swap Opus for Sonnet everywhere with a single edit, pin a
 cheaper model to a `fast-edit` role, or send a `reviewer` role to a
 different provider entirely.
 
-> **v0.1 scope:** emits config files for Claude Code, Codex, and OpenCode,
+> **v0.1 scope:** emits config files for Claude Code, Codex, OpenCode, and Pi,
 > and a resolved role map (`iso-route.resolved.json`) that `iso-harness`
 > consumes when it stamps per-subagent frontmatter. Fallback chains are
 > recorded in the resolved map but *not* encoded into any harness config
@@ -90,9 +90,9 @@ only what you want to differ.
 
 | preset             | thesis                                                                |
 | ------------------ | --------------------------------------------------------------------- |
-| `standard`         | Quality-first. Sonnet/Opus on Claude Code, gpt-5.4 on Codex, OpenCode Zen/Go picks per tier. |
-| `budget`           | Cost-optimized. Haiku/Sonnet on Claude Code, gpt-5.4-mini/nano on Codex, free-tier and pay-once OpenCode picks. |
-| `openrouter-free`  | Standard-like Claude/Codex picks, but OpenCode routes through explicit free OpenRouter model IDs. |
+| `standard`         | Quality-first. Sonnet/Opus on Claude Code and Pi, gpt-5.4 on Codex, OpenCode Zen/Go picks per tier. |
+| `budget`           | Cost-optimized. Haiku/Sonnet on Claude Code and Pi, gpt-5.4-mini/nano on Codex, free-tier and pay-once OpenCode picks. |
+| `openrouter-free`  | Standard-like Claude/Codex/Pi picks, but OpenCode routes through explicit free OpenRouter model IDs. |
 
 Scaffold a starter with the right boilerplate:
 
@@ -125,17 +125,19 @@ harness.
 
 ## Fan-out mapping
 
-| Field                     | Claude Code                          | Codex                                                | OpenCode                               | Cursor                           |
-| ------------------------- | ------------------------------------ | ---------------------------------------------------- | -------------------------------------- | -------------------------------- |
-| `default.model`           | `.claude/settings.json` `model`      | `.codex/config.toml` `model`                         | `opencode.json` top-level `model`      | README note only                 |
-| `roles.<name>.model`      | resolved map (iso-harness stamps)    | `[profiles.<name>]` in `config.toml`                 | `agent.<name>.model` in `opencode.json`| advisory row in README note      |
-| `reasoning`               | closest model tier                   | `model_reasoning_effort`                             | provider-specific                      | advisory                         |
-| `fallback[]`              | resolved map only (runtime unsupported) | resolved map only                                 | resolved map only                      | resolved map only                |
-| provider auth             | env var convention                   | `[model_providers.<name>]` block (not for reserved Codex built-ins `openai` / `ollama`) | `provider` block with `npm` package    | —                                |
+| Field                     | Claude Code                          | Codex                                                | OpenCode                               | Cursor                           | Pi                                |
+| ------------------------- | ------------------------------------ | ---------------------------------------------------- | -------------------------------------- | -------------------------------- | --------------------------------- |
+| `default.model`           | `.claude/settings.json` `model`      | `.codex/config.toml` `model`                         | `opencode.json` top-level `model`      | README note only                 | `.pi/settings.json` `defaultModel` |
+| `roles.<name>.model`      | resolved map (iso-harness stamps)    | `[profiles.<name>]` in `config.toml`                 | `agent.<name>.model` in `opencode.json`| advisory row in README note      | advisory row + `enabledModels`    |
+| `reasoning`               | closest model tier                   | `model_reasoning_effort`                             | provider-specific                      | advisory                         | `defaultThinkingLevel` for default |
+| `fallback[]`              | resolved map only (runtime unsupported) | resolved map only                                 | resolved map only                      | resolved map only                | notes only                        |
+| provider auth             | env var convention                   | `[model_providers.<name>]` block (not for reserved Codex built-ins `openai` / `ollama`) | `provider` block with `npm` package    | —                                | Pi provider/auth settings         |
 
 Cursor has no programmatic way to bind a model to a rule or chat, so
 iso-route emits a README note at `.cursor/iso-route.md` and warns at build
-time. Everything else gets a real config file.
+time. Pi gets `.pi/settings.json` for the default provider/model and model
+cycling, plus `.pi/iso-route.md` because Pi does not have native role-specific
+subagent binding.
 
 ## CLI
 
@@ -210,7 +212,7 @@ console.log(verify.passed ? "ok" : "fix model ids");
 ```
 
 Individual emitters are exported too (`emitClaude`, `emitCodex`,
-`emitOpenCode`, `emitCursor`) if you only need one target. Verification
+`emitOpenCode`, `emitCursor`, `emitPi`) if you only need one target. Verification
 helpers are exported too (`verifyModelFile`, `verifyPolicyModels`,
 `formatVerifyResult`) for callers that want to keep the network check in
 their own pipeline code.
@@ -224,7 +226,8 @@ agent.md  →  agentmd lint  →  agentmd render  →  isolint lint  →  iso-ha
                                                                          │
                                                                          ▼
                                                           project with CLAUDE.md, settings.json,
-                                                          config.toml, opencode.json, …
+                                                          config.toml, opencode.json,
+                                                          .pi/settings.json, …
 ```
 
 `iso-harness` owns *what the agent reads*. `iso-route` owns *which model

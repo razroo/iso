@@ -4,6 +4,7 @@ import { emitClaude } from './targets/claude.mjs';
 import { emitCursor } from './targets/cursor.mjs';
 import { emitCodex } from './targets/codex.mjs';
 import { emitOpenCode } from './targets/opencode.mjs';
+import { emitPi } from './targets/pi.mjs';
 import path from 'node:path';
 
 const EMITTERS = {
@@ -11,6 +12,7 @@ const EMITTERS = {
   cursor: emitCursor,
   codex: emitCodex,
   opencode: emitOpenCode,
+  pi: emitPi,
 };
 
 function formatBytes(n) {

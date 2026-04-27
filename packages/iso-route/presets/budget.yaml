@@ -9,8 +9,9 @@
 #   standard.minimal  (haiku)   →  budget.minimal  (haiku)     [same]
 #
 # On OpenCode, opts into free-tier and pay-once models; on Codex,
-# drops one tier on every OpenAI pick. Verified against 2026-04
-# provider catalogs.
+# drops one tier on every OpenAI pick. Pi inherits the generic
+# Anthropic/API-key picks through `.pi/settings.json`. Verified against
+# 2026-04 provider catalogs.
 #
 # Use when your project is hobby-scale / personal-budget or when
 # Anthropic's opus pricing isn't justified per call.

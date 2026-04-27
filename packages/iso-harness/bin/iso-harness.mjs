@@ -27,13 +27,13 @@ function list(name) {
   return v ? v.split(',').map(s => s.trim()).filter(Boolean) : undefined;
 }
 
-const ALL_TARGETS = ['claude', 'cursor', 'codex', 'opencode'];
+const ALL_TARGETS = ['claude', 'cursor', 'codex', 'opencode', 'pi'];
 
 const USAGE = `iso-harness — one source directory, every agent harness
 
 Usage:
   iso-harness --version
-  iso-harness build    [--source <dir>] [--out <dir>] [--target claude,cursor,codex,opencode]
+  iso-harness build    [--source <dir>] [--out <dir>] [--target claude,cursor,codex,opencode,pi]
                        [--dry-run] [--watch]
   iso-harness validate [--source <dir>] [--format text|json]
 
@@ -47,7 +47,7 @@ Commands:
 Flags:
   --source <dir>     Path to iso source directory (default: iso)
   --out <dir>        Output root directory (default: .)
-  --target <list>    Comma-separated targets (default: all four)
+  --target <list>    Comma-separated targets (default: all supported)
   --dry-run          Print what would be written, with byte sizes. No disk writes.
   --watch            Rebuild on changes to the source directory. Ctrl-C to exit.
   --format <fmt>     validate-only: text (default) | json

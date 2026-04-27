@@ -29,7 +29,7 @@ test('validateMcp: flags missing command, non-string args, non-string env values
 });
 
 test('validateConfig: warns on unknown target keys', () => {
-  const d = validateConfig({ targets: { opencode: {}, nonsense: {} } });
+  const d = validateConfig({ targets: { opencode: {}, pi: {}, nonsense: {} } });
   assert.ok(d.some((x) => x.severity === 'warning' && /Unknown target "nonsense"/.test(x.message)));
 });
 
@@ -72,7 +72,7 @@ test('validateSource: flags unknown target override keys on an agent', () => {
         name: 'a',
         description: 'a',
         body: 'b',
-        targets: { claude: 'skip', madeup: { model: 'x' } },
+        targets: { claude: 'skip', pi: { description: 'pi skill' }, madeup: { model: 'x' } },
       },
     ],
     commands: [],

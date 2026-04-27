@@ -34,6 +34,9 @@ Shipped in `@razroo/iso-harness` 0.4.0. The Claude emitter reads
 still wins; non-Anthropic roles are skipped with a stderr warning;
 missing roles are silent. See the "Composition with `@razroo/iso-route`"
 section in `packages/iso-harness/README.md` for the resolution order.
+The Pi emitter also preserves `.pi/settings.json` from `iso-route` and
+merges any `iso/config.json` `targets.pi` project settings into it, so
+model defaults and Pi resource settings can share the same file.
 
 ---
 

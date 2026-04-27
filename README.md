@@ -8,7 +8,7 @@
 
 `iso` is Razroo's toolchain for making agent harnesses *isomorphic* — one
 authored source fans out to every coding harness (Cursor, Claude Code,
-Codex, OpenCode) and stays legible across model tiers (frontier models down
+Codex, OpenCode, Pi) and stays legible across model tiers (frontier models down
 to 7B local models). The repo now covers the full loop: build portable
 harness files, route models, replay evals, parse production traces, scope
 role capabilities, select deterministic context bundles, audit runtime policy,
@@ -22,8 +22,9 @@ Today, agent workflow reliability is fragmented on three axes:
 
 1. **Harness fragmentation.** Each coding agent reads a different file
    layout — `CLAUDE.md`, `AGENTS.md`, `.cursor/rules/*.mdc`,
-   `.opencode/agents/*.md`, `.mcp.json` vs `opencode.json` vs
-   `.codex/config.toml`. Keeping them in sync is copy-paste drift.
+   `.opencode/agents/*.md`, `.pi/prompts/*.md`, `.mcp.json` vs
+   `opencode.json` vs `.codex/config.toml` vs `.pi/settings.json`.
+   Keeping them in sync is copy-paste drift.
 2. **Model fragmentation.** A prompt written with a frontier model in mind
    quietly breaks on smaller models: soft imperatives (`should`,
    `when relevant`), taste words, ambiguous cross-references, and
@@ -95,6 +96,8 @@ feedback loop:
   │                    │   render  │ load-bearing why  │           │                 │               │ .cursor/rules/*       │    iso-trace ──▶  production events,
   └────────────────────┘           └───────────────────┘           └─────────────────┘               │ .opencode/agents/*    │                    which rules ever fired,
                                                                                                      │ settings.json         │                    regression-fixture mining
+                                                                                                     │ .pi/skills/*          │
+                                                                                                     │ .pi/prompts/*         │
                                                                                                      │                      │    iso-guard ─▶  policy pass / fail
                                                                                                      │                      │    iso-context ─▶ context bundle plan
                                                                                                      │                      │    iso-cache ─▶ artifact reuse
@@ -112,7 +115,8 @@ feedback loop:
                                                                                                      │                      │    iso-capabilities ─▶ role permission policy
   ┌────────────────────┐                                                                             │ .codex/config.toml    │
   │ models.yaml        │ ───────────────────── iso-route build ─────────────────────────────────────▶│ opencode.json         │
-  │ (roles + fallback) │                                                                             │ .mcp.json             │
+  │ (roles + fallback) │                                                                             │ .pi/settings.json     │
+  │                    │                                                                             │ .mcp.json             │
   └────────────────────┘                                                                             └───────────────────────┘
 
                     @razroo/iso chains agentmd → isolint → iso-route (when models.yaml exists) → iso-harness in one command.
@@ -130,7 +134,7 @@ npx iso build .
 Given an `agent.md` (or an existing `iso/instructions.md`) and an `iso/`
 source directory, this lints the authored source, rewrites it for
 small-model safety, and fans it out into `CLAUDE.md`, `AGENTS.md`,
-`.cursor/rules/*`, `.opencode/*`, and the matching MCP config files.
+`.cursor/rules/*`, `.opencode/*`, `.pi/*`, and the matching MCP config files.
 
 See [`packages/iso`](./packages/iso) for the full CLI reference and
 library API, or [`examples/dogfood/`](./examples/dogfood) for a runnable
@@ -138,9 +142,10 @@ project that exercises the wrapper end-to-end.
 
 ## Shipped Support Matrix
 
-Build, replay, and transcript parsing now ship across all four harnesses.
-The remaining narrower surface is `iso-trace model-score`, which is only
-available where the source transcript exposes stable model metadata.
+Prompt/config build and model routing now include Pi. Replay and transcript
+parsing currently ship across Claude Code, Codex, OpenCode, and Cursor. The
+remaining narrower surface is `iso-trace model-score`, which is only available
+where the source transcript exposes stable model metadata.
 
 | Harness       | Prompt/config build | Model binding      | `iso-eval` runner | `iso-trace` parser | `model-score` |
 | ------------- | ------------------- | ------------------ | ----------------- | ------------------ | ------------- |
@@ -148,6 +153,7 @@ available where the source transcript exposes stable model metadata.
 | Codex         | yes                 | yes                | yes               | yes                | yes           |
 | OpenCode      | yes                 | yes                | yes               | yes                | yes           |
 | Cursor        | yes                 | advisory note only | yes               | yes                | not yet       |
+| Pi            | yes                 | default + notes    | not yet           | not yet            | not yet       |
 
 ## Tiny-Model Loop
 
@@ -284,16 +290,17 @@ of the prompt:
    One `iso/` source directory → the file layout each coding agent
    actually reads. Transpiles instructions, subagents, slash commands, and
    MCP servers into `CLAUDE.md`, `AGENTS.md`, `.cursor/rules/*.mdc`,
-   `.opencode/agents/*.md`, etc., so all four harnesses stay in lockstep.
+   `.opencode/agents/*.md`, `.pi/skills/*/SKILL.md`,
+   `.pi/prompts/*.md`, etc., so supported harnesses stay in lockstep.
 
 5. **[`packages/iso-route`](./packages/iso-route)** — [`@razroo/iso-route`](https://www.npmjs.com/package/@razroo/iso-route)
    One model policy, every harness. Declare a default model plus named
    roles (`planner`, `fast-edit`, `reviewer`, …) in a single
    `models.yaml`; iso-route compiles that into `.claude/settings.json`,
-   `.codex/config.toml`, `opencode.json`, and a resolved role map that
-   `iso-harness` consumes when stamping per-subagent frontmatter. Honest
-   about ceilings — warns loudly where a harness (e.g. Cursor) can't bind
-   models programmatically.
+   `.codex/config.toml`, `opencode.json`, `.pi/settings.json`, and
+   resolved notes/maps that `iso-harness` can consume when stamping
+   per-subagent frontmatter. Honest about ceilings — warns loudly where a
+   harness (e.g. Cursor or Pi roles) can't bind models programmatically.
 
 6. **[`packages/iso-eval`](./packages/iso-eval)** — [`@razroo/iso-eval`](https://www.npmjs.com/package/@razroo/iso-eval)
    Behavioral eval runner for the produced harness. Snapshots a workspace
@@ -453,7 +460,7 @@ iso build path/to/project         # target another project
 iso build . --out dist            # write generated harness files under ./dist
 iso build . --target claude,cursor
 iso build . --skip-isolint        # skip the portable-prose pass
-iso build . --dry-run             # dry-run the final iso-harness write
+iso build . --dry-run             # dry-run iso-route + iso-harness writes
 iso plan  .                       # print planned steps without executing
 ```
 

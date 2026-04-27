@@ -1,6 +1,6 @@
 # iso-harness
 
-**One config for every coding agent — Cursor, Claude Code, Codex, OpenCode.**
+**One config for every coding agent — Cursor, Claude Code, Codex, OpenCode, Pi.**
 
 Keep your instructions, subagents, commands, and MCP servers in a single
 `iso/` directory. `iso-harness build` transpiles that source to the
@@ -11,7 +11,7 @@ iso/                              →  CLAUDE.md                    (Claude Code
 ├── instructions.md                  .claude/agents/*.md
 ├── mcp.json                         .claude/commands/*.md
 ├── agents/                          .mcp.json
-│   └── researcher.md             →  AGENTS.md                    (Codex + OpenCode)
+│   └── researcher.md             →  AGENTS.md                    (Codex + OpenCode + Pi)
 └── commands/                        .codex/config.toml
     └── review.md                                                         .opencode/agents/*.md
                                      .opencode/skills/*.md
@@ -19,6 +19,8 @@ iso/                              →  CLAUDE.md                    (Claude Code
                                      opencode.json
                                   →  .cursor/rules/*.mdc          (Cursor)
                                      .cursor/mcp.json
+                                  →  .pi/skills/*/SKILL.md        (Pi)
+                                     .pi/prompts/*.md
 ```
 
 ## Quickstart
@@ -123,23 +125,26 @@ Slash-command body goes here.
 | Cursor       | `.cursor/rules/main.mdc`         | `.cursor/rules/agent-*.mdc` | _(no native form)_          | `.cursor/mcp.json`         |
 | Codex        | `AGENTS.md`                      | _(no native form)_          | _(no native form)_          | `.codex/config.toml`       |
 | OpenCode     | `AGENTS.md`                      | `.opencode/agents/*.md`     | `.opencode/skills/*.md`     | `opencode.json`            |
+| Pi           | `AGENTS.md`                      | `.pi/skills/*/SKILL.md`     | `.pi/prompts/*.md`          | _(extension/package only)_  |
 
 ## Escape hatches
 
-The abstraction is only as good as its lowest common denominator. Three
+The abstraction is only as good as its lowest common denominator. Four
 explicit hatches keep harness-specific features possible:
 
 1. **Per-target frontmatter under `targets:`** (agents & commands).
-   Anything under `targets.<name>` is merged into that harness's emitted
-   frontmatter verbatim. Use this for OpenCode `temperature` /
-   `fallback_models`, Claude Code `allowed-tools`, etc.
+   Harness-specific fields under `targets.<name>` are mapped or passed
+   through where that target supports them. Use this for OpenCode
+   `temperature` / `fallback_models`, Claude Code `allowed-tools`, Pi
+   skill metadata, etc.
 2. **`targets.<name>: skip`** omits the item from a specific target —
    useful when a subagent only makes sense in harnesses that support
    subagents.
 3. **`iso/config.json` with `targets.<name>: { … }`** for top-level
    harness config (not per-item). Keys under `targets.opencode` are
    merged into the generated `opencode.json` — use this for OpenCode's
-   top-level `instructions: [...]` array, for example.
+   top-level `instructions: [...]` array, for example. Keys under
+   `targets.pi` are merged into `.pi/settings.json`.
 4. **`iso/config.json` top-level `opencodeModelFallback`** — JSON object
    written verbatim to `.opencode/opencode-model-fallback.json` for the
    [`@razroo/opencode-model-fallback`](https://www.npmjs.com/package/@razroo/opencode-model-fallback)
@@ -152,6 +157,10 @@ explicit hatches keep harness-specific features possible:
   "targets": {
     "opencode": {
       "instructions": ["templates/states.yml"]
+    },
+    "pi": {
+      "prompts": ["prompts"],
+      "enableSkillCommands": true
     }
   },
   "opencodeModelFallback": {
@@ -188,6 +197,11 @@ session default — without editing the agent body.
 Non-Anthropic roles in the resolved map are skipped (Claude Code
 subagents can only run Anthropic models) and logged on stderr. Missing
 roles are silent — not every agent needs a role entry.
+
+For Pi, `iso-route` owns `.pi/settings.json` model defaults. If
+`iso/config.json` also contains `targets.pi`, iso-harness merges those
+project settings into the existing file instead of replacing model
+settings.
 
 The contract is file-based on purpose: iso-harness and iso-route
 publish and version independently, so an on-disk JSON file is more

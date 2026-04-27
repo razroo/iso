@@ -17,7 +17,7 @@ const USAGE = `iso-route — one model policy, every harness
 usage:
   iso-route --version | -v
   iso-route --help | -h
-  iso-route build  <models.yaml> [--out <dir>] [--targets claude,codex,opencode,cursor]
+  iso-route build  <models.yaml> [--out <dir>] [--targets claude,codex,opencode,cursor,pi]
                                   [--dry-run] [--verify-models]
                                   [--fail-on-unverifiable] [--endpoint <url>]
   iso-route plan   <models.yaml>
@@ -25,7 +25,7 @@ usage:
   iso-route init   [--preset <name>] [--out <path>] [--force]
   iso-route catalog openrouter [--limit <n>] [--json] [--allow-paid] [--allow-no-tools]
 
-targets default to all four. --dry-run emits nothing but prints every file it *would* write.
+targets default to all supported harnesses. --dry-run emits nothing but prints every file it *would* write.
 "init" scaffolds a starter models.yaml from a built-in preset. Run "iso-route init --help"
 to see available presets.
 `;

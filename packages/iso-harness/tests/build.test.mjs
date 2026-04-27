@@ -37,12 +37,12 @@ function mkIso(overrides = {}) {
   return { dir, iso, out: join(dir, 'out') };
 }
 
-test('build: existing minimal example still produces all 11 files', async () => {
+test('build: existing minimal example still produces all target files', async () => {
   const outDir = mkdtempSync(join(tmpdir(), 'iso-harness-smoke-'));
   const summary = await build({
     source: MINIMAL_ISO,
     out: outDir,
-    targets: ['claude', 'cursor', 'codex', 'opencode'],
+    targets: ['claude', 'cursor', 'codex', 'opencode', 'pi'],
   });
   const expected = [
     'CLAUDE.md',
@@ -56,6 +56,8 @@ test('build: existing minimal example still produces all 11 files', async () => 
     'opencode.json',
     '.opencode/agents/researcher.md',
     '.opencode/skills/review.md',
+    '.pi/skills/researcher/SKILL.md',
+    '.pi/prompts/review.md',
   ];
   for (const f of expected) {
     assert.ok(existsSync(join(outDir, f)), `missing: ${f}`);
@@ -318,4 +320,73 @@ test('build: opencode.json merges with existing iso-route model config', async (
   // Added/overwritten by iso-harness: $schema + mcp
   assert.equal(cfg.$schema, 'https://opencode.ai/config.json');
   assert.ok(cfg.mcp?.a, 'expected mcp.a to be present');
+});
+
+test('build: pi target writes AGENTS.md, skills, and prompt templates', async () => {
+  const { iso, out } = mkIso({
+    command:
+      '---\nname: go\ndescription: do the thing\nargs: "[scope]"\n---\n\nCommand body.\n',
+  });
+  await build({ source: iso, out, targets: ['pi'] });
+  assert.equal(readFileSync(join(out, 'AGENTS.md'), 'utf8'), '# Project\n\nGuidelines.\n');
+  const skill = readFileSync(join(out, '.pi/skills/a/SKILL.md'), 'utf8');
+  assert.match(skill, /^name: a$/m);
+  assert.match(skill, /^description: sample agent$/m);
+  assert.match(skill, /Agent body here\./);
+  const prompt = readFileSync(join(out, '.pi/prompts/go.md'), 'utf8');
+  assert.match(prompt, /^description: do the thing$/m);
+  assert.match(prompt, /^argument-hint: "\[scope\]"$/m);
+  assert.match(prompt, /Command body\./);
+});
+
+test('build: pi target honors skip and per-target skill frontmatter', async () => {
+  const { iso, out } = mkIso({
+    agent:
+      '---\nname: a\ndescription: sample agent\ntargets:\n  pi:\n    allowed-tools: [read, bash]\n    metadata:\n      tier: project\n---\n\nAgent body.\n',
+    command:
+      '---\nname: go\ndescription: do the thing\ntargets:\n  pi: skip\n---\n\nCommand body.\n',
+  });
+  await build({ source: iso, out, targets: ['pi'] });
+  const skill = readFileSync(join(out, '.pi/skills/a/SKILL.md'), 'utf8');
+  assert.match(skill, /^allowed-tools: read bash$/m);
+  assert.match(skill, /tier: project/);
+  assert.ok(!existsSync(join(out, '.pi/prompts/go.md')));
+});
+
+test('build: pi target merges target config into existing settings.json', async () => {
+  const { iso, out } = mkIso();
+  writeFileSync(
+    join(iso, 'config.json'),
+    JSON.stringify(
+      {
+        targets: {
+          pi: {
+            prompts: ['prompts'],
+            compaction: { reserveTokens: 8192 },
+          },
+        },
+      },
+      null,
+      2,
+    ),
+  );
+  mkdirSync(join(out, '.pi'), { recursive: true });
+  writeFileSync(
+    join(out, '.pi/settings.json'),
+    JSON.stringify(
+      {
+        defaultProvider: 'anthropic',
+        defaultModel: 'claude-sonnet-4-6',
+        compaction: { enabled: true, reserveTokens: 16384 },
+      },
+      null,
+      2,
+    ),
+  );
+  await build({ source: iso, out, targets: ['pi'] });
+  const settings = JSON.parse(readFileSync(join(out, '.pi/settings.json'), 'utf8'));
+  assert.equal(settings.defaultProvider, 'anthropic');
+  assert.equal(settings.defaultModel, 'claude-sonnet-4-6');
+  assert.deepEqual(settings.prompts, ['prompts']);
+  assert.deepEqual(settings.compaction, { enabled: true, reserveTokens: 8192 });
 });

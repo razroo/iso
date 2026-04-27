@@ -41,10 +41,14 @@ const expected = [
   '.cursor/rules/agent-workspace-researcher.mdc',
   '.cursor/mcp.json',
   '.cursor/iso-route.md',
+  '.pi/settings.json',
+  '.pi/iso-route.md',
   'AGENTS.md',
   'opencode.json',
   '.opencode/agents/workspace-researcher.md',
   '.opencode/skills/release-check.md',
+  '.pi/skills/workspace-researcher/SKILL.md',
+  '.pi/prompts/release-check.md',
 ];
 const missing = expected.filter((file) => !existsSync(resolve(out, file)));
 if (missing.length) {

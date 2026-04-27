@@ -21,12 +21,12 @@ Commands:
 
 Flags:
   --out <dir>         Output directory for generated harness files.
-  --target <list>     Comma-separated targets: claude,cursor,codex,opencode
+  --target <list>     Comma-separated targets: claude,cursor,codex,opencode,pi
   --skip-isolint      Skip the portable-prose lint step.
   --skip-iso-route    Skip the model-policy compile step (iso-route).
                       The step is also skipped automatically when no
                       models.yaml exists.
-  --dry-run           Pass through to iso-harness: show planned writes only.
+  --dry-run           Pass through to iso-route and iso-harness: show planned writes only.
 `;
 
 function readVersion() {

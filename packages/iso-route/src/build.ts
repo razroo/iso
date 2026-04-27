@@ -5,6 +5,7 @@ import { emitClaude } from "./targets/claude.js";
 import { emitCodex } from "./targets/codex.js";
 import { emitCursor } from "./targets/cursor.js";
 import { emitOpenCode } from "./targets/opencode.js";
+import { emitPi } from "./targets/pi.js";
 import type {
   BuildResult,
   EmitResult,
@@ -14,7 +15,7 @@ import type {
   Role,
 } from "./types.js";
 
-export const ALL_TARGETS: HarnessTarget[] = ["claude", "codex", "opencode", "cursor"];
+export const ALL_TARGETS: HarnessTarget[] = ["claude", "codex", "opencode", "cursor", "pi"];
 
 export interface BuildOptions {
   source: string;
@@ -106,5 +107,7 @@ function emitFor(target: HarnessTarget, policy: ModelPolicy): EmitResult {
       return emitOpenCode(policy);
     case "cursor":
       return emitCursor(policy);
+    case "pi":
+      return emitPi(policy);
   }
 }

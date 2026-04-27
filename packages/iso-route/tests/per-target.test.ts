@@ -19,6 +19,7 @@ import { emitClaude } from "../src/targets/claude.js";
 import { emitCodex } from "../src/targets/codex.js";
 import { emitCursor } from "../src/targets/cursor.js";
 import { emitOpenCode } from "../src/targets/opencode.js";
+import { emitPi } from "../src/targets/pi.js";
 
 function writeModelsYaml(contents: string): string {
   const dir = mkdtempSync(join(tmpdir(), "iso-route-per-target-"));
@@ -35,6 +36,9 @@ default:
     opencode:
       provider: opencode
       model: opencode/glm-5.1
+    pi:
+      provider: openai
+      model: gpt-5.4
 
 roles:
   general-free:
@@ -47,6 +51,9 @@ roles:
       codex:
         provider: openai
         model: gpt-5-mini
+      pi:
+        provider: openai
+        model: gpt-5.4-mini
   general-paid:
     provider: anthropic
     model: claude-sonnet-4-6
@@ -56,9 +63,11 @@ test("parser: accepts targets.<harness> on default and on roles", () => {
   const path = writeModelsYaml(POLICY_WITH_TARGETS);
   const policy = loadPolicy(path);
   assert.equal(policy.default.targets?.opencode?.model, "opencode/glm-5.1");
+  assert.equal(policy.default.targets?.pi?.model, "gpt-5.4");
   const free = policy.roles.find((r) => r.name === "general-free")!;
   assert.equal(free.targets?.opencode?.model, "opencode/big-pickle");
   assert.equal(free.targets?.codex?.model, "gpt-5-mini");
+  assert.equal(free.targets?.pi?.model, "gpt-5.4-mini");
   assert.equal(free.targets?.codex?.provider, "openai");
 });
 
@@ -154,4 +163,22 @@ test("end-to-end: cursor README reflects resolved per-target choices", () => {
   // generic anthropic picks.
   assert.match(contents, /anthropic \/ claude-sonnet-4-6/);
   assert.match(contents, /general-free.*claude-haiku-4-5/);
+});
+
+test("end-to-end: pi target applies default and role overrides", () => {
+  const path = writeModelsYaml(POLICY_WITH_TARGETS);
+  const policy = loadPolicy(path);
+  const out = emitPi(resolvePolicyForTarget(policy, "pi"));
+  const settings = JSON.parse(
+    out.files.find((f) => f.path === ".pi/settings.json")!.contents,
+  );
+  assert.equal(settings.defaultProvider, "openai");
+  assert.equal(settings.defaultModel, "gpt-5.4");
+  assert.deepEqual(settings.enabledModels, [
+    "gpt-5.4",
+    "gpt-5.4-mini",
+    "claude-sonnet-4-6",
+  ]);
+  const note = out.files.find((f) => f.path === ".pi/iso-route.md")!.contents;
+  assert.match(note, /general-free.*gpt-5.4-mini/);
 });

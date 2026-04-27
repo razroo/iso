@@ -4,6 +4,7 @@ import { emitClaude } from "../src/targets/claude.js";
 import { emitCodex } from "../src/targets/codex.js";
 import { emitCursor } from "../src/targets/cursor.js";
 import { emitOpenCode } from "../src/targets/opencode.js";
+import { emitPi } from "../src/targets/pi.js";
 import type { ModelPolicy } from "../src/types.js";
 
 function policy(): ModelPolicy {
@@ -90,5 +91,29 @@ test("cursor: emits a README-only note and flags that binding is manual", () => 
   assert.ok(
     out.warnings.some((w) => w.includes("no programmatic model binding")),
     `expected cursor limitation warning, got: ${JSON.stringify(out.warnings)}`,
+  );
+});
+
+test("pi: writes settings.json with default model and role model cycling", () => {
+  const out = emitPi(policy());
+  const settings = out.files.find((f) => f.path === ".pi/settings.json");
+  assert.ok(settings);
+  const parsed = JSON.parse(settings.contents) as {
+    defaultProvider: string;
+    defaultModel: string;
+    defaultThinkingLevel?: string;
+    enabledModels: string[];
+  };
+  assert.equal(parsed.defaultProvider, "anthropic");
+  assert.equal(parsed.defaultModel, "claude-sonnet-4-6");
+  assert.deepEqual(parsed.enabledModels, ["claude-sonnet-4-6", "claude-opus-4-7", "gpt-5"]);
+
+  const note = out.files.find((f) => f.path === ".pi/iso-route.md");
+  assert.ok(note);
+  assert.match(note.contents, /planner/);
+  assert.match(note.contents, /gpt-5/);
+  assert.ok(
+    out.warnings.some((w) => w.includes("no native role/subagent model binding")),
+    `expected pi role-binding warning, got: ${JSON.stringify(out.warnings)}`,
   );
 });

@@ -33,6 +33,7 @@ const VALID_TARGETS: ReadonlySet<HarnessTarget> = new Set<HarnessTarget>([
   "codex",
   "opencode",
   "cursor",
+  "pi",
 ]);
 
 const ROLE_NAME_RE = /^[a-z][a-z0-9-]*$/;

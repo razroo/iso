@@ -1,7 +1,7 @@
 {
   "name": "@razroo/iso-route",
-  "version": "0.5.4",
-  "description": "Author one model policy; fan out to every harness that supports it. Translates role-based model selection into settings.json, config.toml, opencode.json, and a machine-readable resolved map.",
+  "version": "0.6.0",
+  "description": "Author one model policy; fan out to every harness that supports it. Translates role-based model selection into settings.json, config.toml, opencode.json, .pi/settings.json, and resolved notes/maps.",
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
@@ -59,7 +59,9 @@
     "claude-code",
     "cursor",
     "codex",
-    "opencode"
+    "opencode",
+    "pi",
+    "pi-coding-agent"
   ],
   "publishConfig": {
     "access": "public"

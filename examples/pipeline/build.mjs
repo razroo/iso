@@ -112,10 +112,14 @@ const expected = [
   [out, 'opencode.json'],
   [out, '.opencode/agents/researcher.md'],
   [out, '.opencode/skills/review.md'],
+  [out, '.pi/skills/researcher/SKILL.md'],
+  [out, '.pi/prompts/review.md'],
   // iso-route outputs
   [out, '.claude/settings.json'],
   [out, '.claude/iso-route.resolved.json'],
   [out, '.cursor/iso-route.md'],
+  [out, '.pi/settings.json'],
+  [out, '.pi/iso-route.md'],
   // trace → fixture outputs
   [traceFixtureOut, 'task.md'],
   [traceFixtureOut, 'checks.yml'],

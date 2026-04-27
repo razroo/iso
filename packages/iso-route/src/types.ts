@@ -13,7 +13,7 @@ export type Provider =
 
 export type Reasoning = "low" | "medium" | "high";
 
-export type HarnessTarget = "claude" | "codex" | "opencode" | "cursor";
+export type HarnessTarget = "claude" | "codex" | "opencode" | "cursor" | "pi";
 
 export interface ProviderModel {
   provider: Provider;

@@ -1,6 +1,6 @@
 # @razroo/iso-route — openrouter-free preset
 #
-# Standard-like defaults for Claude Code / Codex, but routes OpenCode
+# Standard-like defaults for Claude Code / Codex / Pi, but routes OpenCode
 # through explicit free OpenRouter model IDs instead of OpenCode's own
 # proxy tokens. Intended for users who already have OpenRouter connected
 # inside OpenCode and want reproducible, inspectable model names.

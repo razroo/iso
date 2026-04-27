@@ -29,7 +29,7 @@ my-project/
 4. (When `models.yaml` or `iso/models.yaml` exists) Compile the model
    policy with `iso-route build` so the resolved role map is on disk
    when the next step reads it
-5. Fan the `iso/` directory out to Claude Code, Cursor, Codex, and OpenCode
+5. Fan the `iso/` directory out to Claude Code, Cursor, Codex, OpenCode, and Pi
    with `iso-harness build` — which picks up the resolved map from
    step 4 and stamps per-subagent `model:` fields automatically
 
@@ -51,12 +51,13 @@ wrote iso/instructions.md
 ▶ isolint lint (portable prose)
 1 file scanned — no findings
 
-▶ iso-harness build (fan out to all four harnesses)
+▶ iso-harness build (fan out to all supported harnesses)
 iso-harness: loaded 1 agent(s), 1 command(s), 1 MCP server(s) from iso/
   [claude]   wrote 4 file(s) — CLAUDE.md, .claude/agents/*, .claude/commands/*, .mcp.json
   [cursor]   wrote 3 file(s) — .cursor/rules/*, .cursor/mcp.json
   [codex]    wrote 2 file(s) — AGENTS.md, .codex/config.toml
   [opencode] wrote 4 file(s) — AGENTS.md, .opencode/agents/*, .opencode/skills/*, opencode.json
+  [pi]       wrote 3 file(s) — AGENTS.md, .pi/skills/*, .pi/prompts/*
 ```
 
 Each step runs in sequence and fails loudly on the first non-zero exit,
@@ -89,6 +90,8 @@ iso plan .                        # print the planned steps without executing
 ```
 
 `--out` resolves relative to the project directory you pass to `iso`.
+`--target` is forwarded to both `iso-route` and `iso-harness`, so a
+targeted build only emits model config and harness files for that target set.
 
 `--dry-run` propagates to both `iso-route build` and `iso-harness build`
 so no files are written. `agent.md` and `iso/instructions.md` are still

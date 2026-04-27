@@ -56,7 +56,7 @@ test('planPipeline: instructions-only project skips agentmd and can skip isolint
   assert.equal(plan.hasAgentMd, false);
   assert.deepEqual(
     plan.steps.map((step) => step.label),
-    ['iso-harness build (fan out to all four harnesses)'],
+    ['iso-harness build (fan out to all supported harnesses)'],
   );
 });
 
@@ -170,4 +170,17 @@ test('planPipeline: --dry-run is forwarded to the iso-route step', () => {
   const routeStep = plan.steps.find((s) => s.label.startsWith('iso-route'));
   assert.ok(routeStep);
   assert.ok(routeStep.args.includes('--dry-run'));
+});
+
+test('planPipeline: --target is forwarded to iso-route and iso-harness', () => {
+  const dir = mkProject({
+    modelsYaml: 'default:\n  provider: anthropic\n  model: claude-sonnet-4-6\n',
+  });
+  const plan = planPipeline(dir, { target: 'pi,codex' });
+  const routeStep = plan.steps.find((s) => s.label.startsWith('iso-route'));
+  const harnessStep = plan.steps.find((s) => s.label.startsWith('iso-harness'));
+  assert.ok(routeStep);
+  assert.ok(harnessStep);
+  assert.deepEqual(routeStep.args.slice(-2), ['--targets', 'pi,codex']);
+  assert.deepEqual(harnessStep.args.slice(-2), ['--target', 'pi,codex']);
 });

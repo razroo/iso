@@ -89,6 +89,7 @@ export function planPipeline(projectDir, opts = {}) {
   const modelsYaml = opts.skipIsoRoute ? null : findModelsYaml(abs, isoDir);
   if (modelsYaml) {
     const routeArgs = ['build', modelsYaml, '--out', outDir];
+    if (opts.target) routeArgs.push('--targets', opts.target);
     if (opts.dryRun) routeArgs.push('--dry-run');
     steps.push({
       label: `iso-route build (model policy → harness config)`,
@@ -100,7 +101,7 @@ export function planPipeline(projectDir, opts = {}) {
   if (opts.dryRun) harnessArgs.push('--dry-run');
   if (opts.target) harnessArgs.push('--target', opts.target);
   steps.push({
-    label: `iso-harness build (fan out to ${opts.target ?? 'all four harnesses'})`,
+    label: `iso-harness build (fan out to ${opts.target ?? 'all supported harnesses'})`,
     bin: ISO_HARNESS_BIN,
     args: harnessArgs,
   });

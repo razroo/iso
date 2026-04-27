@@ -1,12 +1,12 @@
 // Schema validation for a loaded iso/ source directory. Runs before any
 // target emitter so a typo in frontmatter, a malformed mcp.json, or an
 // unknown target key fails fast instead of silently fanning out wrong
-// configs to four harnesses.
+// configs to supported harnesses.
 //
 // Deliberately hand-rolled — the package has one runtime dep (yaml) and
 // we don't want to pull ajv in just for this.
 
-const KNOWN_TARGETS = ['claude', 'cursor', 'codex', 'opencode'];
+const KNOWN_TARGETS = ['claude', 'cursor', 'codex', 'opencode', 'pi'];
 
 function isPlainObject(v) {
   return v !== null && typeof v === 'object' && !Array.isArray(v);

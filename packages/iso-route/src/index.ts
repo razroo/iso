@@ -29,4 +29,5 @@ export { emitClaude } from "./targets/claude.js";
 export { emitCodex } from "./targets/codex.js";
 export { emitCursor } from "./targets/cursor.js";
 export { emitOpenCode } from "./targets/opencode.js";
+export { emitPi } from "./targets/pi.js";
 export * from "./types.js";

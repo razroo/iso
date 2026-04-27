@@ -1,5 +1,11 @@
 # @razroo/iso-route
 
+## 0.6.0
+
+### Minor Changes
+
+- Add first-class Pi support across the harness build, model routing, and wrapper pipeline.
+
 ## 0.5.4
 
 ### Patch Changes
