@@ -84,6 +84,7 @@ try {
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-migrate']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-contract']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-capabilities']);
+  run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-score']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-route']);
 
   const packsDir = resolve(tmpRoot, 'packs');
@@ -108,6 +109,7 @@ try {
   const isoMigrateTgz = packWorkspace('@razroo/iso-migrate', packsDir);
   const isoContractTgz = packWorkspace('@razroo/iso-contract', packsDir);
   const isoCapabilitiesTgz = packWorkspace('@razroo/iso-capabilities', packsDir);
+  const isoScoreTgz = packWorkspace('@razroo/iso-score', packsDir);
   const isoRouteTgz = packWorkspace('@razroo/iso-route', packsDir);
 
   // Smoke the packaged iso-harness CLI directly.
@@ -428,6 +430,67 @@ try {
   if (!canonCompare.stdout.includes('iso-canon: SAME')) {
     throw new Error('packaged iso-canon compare did not report SAME');
   }
+
+  // Smoke the packaged iso-score CLI against the bundled JobForge-style scoring rubric.
+  const isoScoreDir = resolve(tmpRoot, 'iso-score');
+  mkdirSync(isoScoreDir, { recursive: true });
+  writePackageJson(isoScoreDir);
+  run('npm', ['install', isoScoreTgz], isoScoreDir);
+  const isoScoreVersion = run('npx', ['--no-install', 'iso-score', '--version'], isoScoreDir, { capture: true });
+  if (!isoScoreVersion.stdout.trim()) {
+    throw new Error('packaged iso-score --version produced no output');
+  }
+  const scorePackageDir = resolve(isoScoreDir, 'node_modules', '@razroo', 'iso-score');
+  const scoreConfigPath = resolve(scorePackageDir, 'examples', 'jobforge-score.json');
+  const scoreInputPath = resolve(scorePackageDir, 'examples', 'evaluation.json');
+  const scoreAltPath = resolve(scorePackageDir, 'examples', 'evaluation-alt.json');
+  const scoreOutPath = resolve(isoScoreDir, 'score-result.json');
+  const scoreCompute = run(
+    'npx',
+    ['--no-install', 'iso-score', 'compute', '--config', scoreConfigPath, '--input', scoreInputPath, '--out', scoreOutPath],
+    isoScoreDir,
+    { capture: true },
+  );
+  if (!scoreCompute.stdout.includes('iso-score: SCORED')) {
+    throw new Error('packaged iso-score compute did not report SCORED');
+  }
+  const scoreVerify = run(
+    'npx',
+    ['--no-install', 'iso-score', 'verify', '--score', scoreOutPath],
+    isoScoreDir,
+    { capture: true },
+  );
+  if (!scoreVerify.stdout.includes('iso-score: PASS')) {
+    throw new Error('packaged iso-score verify did not report PASS');
+  }
+  const scoreCheck = run(
+    'npx',
+    ['--no-install', 'iso-score', 'check', '--config', scoreConfigPath, '--input', scoreInputPath],
+    isoScoreDir,
+    { capture: true },
+  );
+  if (!scoreCheck.stdout.includes('iso-score: PASS')) {
+    throw new Error('packaged iso-score check did not report PASS');
+  }
+  const scoreGate = run(
+    'npx',
+    ['--no-install', 'iso-score', 'gate', '--config', scoreConfigPath, '--input', scoreInputPath, '--gate', 'apply'],
+    isoScoreDir,
+    { capture: true },
+  );
+  if (!scoreGate.stdout.includes('iso-score: PASS')) {
+    throw new Error('packaged iso-score gate did not report PASS');
+  }
+  const scoreCompare = run(
+    'npx',
+    ['--no-install', 'iso-score', 'compare', '--config', scoreConfigPath, '--left', scoreInputPath, '--right', scoreAltPath],
+    isoScoreDir,
+    { capture: true },
+  );
+  if (!scoreCompare.stdout.includes('iso-score: WINNER left')) {
+    throw new Error('packaged iso-score compare did not report WINNER left');
+  }
+  run('npx', ['--no-install', 'iso-score', 'explain', '--config', scoreConfigPath], isoScoreDir);
 
   // Smoke the packaged iso-preflight CLI against the bundled JobForge-style preflight plan.
   const isoPreflightDir = resolve(tmpRoot, 'iso-preflight');
@@ -759,7 +822,7 @@ try {
   run('npx', ['--no-install', 'iso-route', 'plan', modelsPath], isoRouteDir);
 
   console.log(
-    `\npack smoke ok — verified packaged iso-harness, iso, iso-eval, iso-trace, iso-guard, iso-ledger, iso-context, iso-cache, iso-index, iso-canon, iso-preflight, iso-postflight, iso-redact, iso-facts, iso-migrate, iso-contract, iso-capabilities, and iso-route from ${tmpRoot}`,
+    `\npack smoke ok — verified packaged iso-harness, iso, iso-eval, iso-trace, iso-guard, iso-ledger, iso-context, iso-cache, iso-index, iso-canon, iso-score, iso-preflight, iso-postflight, iso-redact, iso-facts, iso-migrate, iso-contract, iso-capabilities, and iso-route from ${tmpRoot}`,
   );
 } catch (err) {
   failed = true;

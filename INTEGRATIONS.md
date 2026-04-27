@@ -1,6 +1,6 @@
 # Integrations
 
-This repo ships twenty packages that **work on their own** but are **designed
+This repo ships twenty-two packages that **work on their own** but are **designed
 to compose**. The planned cross-package compositions listed here are already
 shipped, so this file now serves as:
 
@@ -256,6 +256,19 @@ reread broad source trees.
 
 ---
 
+## 18. `iso-score` ← deterministic rubric scoring for domain packages — **DONE**
+
+Introduced as a standalone package. `iso-score` does not import JobForge,
+`iso-facts`, `iso-contract`, `iso-preflight`, or any other domain package; it
+provides the on-disk JSON score config/input/result formats that domain tools
+can share. JobForge-style examples cover weighted job-fit rubrics, apply
+thresholds, score bands, and score comparisons, but the package remains
+generic: compute weighted totals, verify content-derived result ids, evaluate
+gates, and compare structured scores without asking a model to redo arithmetic
+or threshold checks.
+
+---
+
 ## Design questions that are *not* open integrations
 
 The following look like integrations but are deliberately decoupled —
@@ -313,6 +326,11 @@ don't "fix" them without a conversation first.
   stable keys and explainable comparisons. Domain packages still own whether
   a `possible` match blocks work, warns, or routes to review, and which
   artifact source wins when canonical keys disagree with raw records.
+- **`iso-score` does not decide what a domain values.** It computes configured
+  rubric math, bands, comparisons, and gates. Domain packages still own the
+  rubric dimensions, evidence policy, score freshness, source precedence, and
+  whether a gate routes to preflight, ledger recording, human review, or
+  another workflow step.
 - **`iso-postflight` does not decide how a domain collects observations.**
   It settles explicit plan/outcome/artifact/step records. Domain packages
   still own whether those observations come from TSV files, ledger events,

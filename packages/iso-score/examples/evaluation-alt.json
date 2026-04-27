@@ -1,0 +1,34 @@
+{
+  "subject": "Alt Labs Senior Platform Engineer",
+  "profile": "jobfit",
+  "dimensions": {
+    "role_fit": {
+      "score": 3.4,
+      "evidence": ["reports/813-alt-labs.md:12"]
+    },
+    "company_fit": {
+      "score": 3.2,
+      "evidence": ["reports/813-alt-labs.md:18"]
+    },
+    "comp": {
+      "score": 3.8,
+      "evidence": ["reports/813-alt-labs.md:23"]
+    },
+    "location": {
+      "score": 3,
+      "evidence": ["reports/813-alt-labs.md:29"]
+    },
+    "growth": {
+      "score": 3,
+      "evidence": ["reports/813-alt-labs.md:35"]
+    }
+  },
+  "facts": {
+    "url": "https://example.test/jobs/456",
+    "company": "Alt Labs",
+    "role": "Senior Platform Engineer"
+  },
+  "meta": {
+    "report": "reports/813-alt-labs.md"
+  }
+}

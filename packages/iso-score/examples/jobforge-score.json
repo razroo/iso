@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "profiles": [
+    {
+      "name": "jobfit",
+      "description": "Example job-offer fit rubric. Domain packages own the rubric; iso-score owns the math.",
+      "scale": { "min": 0, "max": 5, "precision": 2 },
+      "dimensions": [
+        { "id": "role_fit", "label": "Role fit", "weight": 0.35, "required": true, "minEvidence": 1 },
+        { "id": "company_fit", "label": "Company fit", "weight": 0.2, "required": true, "minEvidence": 1 },
+        { "id": "comp", "label": "Compensation", "weight": 0.15, "required": false, "minEvidence": 1 },
+        { "id": "location", "label": "Location", "weight": 0.15, "required": true, "minEvidence": 1 },
+        { "id": "growth", "label": "Growth", "weight": 0.15, "required": false, "minEvidence": 1 }
+      ],
+      "bands": [
+        { "id": "strong", "label": "Strong", "min": 4 },
+        { "id": "apply", "label": "Apply", "min": 3 },
+        { "id": "skip", "label": "Skip", "min": 0 }
+      ],
+      "gates": [
+        { "id": "apply", "label": "Apply gate", "min": 3, "blockOnMissingRequired": true, "blockOnIssues": true },
+        { "id": "strong", "label": "Strong candidate gate", "min": 4, "requireBand": "strong", "blockOnIssues": true }
+      ]
+    }
+  ]
+}

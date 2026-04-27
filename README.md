@@ -12,9 +12,9 @@ Codex, OpenCode) and stays legible across model tiers (frontier models down
 to 7B local models). The repo now covers the full loop: build portable
 harness files, route models, replay evals, parse production traces, scope
 role capabilities, select deterministic context bundles, audit runtime policy,
-cache reusable artifacts, canonicalize identity keys, plan dispatches, settle
-dispatch results, redact sensitive output, materialize source-backed facts,
-migrate consumer projects, validate artifact contracts, and persist local
+cache reusable artifacts, canonicalize identity keys, score deterministic
+rubrics, plan dispatches, settle dispatch results, redact sensitive output,
+materialize source-backed facts, migrate consumer projects, validate artifact contracts, and persist local
 workflow truth. The only narrower surface is `iso-trace model-score`, which still
 depends on transcripts exposing stable model metadata.
 
@@ -30,11 +30,11 @@ Today, agent workflow reliability is fragmented on three axes:
    unstructured rationale all drop silently at 7B. You don't find out
    until the agent misbehaves in production.
 3. **Runtime fragmentation.** Workflows rely on fragile prompt prose for
-  fan-out limits, context loading, artifact reuse, fact extraction, identity keys, project upgrades, role permissions, output shape, duplicate checks, post-dispatch settlement, redaction, and
+  fan-out limits, context loading, artifact reuse, fact extraction, identity keys, rubric scoring, project upgrades, role permissions, output shape, duplicate checks, post-dispatch settlement, redaction, and
   "what already happened." Those invariants belong in deterministic local packages,
   not in repeatedly re-tokenized instructions.
 
-Twenty packages solve that in one pipeline with runtime control and a
+Twenty-two packages solve that in one pipeline with runtime control and a
 feedback loop:
 
 - **Four build-time tools** turn your authored source into every harness's file layout:
@@ -44,7 +44,7 @@ feedback loop:
   [`@razroo/iso-route`](./packages/iso-route) compiles *one model policy* into each harness's config.
 - **One wrapper** runs the whole build chain:
   [`@razroo/iso`](./packages/iso) chains the above into a single `iso build`.
-- **Thirteen runtime-control libraries** handle durable execution, context selection, artifact caching, artifact lookup, fact materialization, identity canonicalization, preflight dispatch planning, postflight settlement, redaction, project migration, role capabilities, artifact shape, and operational truth:
+- **Fourteen runtime-control libraries** handle durable execution, context selection, artifact caching, artifact lookup, fact materialization, identity canonicalization, deterministic scoring, preflight dispatch planning, postflight settlement, redaction, project migration, role capabilities, artifact shape, and operational truth:
   [`@razroo/iso-orchestrator`](./packages/iso-orchestrator) provides resumable
   steps, keyed mutexes, and bounded fan-out for side-effectful agent workflows,
   [`@razroo/iso-context`](./packages/iso-context) resolves context bundles,
@@ -57,6 +57,8 @@ feedback loop:
   and checks provenance-rich local facts,
   [`@razroo/iso-canon`](./packages/iso-canon) produces stable URL,
   company, role, and company-role keys for duplicate checks,
+  [`@razroo/iso-score`](./packages/iso-score) computes weighted rubric
+  scores, bands, comparisons, and gate decisions from structured evidence,
   [`@razroo/iso-preflight`](./packages/iso-preflight) validates
   source-backed candidate facts, applies gates, and produces bounded
   dispatch rounds before tool-heavy work starts,
@@ -92,6 +94,7 @@ feedback loop:
                                                                                                      │                      │    iso-index ─▶ artifact lookup
                                                                                                      │                      │    iso-facts ─▶ fact materialization
                                                                                                      │                      │    iso-canon ─▶ identity keys
+                                                                                                     │                      │    iso-score ─▶ rubric gates
                                                                                                      │                      │    iso-preflight ─▶ dispatch plan
                                                                                                      │                      │    iso-postflight ─▶ settlement gate
                                                                                                      │                      │    iso-redact ─▶ safe exports
@@ -153,6 +156,8 @@ the repo now supports a tighter loop:
   local instead of asking a model to reread broad artifact trees.
 - `iso-canon normalize/key/compare` keeps duplicate/entity keys local
   instead of repeatedly restating URL, company, and role matching rules.
+- `iso-score compute/check/gate` keeps weighted rubric scoring local
+  instead of asking a model to redo arithmetic, bands, and threshold checks.
 - `iso-preflight plan/check` keeps dispatch eligibility and batching local
   instead of relying on prompt prose for source-backed facts and fan-out rules.
 - `iso-postflight status/check` keeps dispatch settlement local instead of
@@ -198,6 +203,9 @@ of the prompt:
 - `iso-canon` makes identity canonicalization executable: URLs, companies,
   roles, and company-role pairs compile to stable keys with explainable
   `same` / `possible` / `different` comparisons.
+- `iso-score` makes rubric scoring executable: structured dimension scores
+  compile into weighted totals, bands, comparisons, and gate decisions with
+  deterministic ids and local verification.
 - `iso-preflight` makes dispatch planning executable: validate required
   file-backed facts, apply skip/block gates, avoid same-key overlap inside
   rounds, and emit pre/post steps before tool-heavy work starts.
@@ -326,6 +334,12 @@ of the prompt:
   Normalizes URLs, companies, roles, and company-role pairs into stable
   keys, then compares them with an explainable score so domain packages
   can keep duplicate checks out of prompt prose.
+
+- **[`packages/iso-score`](./packages/iso-score)** — [`@razroo/iso-score`](https://www.npmjs.com/package/@razroo/iso-score)
+  Deterministic weighted rubric scoring for agent workflows. Computes
+  profile-specific scores, bands, gate decisions, comparisons, and
+  content-derived result ids from structured dimension inputs so domain
+  packages can keep arithmetic and threshold checks out of prompt prose.
 
 - **[`packages/iso-preflight`](./packages/iso-preflight)** — [`@razroo/iso-preflight`](https://www.npmjs.com/package/@razroo/iso-preflight)
   Deterministic preflight planning for agent workflows. Validates
@@ -539,6 +553,17 @@ iso-canon compare company "OpenAI, Inc." "Open AI" --config canon.json --profile
 iso-canon explain --config canon.json --profile jobforge
 ```
 
+### `@razroo/iso-score` — what does this rubric deterministically decide?
+
+```bash
+iso-score compute --config score.json --input evaluation.json --out score-result.json
+iso-score verify --score score-result.json
+iso-score check --config score.json --input evaluation.json
+iso-score gate --config score.json --input evaluation.json --gate apply
+iso-score compare --config score.json --left evaluation.json --right evaluation-alt.json
+iso-score explain --config score.json
+```
+
 ### `@razroo/iso-preflight` — is this workflow safe to dispatch?
 
 ```bash
@@ -614,6 +639,7 @@ iso/
     ├── iso-index/        # deterministic local artifact lookup index
     ├── iso-facts/        # deterministic source-backed fact materialization
     ├── iso-canon/        # deterministic identity canonicalization
+    ├── iso-score/        # deterministic weighted rubric scoring
     ├── iso-preflight/    # deterministic preflight dispatch planning
     ├── iso-postflight/   # deterministic postflight settlement
     ├── iso-redact/       # deterministic sensitive-data redaction
@@ -641,6 +667,7 @@ npm --workspace @razroo/iso-cache run test      # iso-cache artifact cache tests
 npm --workspace @razroo/iso-index run test      # iso-index artifact lookup tests
 npm --workspace @razroo/iso-facts run test      # iso-facts materialization tests
 npm --workspace @razroo/iso-canon run test      # iso-canon identity key tests
+npm --workspace @razroo/iso-score run test      # iso-score rubric scoring tests
 npm --workspace @razroo/iso-preflight run test  # iso-preflight dispatch planning tests
 npm --workspace @razroo/iso-postflight run test # iso-postflight settlement tests
 npm --workspace @razroo/iso-redact run test     # iso-redact policy/redaction tests
@@ -682,7 +709,7 @@ build, and `npm publish --provenance`.
 ## End-to-end example
 
 [`examples/pipeline/`](./examples/pipeline) is an executable demonstration
-that exercises **seven of the twenty packages end-to-end** in one `npm run
+that exercises **seven of the twenty-two packages end-to-end** in one `npm run
 test:pipeline` invocation: `agentmd lint` + `render` → `isolint lint` →
 `iso-route build` (from a bundled `models.yaml` that extends the
 `standard` preset) → `iso-harness build` (which consumes iso-route's
@@ -701,7 +728,7 @@ downstream repo would use.
 
 `npm run test:pack` goes one level further: it packs the local workspaces into
 tarballs, installs them into fresh temp projects, and smoke-tests the packaged
-`iso-harness`, `iso`, `iso-eval`, `iso-trace`, `iso-route`, `iso-guard`, `iso-ledger`, `iso-context`, `iso-cache`, `iso-index`, `iso-facts`, `iso-canon`, `iso-preflight`, `iso-postflight`, `iso-redact`, `iso-migrate`, `iso-contract`, and `iso-capabilities`
+`iso-harness`, `iso`, `iso-eval`, `iso-trace`, `iso-route`, `iso-guard`, `iso-ledger`, `iso-context`, `iso-cache`, `iso-index`, `iso-facts`, `iso-canon`, `iso-score`, `iso-preflight`, `iso-postflight`, `iso-redact`, `iso-migrate`, `iso-contract`, and `iso-capabilities`
 CLIs. This guards against packaging regressions that workspace-only tests can
 miss.
 
