@@ -1,6 +1,6 @@
 # Integrations
 
-This repo ships eighteen packages that **work on their own** but are **designed
+This repo ships nineteen packages that **work on their own** but are **designed
 to compose**. The planned cross-package compositions listed here are already
 shipped, so this file now serves as:
 
@@ -230,6 +230,19 @@ subagent prose.
 
 ---
 
+## 16. `iso-redact` ← deterministic sensitive-data handling for domain packages — **DONE**
+
+Introduced as a standalone package. `iso-redact` does not import JobForge,
+`iso-trace`, `iso-guard`, `iso-eval`, or any other domain package; it
+provides the on-disk JSON redaction policy format and scanner/applier that
+domain tools can share. JobForge-style examples cover proxy credentials,
+profile contact fields, API keys, bearer tokens, private keys, and exported
+trace/fixture text, but the package remains generic: scan, apply, verify,
+and explain builtin/pattern/field redaction rules without asking a model to
+remember sensitive-data handling rules.
+
+---
+
 ## Design questions that are *not* open integrations
 
 The following look like integrations but are deliberately decoupled —
@@ -287,6 +300,11 @@ don't "fix" them without a conversation first.
   It settles explicit plan/outcome/artifact/step records. Domain packages
   still own whether those observations come from TSV files, ledger events,
   trace exports, orchestrator state, or another authoritative source.
+- **`iso-redact` does not decide which data a domain is allowed to retain.**
+  It provides deterministic detectors, field rules, replacements, and
+  verification. Domain packages still own their privacy policy, retention
+  boundaries, false-positive tolerance, and where redaction gates run in
+  export or telemetry workflows.
 - **`iso-migrate` does not decide release policy for a domain.** It plans
   and applies idempotent file edits. Domain packages still own when
   migrations run, how versions map to migration catalogs, and which

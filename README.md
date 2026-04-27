@@ -13,8 +13,8 @@ to 7B local models). The repo now covers the full loop: build portable
 harness files, route models, replay evals, parse production traces, scope
 role capabilities, select deterministic context bundles, audit runtime policy,
 cache reusable artifacts, canonicalize identity keys, plan dispatches, settle
-dispatch results, migrate consumer projects, validate artifact contracts, and
-persist local workflow truth. The only narrower surface is `iso-trace model-score`, which still
+dispatch results, redact sensitive output, migrate consumer projects, validate
+artifact contracts, and persist local workflow truth. The only narrower surface is `iso-trace model-score`, which still
 depends on transcripts exposing stable model metadata.
 
 Today, agent workflow reliability is fragmented on three axes:
@@ -29,11 +29,11 @@ Today, agent workflow reliability is fragmented on three axes:
    unstructured rationale all drop silently at 7B. You don't find out
    until the agent misbehaves in production.
 3. **Runtime fragmentation.** Workflows rely on fragile prompt prose for
-  fan-out limits, context loading, artifact reuse, identity keys, project upgrades, role permissions, output shape, duplicate checks, post-dispatch settlement, and
+  fan-out limits, context loading, artifact reuse, identity keys, project upgrades, role permissions, output shape, duplicate checks, post-dispatch settlement, redaction, and
   "what already happened." Those invariants belong in deterministic local packages,
   not in repeatedly re-tokenized instructions.
 
-Eighteen packages solve that in one pipeline with runtime control and a
+Nineteen packages solve that in one pipeline with runtime control and a
 feedback loop:
 
 - **Four build-time tools** turn your authored source into every harness's file layout:
@@ -43,7 +43,7 @@ feedback loop:
   [`@razroo/iso-route`](./packages/iso-route) compiles *one model policy* into each harness's config.
 - **One wrapper** runs the whole build chain:
   [`@razroo/iso`](./packages/iso) chains the above into a single `iso build`.
-- **Eleven runtime-control libraries** handle durable execution, context selection, artifact caching, artifact lookup, identity canonicalization, preflight dispatch planning, postflight settlement, project migration, role capabilities, artifact shape, and operational truth:
+- **Twelve runtime-control libraries** handle durable execution, context selection, artifact caching, artifact lookup, identity canonicalization, preflight dispatch planning, postflight settlement, redaction, project migration, role capabilities, artifact shape, and operational truth:
   [`@razroo/iso-orchestrator`](./packages/iso-orchestrator) provides resumable
   steps, keyed mutexes, and bounded fan-out for side-effectful agent workflows,
   [`@razroo/iso-context`](./packages/iso-context) resolves context bundles,
@@ -60,6 +60,8 @@ feedback loop:
   [`@razroo/iso-postflight`](./packages/iso-postflight) reconciles
   dispatch plans with observed outcomes, required artifacts, and post-run
   steps before the workflow advances or closes,
+  [`@razroo/iso-redact`](./packages/iso-redact) scans, applies, verifies,
+  and explains local sensitive-data redaction policies,
   [`@razroo/iso-migrate`](./packages/iso-migrate) plans and applies
   idempotent consumer-project file migrations,
   [`@razroo/iso-capabilities`](./packages/iso-capabilities) resolves,
@@ -88,6 +90,7 @@ feedback loop:
                                                                                                      │                      │    iso-canon ─▶ identity keys
                                                                                                      │                      │    iso-preflight ─▶ dispatch plan
                                                                                                      │                      │    iso-postflight ─▶ settlement gate
+                                                                                                     │                      │    iso-redact ─▶ safe exports
                                                                                                      │                      │    iso-migrate ─▶ project upgrades
                                                                                                      │                      │    iso-capabilities ─▶ role permission policy
   ┌────────────────────┐                                                                             │ .codex/config.toml    │
@@ -148,6 +151,9 @@ the repo now supports a tighter loop:
   instead of relying on prompt prose for source-backed facts and fan-out rules.
 - `iso-postflight status/check` keeps dispatch settlement local instead of
   asking an agent to infer whether outcomes, artifacts, and post-steps are done.
+- `iso-redact scan/apply/verify` keeps secret and PII scrubbing local
+  instead of trusting every agent summary, trace export, or fixture writer
+  to remember sensitive-data handling rules.
 - `iso-migrate plan/apply/check` keeps consumer project upgrades local
   instead of hand-editing package scripts, dependency ranges, and ignores.
 - `iso-capabilities check/render` keeps role permission matrices local
@@ -189,6 +195,9 @@ of the prompt:
 - `iso-postflight` makes dispatch settlement executable: reconcile planned
   rounds with observed outcomes, required artifacts, and post-run steps before
   continuing, replacing candidates, waiting, collecting output, or closing.
+- `iso-redact` makes sensitive-data handling executable: scan, apply,
+  verify, and explain local redaction policies for trace exports, logs,
+  telemetry, eval fixtures, and domain artifacts without a model call.
 - `iso-migrate` makes project upgrades executable: JSON pointer edits, line
   insertion, exact replacement, and guarded file writes run as idempotent
   migrations instead of one-off shell patches.
@@ -314,6 +323,13 @@ of the prompt:
   post-run steps, then emits the next safe action: dispatch the next round,
   wait, collect missing output, replace failed candidates, run post-steps,
   stop, or close.
+
+- **[`packages/iso-redact`](./packages/iso-redact)** — [`@razroo/iso-redact`](https://www.npmjs.com/package/@razroo/iso-redact)
+  Deterministic sensitive-data redaction for agent workflows. Loads local
+  redaction policies, scans text for builtin/pattern/field matches, applies
+  replacements without leaking matched values in findings, and verifies
+  exported traces, fixtures, telemetry, logs, or domain artifacts before
+  they are shared.
 
 - **[`packages/iso-migrate`](./packages/iso-migrate)** — [`@razroo/iso-migrate`](https://www.npmjs.com/package/@razroo/iso-migrate)
   Deterministic project migrations for agent workflow packages. Plans,
@@ -512,6 +528,15 @@ iso-postflight check --config postflight.json --plan plan.json --outcomes outcom
 iso-postflight explain --config postflight.json
 ```
 
+### `@razroo/iso-redact` — is this output safe to export?
+
+```bash
+iso-redact scan --config redact.json --input session.jsonl
+iso-redact verify --config redact.json --input fixture/task.md
+iso-redact apply --config redact.json --input raw.txt --output safe.txt
+iso-redact explain --config redact.json
+```
+
 ### `@razroo/iso-migrate` — what project-owned files need upgrading?
 
 ```bash
@@ -563,6 +588,7 @@ iso/
     ├── iso-canon/        # deterministic identity canonicalization
     ├── iso-preflight/    # deterministic preflight dispatch planning
     ├── iso-postflight/   # deterministic postflight settlement
+    ├── iso-redact/       # deterministic sensitive-data redaction
     ├── iso-migrate/      # deterministic consumer project migrations
     ├── iso-contract/     # deterministic artifact contracts
     └── iso-capabilities/ # deterministic role capability policy
@@ -588,6 +614,7 @@ npm --workspace @razroo/iso-index run test      # iso-index artifact lookup test
 npm --workspace @razroo/iso-canon run test      # iso-canon identity key tests
 npm --workspace @razroo/iso-preflight run test  # iso-preflight dispatch planning tests
 npm --workspace @razroo/iso-postflight run test # iso-postflight settlement tests
+npm --workspace @razroo/iso-redact run test     # iso-redact policy/redaction tests
 npm --workspace @razroo/iso-migrate run test    # iso-migrate project migration tests
 npm --workspace @razroo/iso-contract run test   # iso-contract artifact contract tests
 npm --workspace @razroo/iso-capabilities run test # iso-capabilities policy tests
@@ -626,7 +653,7 @@ build, and `npm publish --provenance`.
 ## End-to-end example
 
 [`examples/pipeline/`](./examples/pipeline) is an executable demonstration
-that exercises **seven of the eighteen packages end-to-end** in one `npm run
+that exercises **seven of the nineteen packages end-to-end** in one `npm run
 test:pipeline` invocation: `agentmd lint` + `render` → `isolint lint` →
 `iso-route build` (from a bundled `models.yaml` that extends the
 `standard` preset) → `iso-harness build` (which consumes iso-route's
@@ -645,7 +672,7 @@ downstream repo would use.
 
 `npm run test:pack` goes one level further: it packs the local workspaces into
 tarballs, installs them into fresh temp projects, and smoke-tests the packaged
-`iso-harness`, `iso`, `iso-eval`, `iso-trace`, `iso-route`, `iso-guard`, `iso-ledger`, `iso-context`, `iso-cache`, `iso-index`, `iso-canon`, `iso-preflight`, `iso-postflight`, `iso-migrate`, `iso-contract`, and `iso-capabilities`
+`iso-harness`, `iso`, `iso-eval`, `iso-trace`, `iso-route`, `iso-guard`, `iso-ledger`, `iso-context`, `iso-cache`, `iso-index`, `iso-canon`, `iso-preflight`, `iso-postflight`, `iso-redact`, `iso-migrate`, `iso-contract`, and `iso-capabilities`
 CLIs. This guards against packaging regressions that workspace-only tests can
 miss.
 

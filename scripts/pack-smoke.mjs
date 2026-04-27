@@ -79,6 +79,7 @@ try {
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-canon']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-preflight']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-postflight']);
+  run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-redact']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-migrate']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-contract']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-capabilities']);
@@ -101,6 +102,7 @@ try {
   const isoCanonTgz = packWorkspace('@razroo/iso-canon', packsDir);
   const isoPreflightTgz = packWorkspace('@razroo/iso-preflight', packsDir);
   const isoPostflightTgz = packWorkspace('@razroo/iso-postflight', packsDir);
+  const isoRedactTgz = packWorkspace('@razroo/iso-redact', packsDir);
   const isoMigrateTgz = packWorkspace('@razroo/iso-migrate', packsDir);
   const isoContractTgz = packWorkspace('@razroo/iso-contract', packsDir);
   const isoCapabilitiesTgz = packWorkspace('@razroo/iso-capabilities', packsDir);
@@ -489,6 +491,44 @@ try {
     throw new Error('packaged iso-postflight check did not report PASS');
   }
 
+  // Smoke the packaged iso-redact CLI against the bundled JobForge-style redaction policy.
+  const isoRedactDir = resolve(tmpRoot, 'iso-redact');
+  mkdirSync(isoRedactDir, { recursive: true });
+  writePackageJson(isoRedactDir);
+  run('npm', ['install', isoRedactTgz], isoRedactDir);
+  const isoRedactVersion = run('npx', ['--no-install', 'iso-redact', '--version'], isoRedactDir, { capture: true });
+  if (!isoRedactVersion.stdout.trim()) {
+    throw new Error('packaged iso-redact --version produced no output');
+  }
+  const redactPackageDir = resolve(isoRedactDir, 'node_modules', '@razroo', 'iso-redact');
+  const redactConfigPath = resolve(redactPackageDir, 'examples', 'jobforge-redact.json');
+  const redactInputPath = resolve(redactPackageDir, 'examples', 'leaky-input.txt');
+  const redactOutputPath = resolve(isoRedactDir, 'safe.txt');
+  const redactScan = run(
+    'npx',
+    ['--no-install', 'iso-redact', 'scan', '--config', redactConfigPath, '--input', redactInputPath],
+    isoRedactDir,
+    { capture: true },
+  );
+  if (!redactScan.stdout.includes('iso-redact: FOUND')) {
+    throw new Error('packaged iso-redact scan did not report FOUND');
+  }
+  run(
+    'npx',
+    ['--no-install', 'iso-redact', 'apply', '--config', redactConfigPath, '--input', redactInputPath, '--output', redactOutputPath],
+    isoRedactDir,
+  );
+  const redactVerify = run(
+    'npx',
+    ['--no-install', 'iso-redact', 'verify', '--config', redactConfigPath, '--input', redactOutputPath],
+    isoRedactDir,
+    { capture: true },
+  );
+  if (!redactVerify.stdout.includes('iso-redact: PASS')) {
+    throw new Error('packaged iso-redact verify did not report PASS');
+  }
+  run('npx', ['--no-install', 'iso-redact', 'explain', '--config', redactConfigPath], isoRedactDir);
+
   // Smoke the packaged iso-migrate CLI against a JobForge-style consumer upgrade.
   const isoMigrateDir = resolve(tmpRoot, 'iso-migrate');
   mkdirSync(isoMigrateDir, { recursive: true });
@@ -652,7 +692,7 @@ try {
   run('npx', ['--no-install', 'iso-route', 'plan', modelsPath], isoRouteDir);
 
   console.log(
-    `\npack smoke ok — verified packaged iso-harness, iso, iso-eval, iso-trace, iso-guard, iso-ledger, iso-context, iso-cache, iso-index, iso-canon, iso-preflight, iso-postflight, iso-migrate, iso-contract, iso-capabilities, and iso-route from ${tmpRoot}`,
+    `\npack smoke ok — verified packaged iso-harness, iso, iso-eval, iso-trace, iso-guard, iso-ledger, iso-context, iso-cache, iso-index, iso-canon, iso-preflight, iso-postflight, iso-redact, iso-migrate, iso-contract, iso-capabilities, and iso-route from ${tmpRoot}`,
   );
 } catch (err) {
   failed = true;

@@ -1,0 +1,4 @@
+Contact: charlie@example.com
+OPENAI_API_KEY=sk-proj-abcdefghijklmnopqrstuvwxyz1234567890
+proxy: http://user:pass@example.test:8080
+password: "hunter2"

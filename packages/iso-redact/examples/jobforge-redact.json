@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "defaults": {
+    "severity": "error",
+    "replacement": "[REDACTED:{id}]"
+  },
+  "builtins": [
+    "email",
+    "phone",
+    "openai-api-key",
+    "github-token",
+    "npm-token",
+    "aws-access-key-id",
+    "bearer-token",
+    "private-key",
+    "proxy-url-credentials"
+  ],
+  "fields": [
+    {
+      "id": "profile-contact",
+      "label": "Profile contact field",
+      "severity": "warn",
+      "names": [
+        "email",
+        "phone",
+        "address",
+        "street",
+        "city",
+        "postalCode",
+        "zip",
+        "linkedin"
+      ]
+    },
+    {
+      "id": "proxy-config",
+      "label": "Proxy configuration field",
+      "names": [
+        "proxyUrl",
+        "proxy_url",
+        "server",
+        "username",
+        "password",
+        "bypass"
+      ]
+    },
+    {
+      "id": "credential-field",
+      "label": "Credential field",
+      "names": [
+        "apiKey",
+        "api_key",
+        "access_token",
+        "refresh_token",
+        "client_secret",
+        "token"
+      ]
+    }
+  ]
+}
