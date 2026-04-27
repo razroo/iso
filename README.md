@@ -12,7 +12,7 @@ Codex, OpenCode) and stays legible across model tiers (frontier models down
 to 7B local models). The repo now covers the full loop: build portable
 harness files, route models, replay evals, parse production traces, scope
 role capabilities, select deterministic context bundles, audit runtime policy,
-cache reusable artifacts, migrate consumer projects, validate artifact contracts, and persist local workflow truth. The only narrower surface is `iso-trace model-score`, which still
+cache reusable artifacts, canonicalize identity keys, migrate consumer projects, validate artifact contracts, and persist local workflow truth. The only narrower surface is `iso-trace model-score`, which still
 depends on transcripts exposing stable model metadata.
 
 Today, agent workflow reliability is fragmented on three axes:
@@ -27,11 +27,11 @@ Today, agent workflow reliability is fragmented on three axes:
    unstructured rationale all drop silently at 7B. You don't find out
    until the agent misbehaves in production.
 3. **Runtime fragmentation.** Workflows rely on fragile prompt prose for
-  fan-out limits, context loading, artifact reuse, project upgrades, role permissions, output shape, duplicate checks, and
+  fan-out limits, context loading, artifact reuse, identity keys, project upgrades, role permissions, output shape, duplicate checks, and
   "what already happened." Those invariants belong in deterministic local packages,
   not in repeatedly re-tokenized instructions.
 
-Sixteen packages solve that in one pipeline with runtime control and a
+Seventeen packages solve that in one pipeline with runtime control and a
 feedback loop:
 
 - **Four build-time tools** turn your authored source into every harness's file layout:
@@ -41,7 +41,7 @@ feedback loop:
   [`@razroo/iso-route`](./packages/iso-route) compiles *one model policy* into each harness's config.
 - **One wrapper** runs the whole build chain:
   [`@razroo/iso`](./packages/iso) chains the above into a single `iso build`.
-- **Eight runtime-control libraries** handle durable execution, context selection, artifact caching, artifact lookup, project migration, role capabilities, artifact shape, and operational truth:
+- **Nine runtime-control libraries** handle durable execution, context selection, artifact caching, artifact lookup, identity canonicalization, project migration, role capabilities, artifact shape, and operational truth:
   [`@razroo/iso-orchestrator`](./packages/iso-orchestrator) provides resumable
   steps, keyed mutexes, and bounded fan-out for side-effectful agent workflows,
   [`@razroo/iso-context`](./packages/iso-context) resolves context bundles,
@@ -50,6 +50,8 @@ feedback loop:
   content-addressed local artifacts with TTL-aware reads and pruning,
   [`@razroo/iso-index`](./packages/iso-index) builds and queries compact
   local indexes that point to authoritative facts across artifacts,
+  [`@razroo/iso-canon`](./packages/iso-canon) produces stable URL,
+  company, role, and company-role keys for duplicate checks,
   [`@razroo/iso-migrate`](./packages/iso-migrate) plans and applies
   idempotent consumer-project file migrations,
   [`@razroo/iso-capabilities`](./packages/iso-capabilities) resolves,
@@ -75,6 +77,7 @@ feedback loop:
                                                                                                      │                      │    iso-context ─▶ context bundle plan
                                                                                                      │                      │    iso-cache ─▶ artifact reuse
                                                                                                      │                      │    iso-index ─▶ artifact lookup
+                                                                                                     │                      │    iso-canon ─▶ identity keys
                                                                                                      │                      │    iso-migrate ─▶ project upgrades
                                                                                                      │                      │    iso-capabilities ─▶ role permission policy
   ┌────────────────────┐                                                                             │ .codex/config.toml    │
@@ -129,6 +132,8 @@ the repo now supports a tighter loop:
   refetching or rederiving safe inputs on every run.
 - `iso-index build/query/has` keeps artifact lookup local instead of
   grepping and loading growing state/report trees into prompts.
+- `iso-canon normalize/key/compare` keeps duplicate/entity keys local
+  instead of repeatedly restating URL, company, and role matching rules.
 - `iso-migrate plan/apply/check` keeps consumer project upgrades local
   instead of hand-editing package scripts, dependency ranges, and ignores.
 - `iso-capabilities check/render` keeps role permission matrices local
@@ -161,6 +166,9 @@ of the prompt:
 - `iso-index` makes artifact lookup executable: text/TSV/markdown-table/JSONL
   sources compile into a compact queryable index, so agents can ask where a
   fact lives without repeatedly grepping or loading growing files.
+- `iso-canon` makes identity canonicalization executable: URLs, companies,
+  roles, and company-role pairs compile to stable keys with explainable
+  `same` / `possible` / `different` comparisons.
 - `iso-migrate` makes project upgrades executable: JSON pointer edits, line
   insertion, exact replacement, and guarded file writes run as idempotent
   migrations instead of one-off shell patches.
@@ -267,6 +275,12 @@ of the prompt:
   sources, then supports `query/has/verify` so domain packages can find
   authoritative facts without loading whole artifact trees into prompt
   context.
+
+- **[`packages/iso-canon`](./packages/iso-canon)** — [`@razroo/iso-canon`](https://www.npmjs.com/package/@razroo/iso-canon)
+  Deterministic canonicalization and entity matching for agent workflows.
+  Normalizes URLs, companies, roles, and company-role pairs into stable
+  keys, then compares them with an explainable score so domain packages
+  can keep duplicate checks out of prompt prose.
 
 - **[`packages/iso-migrate`](./packages/iso-migrate)** — [`@razroo/iso-migrate`](https://www.npmjs.com/package/@razroo/iso-migrate)
   Deterministic project migrations for agent workflow packages. Plans,
@@ -440,6 +454,15 @@ iso-index verify --index .iso-index.json
 iso-index explain --config index.json
 ```
 
+### `@razroo/iso-canon` — what stable key names this entity?
+
+```bash
+iso-canon normalize url "https://www.example.com/jobs/123?utm_source=x"
+iso-canon key company-role --company "Anthropic, PBC" --role "Senior SWE - Remote US"
+iso-canon compare company "OpenAI, Inc." "Open AI" --config canon.json --profile jobforge
+iso-canon explain --config canon.json --profile jobforge
+```
+
 ### `@razroo/iso-migrate` — what project-owned files need upgrading?
 
 ```bash
@@ -488,6 +511,7 @@ iso/
     ├── iso-context/      # deterministic context bundle policy
     ├── iso-cache/        # deterministic content-addressed artifact cache
     ├── iso-index/        # deterministic local artifact lookup index
+    ├── iso-canon/        # deterministic identity canonicalization
     ├── iso-migrate/      # deterministic consumer project migrations
     ├── iso-contract/     # deterministic artifact contracts
     └── iso-capabilities/ # deterministic role capability policy
@@ -510,6 +534,7 @@ npm --workspace @razroo/iso-ledger run test     # iso-ledger event/state tests
 npm --workspace @razroo/iso-context run test    # iso-context bundle/budget tests
 npm --workspace @razroo/iso-cache run test      # iso-cache artifact cache tests
 npm --workspace @razroo/iso-index run test      # iso-index artifact lookup tests
+npm --workspace @razroo/iso-canon run test      # iso-canon identity key tests
 npm --workspace @razroo/iso-migrate run test    # iso-migrate project migration tests
 npm --workspace @razroo/iso-contract run test   # iso-contract artifact contract tests
 npm --workspace @razroo/iso-capabilities run test # iso-capabilities policy tests
@@ -548,7 +573,7 @@ build, and `npm publish --provenance`.
 ## End-to-end example
 
 [`examples/pipeline/`](./examples/pipeline) is an executable demonstration
-that exercises **seven of the sixteen packages end-to-end** in one `npm run
+that exercises **seven of the seventeen packages end-to-end** in one `npm run
 test:pipeline` invocation: `agentmd lint` + `render` → `isolint lint` →
 `iso-route build` (from a bundled `models.yaml` that extends the
 `standard` preset) → `iso-harness build` (which consumes iso-route's
@@ -567,7 +592,7 @@ downstream repo would use.
 
 `npm run test:pack` goes one level further: it packs the local workspaces into
 tarballs, installs them into fresh temp projects, and smoke-tests the packaged
-`iso-harness`, `iso`, `iso-eval`, `iso-trace`, `iso-route`, `iso-guard`, `iso-ledger`, `iso-context`, `iso-cache`, `iso-index`, `iso-migrate`, `iso-contract`, and `iso-capabilities`
+`iso-harness`, `iso`, `iso-eval`, `iso-trace`, `iso-route`, `iso-guard`, `iso-ledger`, `iso-context`, `iso-cache`, `iso-index`, `iso-canon`, `iso-migrate`, `iso-contract`, and `iso-capabilities`
 CLIs. This guards against packaging regressions that workspace-only tests can
 miss.
 

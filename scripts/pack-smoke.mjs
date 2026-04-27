@@ -76,6 +76,7 @@ try {
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-context']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-cache']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-index']);
+  run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-canon']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-migrate']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-contract']);
   run('npm', ['--silent', 'run', 'build', '--workspace', '@razroo/iso-capabilities']);
@@ -95,6 +96,7 @@ try {
   const isoContextTgz = packWorkspace('@razroo/iso-context', packsDir);
   const isoCacheTgz = packWorkspace('@razroo/iso-cache', packsDir);
   const isoIndexTgz = packWorkspace('@razroo/iso-index', packsDir);
+  const isoCanonTgz = packWorkspace('@razroo/iso-canon', packsDir);
   const isoMigrateTgz = packWorkspace('@razroo/iso-migrate', packsDir);
   const isoContractTgz = packWorkspace('@razroo/iso-contract', packsDir);
   const isoCapabilitiesTgz = packWorkspace('@razroo/iso-capabilities', packsDir);
@@ -370,6 +372,55 @@ try {
     throw new Error('packaged iso-index verify did not report PASS');
   }
 
+  // Smoke the packaged iso-canon CLI against the bundled JobForge-style canonicalization profile.
+  const isoCanonDir = resolve(tmpRoot, 'iso-canon');
+  mkdirSync(isoCanonDir, { recursive: true });
+  writePackageJson(isoCanonDir);
+  run('npm', ['install', isoCanonTgz], isoCanonDir);
+  const isoCanonVersion = run('npx', ['--no-install', 'iso-canon', '--version'], isoCanonDir, { capture: true });
+  if (!isoCanonVersion.stdout.trim()) {
+    throw new Error('packaged iso-canon --version produced no output');
+  }
+  const canonConfigPath = resolve(
+    isoCanonDir,
+    'node_modules',
+    '@razroo',
+    'iso-canon',
+    'examples',
+    'jobforge-canon.json',
+  );
+  const canonKey = run(
+    'npx',
+    [
+      '--no-install',
+      'iso-canon',
+      'key',
+      'company-role',
+      '--company',
+      'Anthropic, PBC',
+      '--role',
+      'Senior SWE, AI Platform - Remote US',
+      '--config',
+      canonConfigPath,
+      '--profile',
+      'jobforge',
+    ],
+    isoCanonDir,
+    { capture: true },
+  );
+  if (!canonKey.stdout.includes('company-role:anthropic:senior-software-engineer-ai-platform')) {
+    throw new Error('packaged iso-canon key did not report the expected canonical key');
+  }
+  const canonCompare = run(
+    'npx',
+    ['--no-install', 'iso-canon', 'compare', 'company', 'OpenAI, Inc.', 'Open AI', '--config', canonConfigPath, '--profile', 'jobforge'],
+    isoCanonDir,
+    { capture: true },
+  );
+  if (!canonCompare.stdout.includes('iso-canon: SAME')) {
+    throw new Error('packaged iso-canon compare did not report SAME');
+  }
+
   // Smoke the packaged iso-migrate CLI against a JobForge-style consumer upgrade.
   const isoMigrateDir = resolve(tmpRoot, 'iso-migrate');
   mkdirSync(isoMigrateDir, { recursive: true });
@@ -533,7 +584,7 @@ try {
   run('npx', ['--no-install', 'iso-route', 'plan', modelsPath], isoRouteDir);
 
   console.log(
-    `\npack smoke ok — verified packaged iso-harness, iso, iso-eval, iso-trace, iso-guard, iso-ledger, iso-context, iso-cache, iso-index, iso-migrate, iso-contract, iso-capabilities, and iso-route from ${tmpRoot}`,
+    `\npack smoke ok — verified packaged iso-harness, iso, iso-eval, iso-trace, iso-guard, iso-ledger, iso-context, iso-cache, iso-index, iso-canon, iso-migrate, iso-contract, iso-capabilities, and iso-route from ${tmpRoot}`,
   );
 } catch (err) {
   failed = true;

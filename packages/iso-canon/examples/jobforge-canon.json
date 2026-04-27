@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "profiles": [
+    {
+      "name": "jobforge",
+      "url": {
+        "dropHash": true,
+        "stripWww": true,
+        "stripQueryParams": [
+          "utm_*",
+          "gh_src",
+          "source",
+          "ref",
+          "referrer",
+          "lever-source",
+          "ashby_jid"
+        ]
+      },
+      "company": {
+        "aliases": {
+          "open ai": "openai",
+          "anthropic pbc": "anthropic",
+          "google llc": "google",
+          "meta platforms": "meta"
+        },
+        "suffixes": [
+          "inc",
+          "incorporated",
+          "llc",
+          "ltd",
+          "limited",
+          "corp",
+          "corporation",
+          "company",
+          "co",
+          "pbc",
+          "plc"
+        ]
+      },
+      "role": {
+        "aliases": {
+          "fdse": "forward deployed software engineer",
+          "fullstack": "full stack",
+          "ml": "machine learning",
+          "sr": "senior",
+          "swe": "software engineer"
+        },
+        "stopWords": [
+          "hybrid",
+          "new york",
+          "onsite",
+          "remote",
+          "san francisco",
+          "united states",
+          "usa",
+          "us"
+        ]
+      },
+      "match": {
+        "strong": 0.92,
+        "possible": 0.78
+      }
+    }
+  ]
+}

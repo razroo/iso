@@ -65,6 +65,9 @@ jobs:
           - workspace: "@razroo/iso-index"
             node: "20.6.0"
             extra: ""
+          - workspace: "@razroo/iso-canon"
+            node: "20.6.0"
+            extra: ""
           - workspace: "@razroo/iso-migrate"
             node: "20.6.0"
             extra: ""
@@ -207,6 +210,12 @@ jobs:
           node packages/iso-index/dist/cli.js has --index /tmp/jobforge.iso-index.json --key "company-role:example-labs:staff-agent-engineer"
           node packages/iso-index/dist/cli.js query --index /tmp/jobforge.iso-index.json --kind jobforge.report.url --key "url:https://example.test/jobs/123"
           node packages/iso-index/dist/cli.js verify --index /tmp/jobforge.iso-index.json
+
+      - name: iso-canon example normalize/compare
+        run: |
+          node packages/iso-canon/dist/cli.js normalize company "OpenAI, Inc." --config packages/iso-canon/examples/jobforge-canon.json --profile jobforge
+          node packages/iso-canon/dist/cli.js key company-role --company "Anthropic, PBC" --role "Senior SWE, AI Platform - Remote US" --config packages/iso-canon/examples/jobforge-canon.json --profile jobforge
+          node packages/iso-canon/dist/cli.js compare company "OpenAI, Inc." "Open AI" --config packages/iso-canon/examples/jobforge-canon.json --profile jobforge
 
       - name: iso-migrate example plan/apply/check
         run: |

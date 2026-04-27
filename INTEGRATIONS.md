@@ -1,6 +1,6 @@
 # Integrations
 
-This repo ships sixteen packages that **work on their own** but are **designed
+This repo ships seventeen packages that **work on their own** but are **designed
 to compose**. The planned cross-package compositions listed here are already
 shipped, so this file now serves as:
 
@@ -203,6 +203,19 @@ asking the model to hand-edit consumer-owned files.
 
 ---
 
+## 14. `iso-canon` ← deterministic identity keys for domain packages — **DONE**
+
+Introduced as a standalone package. `iso-canon` does not import JobForge,
+`iso-index`, `iso-ledger`, or any other domain package; it provides the
+on-disk JSON profile format and canonicalizer that domain tools can share.
+JobForge-style examples cover URL tracking cleanup, company legal suffixes,
+role aliases, and company-role dedupe keys, but the package remains generic:
+normalize URL/company/role/company-role identifiers and return explainable
+`same` / `possible` / `different` comparisons without asking the model to
+remember duplicate-matching rules.
+
+---
+
 ## Design questions that are *not* open integrations
 
 The following look like integrations but are deliberately decoupled —
@@ -252,6 +265,10 @@ don't "fix" them without a conversation first.
   It builds and verifies lookup records from configured sources. Domain
   packages still own which source wins when report, tracker, scan, cache,
   and ledger facts disagree, and when an index should be rebuilt.
+- **`iso-canon` does not decide duplicate policy for a domain.** It emits
+  stable keys and explainable comparisons. Domain packages still own whether
+  a `possible` match blocks work, warns, or routes to review, and which
+  artifact source wins when canonical keys disagree with raw records.
 - **`iso-migrate` does not decide release policy for a domain.** It plans
   and applies idempotent file edits. Domain packages still own when
   migrations run, how versions map to migration catalogs, and which
