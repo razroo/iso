@@ -257,7 +257,7 @@ of the prompt:
 - `iso-guard` audits the normalized event streams from real runs so runtime
   policy stays verifiable after deploy.
 
-## Packages
+## Packages (25 Total)
 
 1. **[`packages/iso`](./packages/iso)** — [`@razroo/iso`](https://www.npmjs.com/package/@razroo/iso) · *recommended entry point*
    The wrapper CLI for the whole flow. If `agent.md` is your authored
