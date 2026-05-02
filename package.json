@@ -7,6 +7,9 @@
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
+    "demo:dev": "vite --config demo/vite.config.ts",
+    "demo:build": "vite build --config demo/vite.config.ts",
+    "demo:preview": "vite preview --config demo/vite.config.ts",
     "test": "npm run test --workspaces --if-present",
     "test:dogfood": "node examples/dogfood/build.mjs",
     "test:pack": "node scripts/pack-smoke.mjs",
@@ -21,7 +24,8 @@
     "@changesets/cli": "^2.31.0",
     "@types/node": "^22.10.0",
     "tsx": "^4.19.1",
-    "typescript": "^5.6.2"
+    "typescript": "^5.6.2",
+    "vite": "^8.0.10"
   },
   "engines": {
     "node": ">=18.17.0"

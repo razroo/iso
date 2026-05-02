@@ -1,11 +1,13 @@
 node_modules
 dist
+dist-demo
 *.tsbuildinfo
 coverage
 .env
 .env.local
 .DS_Store
 *.log
+.playwright-mcp
 
 # Accidental tsc emit beside sources (build output belongs in dist/)
 packages/*/src/**/*.js
