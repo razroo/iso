@@ -9,19 +9,26 @@ file layout each harness actually reads.
 ```
 iso/                              →  CLAUDE.md                    (Claude Code)
 ├── instructions.md                  .claude/agents/*.md
-├── mcp.json                         .claude/commands/*.md
+├── instructions.agents.md*          .claude/commands/*.md
+├── instructions.claude.md*          .mcp.json
+├── instructions.cursor.md*       →  AGENTS.md                    (Codex + OpenCode + Pi)
+├── instructions.opencode.md*        .codex/config.toml
+├── mcp.json                         .opencode/agents/*.md
+│                                     .opencode/skills/*.md
+│                                     .opencode/instructions.md*  (OpenCode-only addendum)
+│                                     .opencode/opencode-model-fallback.json  (optional; from `opencodeModelFallback` in iso/config.json)
+│                                     opencode.json
+│                                  →  .cursor/rules/*.mdc          (Cursor)
+│                                     .cursor/mcp.json
+│                                  →  .pi/skills/*/SKILL.md        (Pi)
+│                                     .pi/prompts/*.md
 ├── agents/                          .mcp.json
-│   └── researcher.md             →  AGENTS.md                    (Codex + OpenCode + Pi)
-└── commands/                        .codex/config.toml
-    └── review.md                                                         .opencode/agents/*.md
-                                     .opencode/skills/*.md
-                                     .opencode/opencode-model-fallback.json  (optional; from `opencodeModelFallback` in iso/config.json)
-                                     opencode.json
-                                  →  .cursor/rules/*.mdc          (Cursor)
-                                     .cursor/mcp.json
-                                  →  .pi/skills/*/SKILL.md        (Pi)
-                                     .pi/prompts/*.md
+│   └── researcher.md
+└── commands/
+    └── review.md
 ```
+
+Files marked with `*` are optional.
 
 ## Quickstart
 
@@ -53,6 +60,10 @@ iso-harness build --watch                 # rebuild on every change under iso/
 ```
 iso/
 ├── instructions.md       # root prompt → CLAUDE.md / AGENTS.md / .cursor/rules/main.mdc
+├── instructions.agents.md   # optional addendum for shared AGENTS.md targets
+├── instructions.claude.md   # optional Claude-only root addendum
+├── instructions.cursor.md   # optional Cursor-only root addendum
+├── instructions.opencode.md # optional OpenCode-only addendum, loaded via opencode.json.instructions
 ├── config.json           # optional — targets.* merges + opencodeModelFallback file emit
 ├── mcp.json              # shared MCP server definitions
 ├── agents/               # subagents
@@ -150,6 +161,19 @@ explicit hatches keep harness-specific features possible:
    [`@razroo/opencode-model-fallback`](https://www.npmjs.com/package/@razroo/opencode-model-fallback)
    plugin (`retryable_error_patterns`, global `fallback_models`, etc.).
    OpenCode-only; other harnesses ignore it.
+
+### Root instruction addenda
+
+`instructions.md` is still the shared base prompt. Optional sibling files let
+you add harness-specific root guidance without forking the whole source:
+
+- `instructions.agents.md` appends only to the shared `AGENTS.md` output used by Codex, OpenCode, and Pi.
+- `instructions.claude.md` appends only to `CLAUDE.md`.
+- `instructions.cursor.md` appends only to `.cursor/rules/main.mdc`.
+- `instructions.opencode.md` is emitted to `.opencode/instructions.md` and automatically added to `opencode.json.instructions`.
+
+This is especially useful when OpenCode needs extra orchestration guidance
+that should not leak into the shared `AGENTS.md` file that Codex and Pi also read.
 
 ```json
 // iso/config.json

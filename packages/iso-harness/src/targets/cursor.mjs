@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { stringify as toFrontmatter } from '../frontmatter.mjs';
 import { writeFile, writeJson } from '../fs-utils.mjs';
-import { targetOverride } from '../source.mjs';
+import { instructionsForTarget, targetOverride } from '../source.mjs';
 
 export async function emitCursor(src, outDir, opts = {}) {
   const written = [];
@@ -10,13 +10,14 @@ export async function emitCursor(src, outDir, opts = {}) {
     written.push({ path: p, bytes });
   };
 
-  if (src.instructions) {
+  const instructions = instructionsForTarget(src, 'cursor');
+  if (instructions) {
     const data = {
       description: 'Project instructions',
       alwaysApply: true,
     };
     const p = path.join(outDir, '.cursor', 'rules', 'main.mdc');
-    await push(p, toFrontmatter({ data, body: src.instructions }));
+    await push(p, toFrontmatter({ data, body: instructions }));
   }
 
   // Cursor has no native subagents or slash commands; emit agent prompts as

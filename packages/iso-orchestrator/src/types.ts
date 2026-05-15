@@ -20,6 +20,24 @@ export interface WorkflowEvent<TDetail extends JsonValue = JsonValue> {
   detail?: TDetail;
 }
 
+export interface WorkflowHeartbeatRecord<TDetail extends JsonValue = JsonValue> {
+  key: string;
+  at: string;
+  detail?: TDetail;
+}
+
+export interface WorkflowLeaseRecord<TDetail extends JsonValue = JsonValue> {
+  key: string;
+  holder: string;
+  acquiredAt: string;
+  heartbeatAt: string;
+  expiresAt: string;
+  releasedAt?: string;
+  detail?: TDetail;
+}
+
+export type WorkflowLeaseStatus = 'active' | 'expired' | 'released';
+
 export interface AppendEventInput<TDetail extends JsonValue = JsonValue> {
   type: string;
   message?: string;
@@ -47,6 +65,8 @@ export interface WorkflowRecord<TState extends JsonValue = JsonValue> {
   state: TState;
   steps: Record<string, StepRecord>;
   events: WorkflowEvent[];
+  heartbeats?: Record<string, WorkflowHeartbeatRecord>;
+  leases?: Record<string, WorkflowLeaseRecord>;
   lastError?: SerializedError;
 }
 
@@ -86,6 +106,12 @@ export interface MutexOptions {
   staleAfterMs?: number;
 }
 
+export interface TouchLeaseInput<TDetail extends JsonValue = JsonValue> {
+  holder: string;
+  ttlMs: number;
+  detail?: TDetail;
+}
+
 export interface ForEachContext {
   index: number;
 }
@@ -115,6 +141,12 @@ export interface WorkflowContext<TState extends JsonValue> {
   getRecord(): Promise<WorkflowRecord<TState>>;
   updateState(updater: StateUpdater<TState>): Promise<TState>;
   appendEvent<TDetail extends JsonValue = JsonValue>(input: AppendEventInput<TDetail>): Promise<WorkflowEvent<TDetail>>;
+  heartbeat<TDetail extends JsonValue = JsonValue>(key: string, detail?: TDetail): Promise<WorkflowHeartbeatRecord<TDetail>>;
+  touchLease<TDetail extends JsonValue = JsonValue>(
+    key: string,
+    input: TouchLeaseInput<TDetail>,
+  ): Promise<WorkflowLeaseRecord<TDetail>>;
+  releaseLease(key: string, holder?: string): Promise<WorkflowLeaseRecord | undefined>;
   setStatus(status: WorkflowStatus, error?: unknown): Promise<WorkflowRecord<TState>>;
   step<TResult extends JsonValue>(
     name: string,

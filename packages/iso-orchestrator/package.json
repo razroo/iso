@@ -1,6 +1,6 @@
 {
   "name": "@razroo/iso-orchestrator",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Durable workflow primitives for AI-agent harnesses: resumable steps, keyed mutexes, and bounded parallel fan-out with file-backed state.",
   "license": "MIT",
   "type": "module",

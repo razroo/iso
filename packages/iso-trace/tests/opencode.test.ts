@@ -15,6 +15,7 @@ test("parses the sample OpenCode export into a session", () => {
   assert.equal(s.source.harness, "opencode");
   assert.equal(s.source.format, "opencode/export-json-v1");
   assert.equal(s.cwd, "/tmp/opencode-project");
+  assert.equal(s.title, "Trace demo");
   assert.equal(s.model, "openai/gpt-5-mini");
   assert.equal(s.startedAt, "2026-04-19T16:00:00.000Z");
   assert.equal(s.endedAt, "2026-04-19T16:00:04.000Z");
@@ -31,6 +32,7 @@ test("loadSessionFromPath and refFromPath infer OpenCode from the export content
   assert.equal(s.source.harness, "opencode");
   assert.equal(ref.source.harness, "opencode");
   assert.equal(ref.id, "ses_demo123");
+  assert.equal(ref.title, "Trace demo");
 });
 
 test("OpenCode tool parts, patch parts, and assistant errors become events", () => {

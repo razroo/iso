@@ -1,5 +1,7 @@
 export { discoverSessions, defaultRoots, parseSinceCutoff } from "./discover.js";
 export type { SourceRoot } from "./discover.js";
+export { inspectSession, inspectSessions } from "./inspect.js";
+export type { InspectOptions, SessionInspection } from "./inspect.js";
 export { loadSessionFromPath, refFromPath } from "./sources/index.js";
 export { parseClaudeCode, refForClaudeCode, CLAUDE_CODE_FORMAT } from "./sources/claude-code.js";
 export { parseCursor, refForCursor, CURSOR_FORMAT } from "./sources/cursor.js";

@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { promises as fs } from 'node:fs';
 import { writeFile } from '../fs-utils.mjs';
+import { instructionsForTarget } from '../source.mjs';
 
 function tomlString(v) {
   return `"${String(v).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
@@ -64,9 +65,10 @@ export async function emitCodex(src, outDir, opts = {}) {
     written.push({ path: p, bytes });
   };
 
-  if (src.instructions) {
+  const instructions = instructionsForTarget(src, 'codex');
+  if (instructions) {
     const p = path.join(outDir, 'AGENTS.md');
-    await push(p, src.instructions.endsWith('\n') ? src.instructions : src.instructions + '\n');
+    await push(p, instructions.endsWith('\n') ? instructions : instructions + '\n');
   }
 
   if (Object.keys(src.mcp.servers).length > 0) {

@@ -29,7 +29,9 @@ Supported local sources today:
   replaying every export.
 
 The event model is harness-agnostic, so consumers do not need to care
-where a session came from.
+where a session came from. Session metadata is additive where available:
+for example OpenCode session titles are surfaced on normalized
+`Session` / `SessionRef` objects.
 
 > **Zero upload.** The tool never opens a network connection. Everything
 > is local reads and stdout / user-specified file output.
@@ -174,7 +176,7 @@ For a faster path from "observed failure" to "rerunnable suite":
 
 ```ts
 import {
-  discoverSessions, loadSessionFromPath, filter, stats, exportSession,
+  discoverSessions, loadSessionFromPath, filter, inspectSession, stats, exportSession,
 } from "@razroo/iso-trace";
 
 // discovery: autodetects Claude Code, Cursor, Codex, and OpenCode local sources
@@ -185,6 +187,10 @@ const session = loadSessionFromPath(refs[0].source.path);
 
 // query
 const bash = filter(session, (e) => e.kind === "tool_call" && e.name === "Bash");
+
+// inspection summary for dashboards / worker status views
+const summary = inspectSession(session);
+// → { toolCallCount, preview, fileOps, toolNames, ... }
 
 // aggregate
 const s = stats([session]);

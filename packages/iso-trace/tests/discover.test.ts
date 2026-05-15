@@ -127,6 +127,7 @@ test("sessionRefsFromOpenCodeRows converts sqlite rows into session refs", () =>
       {
         id: "ses_older",
         directory: "/tmp/older",
+        title: "Older session",
         time_created: 1776614300000,
         time_updated: 1776614302000,
         turn_count: 2,
@@ -135,6 +136,7 @@ test("sessionRefsFromOpenCodeRows converts sqlite rows into session refs", () =>
       {
         id: "ses_newer",
         directory: "/tmp/newer",
+        title: "Newer session",
         time_created: 1776614400000,
         time_updated: 1776614404000,
         turn_count: 5,
@@ -148,6 +150,7 @@ test("sessionRefsFromOpenCodeRows converts sqlite rows into session refs", () =>
   assert.equal(refs[0].id, "ses_newer");
   assert.equal(refs[0].source.harness, "opencode");
   assert.match(refs[0].source.path, /opencode\.db#session=ses_newer$/);
+  assert.equal(refs[0].title, "Newer session");
   assert.equal(refs[0].turnCount, 5);
   assert.equal(refs[0].sizeBytes, 320);
 });

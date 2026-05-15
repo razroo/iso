@@ -71,6 +71,7 @@ export interface Session {
   id: string;
   source: SourceInfo;
   cwd: string;
+  title?: string;
   model?: string;
   startedAt: string;
   endedAt?: string;
@@ -83,6 +84,7 @@ export interface SessionRef {
   id: string;
   source: SourceInfo;
   cwd: string;
+  title?: string;
   startedAt: string;
   endedAt?: string;
   turnCount: number;

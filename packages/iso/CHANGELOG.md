@@ -1,5 +1,12 @@
 # @razroo/iso
 
+## 0.3.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @razroo/iso-harness@0.8.0
+
 ## 0.3.0
 
 ### Minor Changes

@@ -24,6 +24,18 @@ function mkIso(overrides = {}) {
     join(iso, 'instructions.md'),
     overrides.instructions ?? '# Project\n\nGuidelines.\n',
   );
+  if (overrides.instructionsAgents) {
+    writeFileSync(join(iso, 'instructions.agents.md'), overrides.instructionsAgents);
+  }
+  if (overrides.instructionsClaude) {
+    writeFileSync(join(iso, 'instructions.claude.md'), overrides.instructionsClaude);
+  }
+  if (overrides.instructionsCursor) {
+    writeFileSync(join(iso, 'instructions.cursor.md'), overrides.instructionsCursor);
+  }
+  if (overrides.instructionsOpencode) {
+    writeFileSync(join(iso, 'instructions.opencode.md'), overrides.instructionsOpencode);
+  }
   writeFileSync(
     join(iso, 'agents', 'a.md'),
     overrides.agent ??
@@ -158,6 +170,56 @@ test('build: rendered CLAUDE.md preserves the instructions file verbatim (plus t
   await build({ source: iso, out, targets: ['claude'] });
   const got = readFileSync(join(out, 'CLAUDE.md'), 'utf8');
   assert.equal(got, '# My project\n\nRule 1.\nRule 2.\n');
+});
+
+test('build: target-specific root instruction layers stay scoped to the correct harness surface', async () => {
+  const { iso, out } = mkIso({
+    instructions: '# Base\n\nShared.\n',
+    instructionsAgents: '## Shared AGENTS Addendum\n\nApplies to Codex, OpenCode, and Pi.\n',
+    instructionsClaude: '## Claude Addendum\n\nClaude-only root guidance.\n',
+    instructionsOpencode: '## OpenCode Addendum\n\nOpenCode-only guidance.\n',
+  });
+  await build({ source: iso, out, targets: ['claude', 'codex', 'opencode', 'pi'] });
+
+  const claude = readFileSync(join(out, 'CLAUDE.md'), 'utf8');
+  assert.match(claude, /# Base/);
+  assert.match(claude, /## Claude Addendum/);
+  assert.doesNotMatch(claude, /Shared AGENTS Addendum/);
+  assert.doesNotMatch(claude, /OpenCode Addendum/);
+
+  const agents = readFileSync(join(out, 'AGENTS.md'), 'utf8');
+  assert.match(agents, /# Base/);
+  assert.match(agents, /## Shared AGENTS Addendum/);
+  assert.doesNotMatch(agents, /Claude Addendum/);
+  assert.doesNotMatch(agents, /OpenCode Addendum/);
+
+  const opencodeExtra = readFileSync(join(out, '.opencode/instructions.md'), 'utf8');
+  assert.match(opencodeExtra, /## OpenCode Addendum/);
+
+  const opencodeConfig = JSON.parse(readFileSync(join(out, 'opencode.json'), 'utf8'));
+  assert.deepEqual(opencodeConfig.instructions, ['.opencode/instructions.md']);
+  assert.equal(readFileSync(join(out, 'AGENTS.md'), 'utf8'), agents);
+});
+
+test('build: opencode supplemental instructions merge with existing config instructions without duplicates', async () => {
+  const { iso, out } = mkIso({
+    instructionsOpencode: '## OpenCode Addendum\n\nOpenCode-only guidance.\n',
+  });
+  mkdirSync(out, { recursive: true });
+  writeFileSync(
+    join(out, 'opencode.json'),
+    JSON.stringify(
+      {
+        $schema: 'https://opencode.ai/config.json',
+        instructions: ['AGENTS.harness.md', '.opencode/instructions.md'],
+      },
+      null,
+      2,
+    ),
+  );
+  await build({ source: iso, out, targets: ['opencode'] });
+  const opencodeConfig = JSON.parse(readFileSync(join(out, 'opencode.json'), 'utf8'));
+  assert.deepEqual(opencodeConfig.instructions, ['AGENTS.harness.md', '.opencode/instructions.md']);
 });
 
 test('build: --dry-run returns a summary without writing any files', async () => {

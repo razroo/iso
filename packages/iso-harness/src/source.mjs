@@ -2,6 +2,13 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { parse as parseFrontmatter } from './frontmatter.mjs';
 
+const INSTRUCTION_VARIANTS = [
+  'agents',
+  'claude',
+  'cursor',
+  'opencode',
+];
+
 async function readIfExists(p) {
   try {
     return await fs.readFile(p, 'utf8');
@@ -52,6 +59,11 @@ export async function loadSource(sourceDir) {
   }
 
   const instructions = await readIfExists(path.join(abs, 'instructions.md'));
+  const instructionVariants = {};
+  for (const name of INSTRUCTION_VARIANTS) {
+    const value = await readIfExists(path.join(abs, `instructions.${name}.md`));
+    if (value != null) instructionVariants[name] = value;
+  }
   const mcpRaw = await readIfExists(path.join(abs, 'mcp.json'));
   const configRaw = await readIfExists(path.join(abs, 'config.json'));
 
@@ -83,10 +95,46 @@ export async function loadSource(sourceDir) {
     sourceDir: abs,
     config,
     instructions: instructions ?? '',
+    instructionVariants,
     mcp,
     agents,
     commands,
   };
+}
+
+function joinInstructionParts(parts) {
+  const present = parts.filter((part) => typeof part === 'string' && part.trim());
+  if (present.length === 0) return '';
+  let out = present[0];
+  for (const part of present.slice(1)) {
+    out = `${out.replace(/\s+$/, '')}\n\n${part.replace(/^\s+/, '')}`;
+  }
+  return out;
+}
+
+export function instructionsForTarget(source, target) {
+  switch (target) {
+    case 'claude':
+      return joinInstructionParts([source.instructions, source.instructionVariants?.claude]);
+    case 'cursor':
+      return joinInstructionParts([source.instructions, source.instructionVariants?.cursor]);
+    case 'codex':
+    case 'pi':
+      return joinInstructionParts([source.instructions, source.instructionVariants?.agents]);
+    case 'opencode':
+      return joinInstructionParts([source.instructions, source.instructionVariants?.agents]);
+    default:
+      return source.instructions ?? '';
+  }
+}
+
+export function supplementalInstructionsForTarget(source, target) {
+  switch (target) {
+    case 'opencode':
+      return source.instructionVariants?.opencode ?? '';
+    default:
+      return '';
+  }
 }
 
 export function targetOverride(item, target) {

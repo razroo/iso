@@ -83,19 +83,23 @@ export function discoverOpenCodeSessionRefs(dbPath: string): SessionRef[] {
 export function sessionRefsFromOpenCodeRows(rows: OpenCodeSessionRow[], dbPath: string): SessionRef[] {
   return rows
     .sort((a, b) => b.time_updated - a.time_updated)
-    .map((row) => ({
-      id: row.id,
-      source: {
-        harness: "opencode",
-        format: OPENCODE_SQLITE_FORMAT,
-        path: openCodeSessionLocator(row.id, dbPath),
-      },
-      cwd: row.directory,
-      startedAt: msToIso(row.time_created),
-      endedAt: msToIso(row.time_updated),
-      turnCount: row.turn_count ?? 0,
-      sizeBytes: row.size_bytes ?? 0,
-    }));
+    .map((row) => {
+      const ref: SessionRef = {
+        id: row.id,
+        source: {
+          harness: "opencode",
+          format: OPENCODE_SQLITE_FORMAT,
+          path: openCodeSessionLocator(row.id, dbPath),
+        },
+        cwd: row.directory,
+        startedAt: msToIso(row.time_created),
+        endedAt: msToIso(row.time_updated),
+        turnCount: row.turn_count ?? 0,
+        sizeBytes: row.size_bytes ?? 0,
+      };
+      if (typeof row.title === "string" && row.title) ref.title = row.title;
+      return ref;
+    });
 }
 
 export function parseOpenCode(path: string): Session {
@@ -109,16 +113,17 @@ export function parseOpenCode(path: string): Session {
 
 export function refForOpenCode(path: string): SessionRef {
   const session = parseOpenCode(path);
-  const sizeBytes = isOpenCodeLocator(path) ? 0 : statSync(resolve(path)).size;
-  return {
+  const ref: SessionRef = {
     id: session.id,
     source: session.source,
     cwd: session.cwd,
     startedAt: session.startedAt,
     endedAt: session.endedAt,
     turnCount: session.turns.length,
-    sizeBytes,
+    sizeBytes: isOpenCodeLocator(path) ? 0 : statSync(resolve(path)).size,
   };
+  if (session.title) ref.title = session.title;
+  return ref;
 }
 
 export function looksLikeOpenCodeExport(raw: string): boolean {
@@ -164,6 +169,7 @@ function parseOpenCodeExportText(raw: string, sourcePath: string, format: string
     turns,
     tokenUsage,
   };
+  if (typeof info.title === "string" && info.title) session.title = info.title;
   if (endedAtMs !== undefined) session.endedAt = msToIso(endedAtMs);
   if (firstAssistant?.info?.modelID) {
     const provider = typeof firstAssistant.info.providerID === "string" ? `${firstAssistant.info.providerID}/` : "";

@@ -1,3 +1,4 @@
+export { WorkflowLeaseConflictError, workflowLeaseStatus } from './lease.js';
 export { openWorkflow, readWorkflowRecord, runWorkflow } from './workflow.js';
 export type {
   AppendEventInput,
@@ -17,8 +18,12 @@ export type {
   StepRecord,
   StepRunContext,
   StepStatus,
+  TouchLeaseInput,
   WorkflowContext,
   WorkflowEvent,
+  WorkflowHeartbeatRecord,
+  WorkflowLeaseRecord,
+  WorkflowLeaseStatus,
   WorkflowOptions,
   WorkflowRecord,
   WorkflowStatus,

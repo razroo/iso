@@ -2,7 +2,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { stringify as toFrontmatter } from '../frontmatter.mjs';
 import { writeFile, writeJson } from '../fs-utils.mjs';
-import { targetOverride } from '../source.mjs';
+import { instructionsForTarget, targetOverride } from '../source.mjs';
 
 function claudeTools(tools) {
   if (!tools) return undefined;
@@ -46,9 +46,10 @@ export async function emitClaude(src, outDir, opts = {}) {
   };
   const roleMap = await loadResolvedRoleMap(outDir);
 
-  if (src.instructions) {
+  const instructions = instructionsForTarget(src, 'claude');
+  if (instructions) {
     const p = path.join(outDir, 'CLAUDE.md');
-    await push(p, src.instructions.endsWith('\n') ? src.instructions : src.instructions + '\n');
+    await push(p, instructions.endsWith('\n') ? instructions : instructions + '\n');
   }
 
   for (const agent of src.agents) {

@@ -9,6 +9,7 @@ adds the deterministic parts that should not live only in prompt prose:
 - resumable, idempotent `step()` execution with file-backed records
 - bounded parallel fan-out with `forEach(..., { maxParallel })`
 - keyed mutexes so "same entity" work never runs concurrently
+- worker heartbeats plus renewable leases for liveness / ownership tracking
 - append-only-ish workflow events and durable state snapshots on local disk
 
 It is intentionally generic. There is no built-in "dispatch a Codex worker"
@@ -42,6 +43,7 @@ The workflow record contains:
 - current workflow status (`idle`, `running`, `completed`, `failed`)
 - durable JSON state
 - step attempt counts and cached step results
+- optional heartbeat snapshots and lease ownership records
 - event history (`workflow.running`, `step.started`, `step.completed`, ...)
 
 ## Quick example
@@ -135,6 +137,28 @@ Options:
 - `pollMs`: wait interval while the lock is held elsewhere
 - `staleAfterMs`: optional stale-lock eviction threshold
 
+### `workflow.heartbeat(key, detail?)`
+
+Persists the latest heartbeat for a named worker or phase. This is useful
+when you want external inspectors to tell whether a background task is
+still progressing even if it is not currently holding a mutex.
+
+### `workflow.touchLease(key, { holder, ttlMs, detail? })`
+
+Acquires or renews a renewable lease for `key`.
+
+- a missing, expired, or released lease is acquired
+- the current holder can renew in place
+- a different holder gets a `WorkflowLeaseConflictError` while the lease is active
+
+Use this for "one worker owns this slot until its heartbeat expires"
+semantics without introducing a harness-specific queue.
+
+### `workflow.releaseLease(key, holder?)`
+
+Marks a lease released. Passing `holder` is optional but recommended so a
+worker cannot accidentally release another worker's active lease.
+
 ### `workflow.forEach(items, fn, options?)`
 
 Bounded fan-out over a list.
@@ -171,7 +195,6 @@ What it does not do yet:
 - remote workers
 - harness-specific task dispatch APIs
 - cron / scheduling
-- heartbeats and leases
 
 That narrower scope is deliberate. The goal is to let packages like JobForge
 stop expressing orchestration invariants only in prompt prose or Bash without

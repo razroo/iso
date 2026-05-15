@@ -2,7 +2,13 @@ import path from 'node:path';
 import { promises as fs } from 'node:fs';
 import { stringify as toFrontmatter } from '../frontmatter.mjs';
 import { writeFile, writeJson } from '../fs-utils.mjs';
-import { targetOverride } from '../source.mjs';
+import { instructionsForTarget, supplementalInstructionsForTarget, targetOverride } from '../source.mjs';
+
+function mergeInstructionRefs(existing, extra) {
+  const base = Array.isArray(existing) ? existing : existing ? [existing] : [];
+  if (!extra) return base;
+  return [...new Set([...base, extra])];
+}
 
 async function readJsonIfExists(p) {
   try {
@@ -34,9 +40,10 @@ export async function emitOpenCode(src, outDir, opts = {}) {
     written.push({ path: p, bytes });
   };
 
-  if (src.instructions) {
+  const instructions = instructionsForTarget(src, 'opencode');
+  if (instructions) {
     const p = path.join(outDir, 'AGENTS.md');
-    await push(p, src.instructions.endsWith('\n') ? src.instructions : src.instructions + '\n');
+    await push(p, instructions.endsWith('\n') ? instructions : instructions + '\n');
   }
 
   // Load iso-route's opencode.json once so we can (a) fall back to its
@@ -46,6 +53,15 @@ export async function emitOpenCode(src, outDir, opts = {}) {
   // below with the later merge-write on opencode.json.
   const opencodeJsonPath = path.join(outDir, 'opencode.json');
   const existingConfig = opts.dryRun ? {} : await readJsonIfExists(opencodeJsonPath);
+  const opencodeSupplement = supplementalInstructionsForTarget(src, 'opencode');
+  const opencodeSupplementPath = path.join(outDir, '.opencode', 'instructions.md');
+
+  if (opencodeSupplement) {
+    await push(
+      opencodeSupplementPath,
+      opencodeSupplement.endsWith('\n') ? opencodeSupplement : opencodeSupplement + '\n',
+    );
+  }
 
   for (const agent of src.agents) {
     const { skip, override } = targetOverride(agent, 'opencode');
@@ -97,7 +113,8 @@ export async function emitOpenCode(src, outDir, opts = {}) {
   const opencodeExtras = src.config?.targets?.opencode ?? {};
   const hasMcp = Object.keys(src.mcp.servers).length > 0;
   const hasExtras = Object.keys(opencodeExtras).length > 0;
-  if (hasMcp || hasExtras) {
+  const needsInstructionRef = Boolean(opencodeSupplement);
+  if (hasMcp || hasExtras || needsInstructionRef) {
     // Reuse the `existingConfig` loaded at the top — re-reading could race
     // with intermediate per-agent file writes on slower filesystems and is
     // wasted I/O. `@razroo/iso-route` writes model routing fields to
@@ -121,6 +138,9 @@ export async function emitOpenCode(src, outDir, opts = {}) {
     }
     for (const [k, v] of Object.entries(opencodeExtras)) {
       output[k] = v;
+    }
+    if (needsInstructionRef) {
+      output.instructions = mergeInstructionRefs(output.instructions, '.opencode/instructions.md');
     }
     await push(opencodeJsonPath, output, writeJson);
   }

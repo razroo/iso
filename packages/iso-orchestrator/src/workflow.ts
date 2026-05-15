@@ -9,11 +9,15 @@ import type {
   StateUpdater,
   StepOptions,
   StepRunContext,
+  TouchLeaseInput,
+  WorkflowHeartbeatRecord,
   WorkflowContext,
+  WorkflowLeaseRecord,
   WorkflowOptions,
   WorkflowRecord,
   WorkflowStatus,
 } from './types.js';
+import { WorkflowLeaseConflictError, workflowLeaseStatus } from './lease.js';
 import {
   WorkflowStore,
   acquireLock,
@@ -78,6 +82,125 @@ class FileWorkflowContext<TState extends JsonValue> implements WorkflowContext<T
       };
       record.events.push(event);
       return event;
+    });
+  }
+
+  async heartbeat<TDetail extends JsonValue = JsonValue>(key: string, detail?: TDetail) {
+    return this.store.mutate((record) => {
+      const heartbeat: WorkflowHeartbeatRecord<TDetail> = {
+        key,
+        at: this.store.timestamp(),
+        ...(detail !== undefined ? { detail: cloneJson(detail) } : {}),
+      };
+      record.heartbeats ??= {};
+      record.heartbeats[key] = heartbeat;
+      record.events.push({
+        at: heartbeat.at,
+        type: 'heartbeat.recorded',
+        detail: {
+          key,
+          hasDetail: detail !== undefined,
+        },
+      });
+      return heartbeat;
+    });
+  }
+
+  async touchLease<TDetail extends JsonValue = JsonValue>(
+    key: string,
+    input: TouchLeaseInput<TDetail>,
+  ): Promise<WorkflowLeaseRecord<TDetail>> {
+    if (!input.holder.trim()) {
+      throw new Error(`Lease "${key}" requires a non-empty holder`);
+    }
+    if (!Number.isFinite(input.ttlMs) || input.ttlMs <= 0) {
+      throw new Error(`Lease "${key}" requires ttlMs > 0`);
+    }
+
+    return this.store.mutate((record) => {
+      const now = this.store.timestamp();
+      const current = record.leases?.[key];
+      const status = current ? workflowLeaseStatus(current, new Date(now)) : undefined;
+      const sameHolderActive = current?.holder === input.holder && status === 'active';
+
+      if (
+        current &&
+        status === 'active' &&
+        current.holder !== input.holder
+      ) {
+        throw new WorkflowLeaseConflictError({
+          leaseKey: key,
+          holder: input.holder,
+          currentHolder: current.holder,
+          expiresAt: current.expiresAt,
+        });
+      }
+
+      const heartbeatAt = now;
+      const expiresAt = new Date(Date.parse(now) + input.ttlMs).toISOString();
+      const detail = input.detail !== undefined
+        ? cloneJson(input.detail)
+        : current?.detail !== undefined
+          ? cloneJson(current.detail as TDetail)
+          : undefined;
+      const acquiredAt = sameHolderActive && current ? current.acquiredAt : now;
+      const lease: WorkflowLeaseRecord<TDetail> = sameHolderActive
+        ? {
+          key,
+          holder: input.holder,
+          acquiredAt,
+          heartbeatAt,
+          expiresAt,
+          ...(detail !== undefined ? { detail } : {}),
+        }
+        : {
+          key,
+          holder: input.holder,
+          acquiredAt,
+          heartbeatAt,
+          expiresAt,
+          ...(detail !== undefined ? { detail } : {}),
+        };
+
+      record.leases ??= {};
+      record.leases[key] = lease;
+      record.events.push({
+        at: now,
+        type: sameHolderActive ? 'lease.renewed' : 'lease.acquired',
+        detail: {
+          key,
+          holder: input.holder,
+          ttlMs: input.ttlMs,
+        },
+      });
+      return lease;
+    });
+  }
+
+  async releaseLease(key: string, holder?: string): Promise<WorkflowLeaseRecord | undefined> {
+    return this.store.mutate((record) => {
+      const current = record.leases?.[key];
+      if (!current) return undefined;
+      if (holder !== undefined && current.holder !== holder) {
+        throw new Error(`Lease "${key}" is held by "${current.holder}", not "${holder}"`);
+      }
+      if (current.releasedAt) return current;
+      const releasedAt = this.store.timestamp();
+      const lease: WorkflowLeaseRecord = {
+        ...current,
+        releasedAt,
+      };
+      record.leases ??= {};
+      record.leases[key] = lease;
+      record.events.push({
+        at: releasedAt,
+        type: 'lease.released',
+        detail: {
+          key,
+          holder: current.holder,
+        },
+      });
+      return lease;
     });
   }
 
